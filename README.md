@@ -1,3 +1,5 @@
+<img width="742" height="779" alt="Screenshot_11" src="https://github.com/user-attachments/assets/05b620e3-c690-4d97-81a4-0b1a9f6b96bb" />
+<img width="716" height="349" alt="Screenshot_10" src="https://github.com/user-attachments/assets/2e9b044e-8d56-4b82-9da2-0e084258513b" />
 # DocuMentor: A RAG-Powered Q&A Chatbot for Technical Documents
 
 **DocuMentor** is an intelligent, web-based chatbot designed to navigate and answer questions from dense technical knowledge bases. Developed as a final project for the Akbank GenAI Bootcamp, this application showcases the power of Retrieval-Augmented Generation (RAG) in making complex information accessible and understandable.
