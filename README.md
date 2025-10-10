@@ -30,7 +30,7 @@ DocuMentor is built on a RAG (Retrieval-Augmented Generation) pipeline orchestra
 
 1. **Ingestion:** The "context" texts from the databricks-dolly-15k dataset are loaded into the system.
 
-2. **Embedding:** Each text document is converted into a numerical vector representation using HuggingFaceEmbeddingswith thesentence-transformers/all-MiniLM-L6-v2 model.
+2. **Embedding:** Each text document is converted into a numerical vector representation using HuggingFaceEmbeddings with thesentence-transformers/all-MiniLM-L6-v2 model.
 
 3. **Indexing:** These vectors are stored and indexed in a FAISS vector database, allowing for efficient, high-speed semantic searches.
 
