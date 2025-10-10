@@ -1,0 +1,9 @@
+# Sanal ortam klasörünü yok say
+venv/
+
+# Gizli API anahtarını içeren dosyayı yok say
+.env
+
+# Python'un oluşturduğu geçici klasörleri yok say
+__pycache__/
+*.pyc
