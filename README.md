@@ -78,6 +78,6 @@ Note: The initial startup may take a few minutes as the application needs to dow
 Live Demo
 A live version of the DocuMentor application is available at the following link:
 
-➡️ [LINK TO YOUR DEPLOYED STREAMLIT APP HERE]
+➡️ [https://documentor1.streamlit.app]
 
 Developed by Göktuğ Türkdağ as a part of the Akbank GenAI Bootcamp to merge a passion for AI with new skills.
