@@ -91,5 +91,5 @@ A live version of the DocuMentor application is available at the following link:
 
 *Developed by **Göktuğ Türkdağ** as a part of the Akbank GenAI Bootcamp to merge a passion for AI with new skills.*
 
-<img width="742" height="779" alt="Screenshot_11" src="https://github.com/user-attachments/assets/05b620e3-c690-4d97-81a4-0b1a9f6b96bb" />
 <img width="716" height="349" alt="Screenshot_10" src="https://github.com/user-attachments/assets/2e9b044e-8d56-4b82-9da2-0e084258513b" />
+<img width="742" height="779" alt="Screenshot_11" src="https://github.com/user-attachments/assets/05b620e3-c690-4d97-81a4-0b1a9f6b96bb" />
