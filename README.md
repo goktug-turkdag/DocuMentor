@@ -66,7 +66,7 @@ To run this project on your local machine, please follow the steps below.
 
    venv\Scripts\activate  # On Windows
 
-   # source venv/bin/activate  # On macOS/Linux
+   source venv/bin/activate  # On macOS/Linux
 
 3. **Install Dependencies:**
 
