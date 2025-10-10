@@ -105,7 +105,7 @@ To run this project on your local machine, please follow the steps below.
 ## Live Demo
 
 A live version of the DocuMentor application is available at the following link:
-
 ➡️ [**https://documentor1.streamlit.app**](https://documentor1.streamlit.app)
 
 *Developed by **Göktuğ Türkdağ** as a part of the Akbank GenAI Bootcamp to merge a passion for AI with new skills.*
+
