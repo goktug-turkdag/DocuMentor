@@ -56,17 +56,11 @@ To run this project on your local machine, please follow the steps below.
 
 1. **Clone the Repository:**
 
-`   ````
-
    git clone https://github.com/goktug-turkdag/DocuMentor.git
 
    cd DocuMentor
 
-`   ````
-
 2. **Set Up and Activate the Virtual Environment:**
-
-`   ````
 
    python -m venv venv
 
@@ -74,31 +68,19 @@ To run this project on your local machine, please follow the steps below.
 
    # source venv/bin/activate  # On macOS/Linux
 
-`   ````
-
 3. **Install Dependencies:**
-
-`   ````
 
    pip install --upgrade -r requirements.txt
 
-`   ````
-
 4. **Configure the API Key:**
 
-
   * Create a file named.env in the root directory.
-
 
   * Add your Google API key to the file in the following format:GOOGLE_API_KEY="YOUR_API_KEY_HERE"``
 
 5. **Run the Application:**
 
-`   ````
-
    streamlit run app.py
-
-`   ````
 
    *Note: The initial startup may take a few minutes as the application needs to download the dataset and models for the first time.*
 
