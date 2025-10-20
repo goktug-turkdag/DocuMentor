@@ -3,7 +3,7 @@ langchain
 langchain-community
 langchain-huggingface
 langchain-google-genai
-langchain_core.pydantic_v1
+langchain-chains
 google-generativeai
 sentence-transformers
 faiss-cpu
