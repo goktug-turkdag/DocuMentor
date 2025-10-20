@@ -8,3 +8,4 @@ sentence-transformers
 faiss-cpu
 python-dotenv
 streamlit
+langchain_core.pydantic_v1
