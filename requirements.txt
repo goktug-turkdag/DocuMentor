@@ -3,7 +3,6 @@ langchain
 langchain-community
 langchain-huggingface
 langchain-google-genai
-langchain-chains
 google-generativeai
 sentence-transformers
 faiss-cpu
