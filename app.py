@@ -4,6 +4,7 @@ from datasets import load_dataset
 from langchain_community.vectorstores import FAISS
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_google_genai import GoogleGenerativeAI
+from langchain.chains import RetrievalQA  # <-- 1. HATA DÜZELTMESİ: Eksik import eklendi
 import os
 import time
 
@@ -79,7 +80,12 @@ if user_question:
 
     with st.spinner("Searching for the answer..."):
         try:
-            response = rag_chain.run(user_question)
+            # --- 2. HATA DÜZELTMESİ: .run() yerine .invoke() kullanıldı ---
+            # .run() metodu eskidir (deprecated).
+            # .invoke() bir dictionary döndürür, asıl cevap 'result' anahtarı altındadır.
+            response_dict = rag_chain.invoke(user_question)
+            response = response_dict["result"]
+            
         except Exception as e:
             response = f"An error occurred while generating the response: {e}"
     
