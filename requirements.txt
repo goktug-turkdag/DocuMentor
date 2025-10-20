@@ -1,5 +1,6 @@
 datasets
 langchain
+langchain-core                 # Explicitly add langchain-core
 langchain-huggingface
 langchain-google-genai
 google-generativeai
@@ -7,3 +8,4 @@ sentence-transformers
 faiss-cpu
 python-dotenv
 streamlit
+pydantic>=1.0.0,<2.0.0          # Force Pydantic v1.x installation
