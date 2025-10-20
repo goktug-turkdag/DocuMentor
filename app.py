@@ -3,7 +3,7 @@ from dotenv import load_dotenv
 from datasets import load_dataset
 from langchain_community.vectorstores import FAISS
 from langchain_huggingface import HuggingFaceEmbeddings
-from langchain.chains import RetrievalQA
+from langchain import RetrievalQA
 from langchain_google_genai import GoogleGenerativeAI
 import os
 import time
