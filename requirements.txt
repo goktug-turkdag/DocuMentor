@@ -1,6 +1,7 @@
 datasets
 langchain
 langchain-core                 # Explicitly add langchain-core
+langchain-community
 langchain-huggingface
 langchain-google-genai
 google-generativeai
