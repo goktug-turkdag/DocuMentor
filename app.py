@@ -3,7 +3,7 @@ from dotenv import load_dotenv
 from datasets import load_dataset
 import os
 import tempfile
-import random # Casino oyunları için
+import random # Games için
 import time # Cashout mesajı için
 
 # --- GEREKLİ LANGCHAIN IMPORTLARI ---
@@ -127,25 +127,44 @@ Simlish Answer:
 """
 
 # --- 2. WEB ARAYÜZÜ (Sekmeli Yapı) ---
-# --- DÜZELTME: Başlık orijinal haline getirildi ---
 st.title("DocuMentor 📄") 
 
-# --- Sekmeler (Chat, Blackjack, Coin Flip, Roulette) ---
-tab_chat, tab_blackjack, tab_coinflip, tab_roulette = st.tabs(["💬 Chatbot", "🃏 Blackjack", "🪙 Coin Flip", "🎡 Roulette"])
+# --- Sekmeler ---
+tab_chat, tab_blackjack, tab_coinflip, tab_roulette, tab_music = st.tabs([
+    "💬 Chatbot", 
+    "🃏 Blackjack", 
+    "🪙 Coin Flip", 
+    "🎡 Roulette",
+    "🎶 Music Player" 
+])
 
 # --- Sidebar ---
 with st.sidebar:
     st.header("About DocuMentor")
     st.markdown(
-        "An intelligent Q&A chatbot and mini-casino app built with RAG, " # Açıklamayı güncelledim
-        "Google Gemini, Streamlit, and Python by Göktuğ Türkdağ."
+        """
+        **DocuMentor** is a multi-functional application showcasing:
+        1.  An **intelligent Q&A chatbot** using advanced AI techniques.
+        2.  Several **interactive features & games of chance** demonstrating Python logic and state handling.
+
+        **Technical Architecture & Features:**
+        * **UI:** Built with **Streamlit**.
+        * **Core Logic:** **Python**.
+        * **Chatbot Engine:** RAG architecture, Google Gemini Pro LLM (via LangChain), HuggingFace multilingual embeddings, ChromaDB vector store, Dolly 15k dataset baseline, multi-document upload (.pdf, .docx, .txt), conversational memory, streaming responses, and Simlish mode easter egg.
+        * **Interactive Features (Games):** Blackjack (with side bets, dynamic cashout, 5-Card Charlie), Coin Flip, and Roulette implemented using pure Python logic and Streamlit Session State for complex state management (balance, bets, game flow).
+        
+        **Developed by Göktuğ Türkdağ.** This project demonstrates proficiency in building complex, interactive AI applications and sophisticated state management. 
+        
+        The codebase exceeds **1000+ lines** and is **open-source** on GitHub.
+        """
     )
     st.markdown("---")
-    st.subheader("Developed by Göktuğ Türkdağ")
+    st.subheader("Connect with the Developer")
     st.markdown("🔗 [LinkedIn](https://www.linkedin.com/in/goktugturkdag)")
-    st.markdown("🐙 [GitHub](https://github.com/goktug-turkdag)")
+    st.markdown("🐙 [GitHub](https://github.com/goktug-turkdag)") 
     st.markdown("---")
     
+    # Butonlar
     if st.button("Clear Chat History 🧹"):
         st.session_state.messages = []
         st.session_state.chat_history = []
@@ -154,20 +173,21 @@ with st.sidebar:
         st.success("Chat history and uploaded files cleared!")
         st.rerun()
 
-    if st.button("Reset Casino Games 💰"):
-        # Blackjack state
-        st.session_state.game_state = "betting" 
-        st.session_state.player_balance = 1000 
-        # Coin Flip state (varsa)
+    if st.button("Reset Interactive Features 💰"): 
+        if "game_state" in st.session_state: reset_blackjack_state(reset_balance=True) 
         if "coin_flip_result" in st.session_state:
             st.session_state.coin_flip_result = ""
             st.session_state.coin_flip_message = ""
-        # Roulette state (varsa)
+            st.session_state.last_coin_flip_bet = 0
+            st.session_state.last_coin_flip_choice = ""
         if "roulette_bets" in st.session_state:
             st.session_state.roulette_bets = {}
             st.session_state.roulette_result = ""
             st.session_state.roulette_message = ""
-        st.success("Casino balance and game states reset!")
+            st.session_state.last_roulette_bets = {}
+            
+        st.session_state.player_balance = 1000 
+        st.success("Balance and feature states reset!") 
         st.rerun()
 
     st.markdown("---")
@@ -198,7 +218,7 @@ if "messages" not in st.session_state:
     welcome_message = f"""
     Hi! I'm **DocuMentor**, an intelligent RAG chatbot developed by **Göktuğ Türkdağ**.
     I'm trained on **Dolly 15k**, but you can also **upload your own documents** in the sidebar to chat with them!
-    Check out the other tabs for some mini-casino games!
+    Feel free to explore the other tabs for some **interactive features** and **easter eggs**!
     
     - Try asking me: "Who is Göktuğ Türkdağ?"
     - Or toggle **Simlish Mode** 👽
@@ -224,12 +244,15 @@ if "game_state" not in st.session_state:
 if "coin_flip_result" not in st.session_state:
     st.session_state.coin_flip_result = ""
     st.session_state.coin_flip_message = ""
+    st.session_state.last_coin_flip_bet = 10 
+    st.session_state.last_coin_flip_choice = "Heads"
 
 # Roulette için
 if "roulette_bets" not in st.session_state:
     st.session_state.roulette_bets = {} 
     st.session_state.roulette_result = ""
     st.session_state.roulette_message = ""
+    st.session_state.last_roulette_bets = {}
 
 # --- SEKME 1: CHATBOT ---
 with tab_chat:
@@ -350,7 +373,7 @@ with tab_chat:
             st.session_state.chat_history.append(AIMessage(content=full_response))
 
 
-# --- SEKME 2: BLACKJACK (TAM KOD) ---
+# --- SEKME 2: BLACKJACK ---
 with tab_blackjack:
     st.header("🃏 Blackjack")
     st.markdown("Place your bet, and optional side bets, to beat the dealer!")
@@ -373,14 +396,14 @@ with tab_blackjack:
         """)
 
     # Blackjack Oyun Fonksiyonları
-    def reset_blackjack_state():
+    def reset_blackjack_state(reset_balance=False): 
         st.session_state.game_state = "betting" 
         st.session_state.deck = []
         st.session_state.player_hand = []
         st.session_state.dealer_hand = []
         st.session_state.game_message = ""
         st.session_state.side_bet_message = ""
-        # Bakiye sıfırlanmaz
+        if reset_balance: st.session_state.player_balance = 1000 
         st.session_state.current_bet = 0
         st.session_state.bet_21_3 = 0
         st.session_state.bet_perfect_pairs = 0
@@ -485,12 +508,12 @@ with tab_blackjack:
     # Dinamik Cashout Teklifi Hesaplayıcı
     def get_cashout_offer_heuristic(player_hand, dealer_up_card, bet):
         p_score = calculate_score(player_hand)
+        if p_score == 21 or (len(player_hand) >= 5 and p_score <= 21) or p_score > 21:
+             return 0 
+        
         d_val = get_card_value(dealer_up_card['rank'])
         p_win = 0.48 
-        if p_score == 21: return bet * 2 # Blackjack veya Charlie sonrası Cashout yok
-        if len(player_hand) >= 5 and p_score <= 21: return bet * 2 # Charlie Win sonrası Cashout yok
-        if p_score > 21: return 0 # Patladıysan teklif yok
-        
+        # ... (p_win hesaplama mantığı) ...
         if p_score == 20: p_win = 0.85
         elif p_score == 19: p_win = 0.75
         elif p_score == 18: p_win = 0.65
@@ -508,7 +531,8 @@ with tab_blackjack:
             if d_val in [10, 11]: p_win = 0.30
             else: p_win = 0.40
         elif p_score == 17 and (get_card_value('A') in [get_card_value(c['rank']) for c in player_hand]):
-             p_win = 0.45 
+             p_win = 0.45
+             
         if p_win >= 0.5: multiplier = 1.0 + (p_win - 0.5) * 1.5
         else: multiplier = 1.0 - (0.5 - p_win) * 3.0
         offer = int(bet * multiplier)
@@ -518,7 +542,7 @@ with tab_blackjack:
 
     # Oyun Durumu Yönetimi
     if "game_state" not in st.session_state:
-        reset_blackjack_state() 
+        reset_blackjack_state(reset_balance=True) 
 
     st.metric(label="Your Balance", value=f"💰 {st.session_state.player_balance}")
     
@@ -604,7 +628,7 @@ with tab_blackjack:
                          st.session_state.game_message = "Dealer has Blackjack. 😕 You lose."
                     else:
                         st.session_state.game_state = "player_turn"
-                        st.session_state.game_message = "Your turn! Hit, Stand, or Cash Out?" # Mesajı güncelledim
+                        st.session_state.game_message = "Your turn! Hit, Stand, or Cash Out?"
                     st.rerun()
 
     # Oyun Akışı
@@ -670,8 +694,7 @@ with tab_blackjack:
                     st.session_state.side_bet_message += "\n" + l7_msg
                 st.rerun()
             
-            # Dinamik Cashout sadece 2 kart varken anlamlı, istersen kaldırabilirsin
-            if len(st.session_state.player_hand) == 2: 
+            if cashout_offer > 0: # Sadece teklif varsa göster
                 if col3.button(f"Cash Out for 💰 {cashout_offer}", key="cashout"):
                     st.session_state.player_balance += cashout_offer
                     st.session_state.game_state = "game_over"
@@ -713,7 +736,7 @@ with tab_blackjack:
         st.rerun()
 
 
-# --- YENİ ÖZELLİK: SEKME 3 - COIN FLIP ---
+# --- SEKME 3: COIN FLIP ---
 with tab_coinflip:
     st.header("🪙 Coin Flip")
     st.markdown("A simple Heads or Tails betting game.")
@@ -721,24 +744,34 @@ with tab_coinflip:
     if "coin_flip_result" not in st.session_state:
         st.session_state.coin_flip_result = ""
         st.session_state.coin_flip_message = ""
+        st.session_state.last_coin_flip_bet = 10 
+        st.session_state.last_coin_flip_choice = "Heads" 
 
     st.metric(label="Your Balance", value=f"💰 {st.session_state.player_balance}")
 
     if st.session_state.player_balance <= 0:
         st.error("You are out of money! Reset games from the sidebar.")
     else:
+        st.caption(f"Last bet: {st.session_state.last_coin_flip_bet} on {st.session_state.last_coin_flip_choice}")
+
         with st.form("coin_flip_form"):
-            cf_bet = st.number_input("Bet Amount:", min_value=1, max_value=st.session_state.player_balance, value=10, step=1)
-            cf_choice = st.radio("Choose:", ("Heads", "Tails"), horizontal=True)
+            cf_bet = st.number_input("Bet Amount:", min_value=1, max_value=st.session_state.player_balance, 
+                                     value=st.session_state.last_coin_flip_bet, step=1)
+            cf_choice_options = ["Heads", "Tails"]
+            cf_choice_index = cf_choice_options.index(st.session_state.last_coin_flip_choice) if st.session_state.last_coin_flip_choice in cf_choice_options else 0
+            cf_choice = st.radio("Choose:", cf_choice_options, index=cf_choice_index, horizontal=True)
+            
             flip_button = st.form_submit_button("Flip Coin")
 
         if flip_button:
             st.session_state.player_balance -= cf_bet
             result = random.choice(["Heads", "Tails"])
             st.session_state.coin_flip_result = result
+            st.session_state.last_coin_flip_bet = cf_bet
+            st.session_state.last_coin_flip_choice = cf_choice
             
             if result == cf_choice:
-                winnings = cf_bet * 2 # 1:1 ödeme + ana bahis iade
+                winnings = cf_bet * 2 
                 st.session_state.player_balance += winnings
                 st.session_state.coin_flip_message = f"🎉 It's {result}! You win {winnings}!"
                 st.balloons()
@@ -751,7 +784,7 @@ with tab_coinflip:
         st.subheader(f"Result: {st.session_state.coin_flip_result}")
         st.write(st.session_state.coin_flip_message)
 
-# --- YENİ ÖZELLİK: SEKME 4 - ROULETTE ---
+# --- SEKME 4: ROULETTE ---
 with tab_roulette:
     st.header("🎡 Roulette (European)")
     st.markdown("Place your bets on the table and spin the wheel!")
@@ -760,6 +793,7 @@ with tab_roulette:
         st.session_state.roulette_bets = {} 
         st.session_state.roulette_result = ""
         st.session_state.roulette_message = ""
+        st.session_state.last_roulette_bets = {} 
 
     numbers = list(range(37)) 
     red_numbers = {1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36}
@@ -786,13 +820,21 @@ with tab_roulette:
     else:
         st.subheader("Place Your Bets:")
         
+        if st.session_state.last_roulette_bets:
+            with st.expander("Show/Repeat Last Bets"):
+                last_bets_str = "\n".join([f"- {k.replace('_', ' ').title()}: {v}" for k, v in st.session_state.last_roulette_bets.items()])
+                st.markdown(last_bets_str)
+                # (İsterseniz buraya bir "Repeat Bets" butonu da ekleyebilirsiniz)
+        
         current_bets = {} 
         total_current_bet = 0
 
         num_cols = st.columns(4)
         selected_number = num_cols[0].selectbox("Number (0-36):", ["-"] + numbers, key="r_num_select")
+        last_num_key = next((k for k in st.session_state.last_roulette_bets if k.startswith("number_")), None)
+        default_num_bet = st.session_state.last_roulette_bets.get(last_num_key, 0) if last_num_key else 0
         if selected_number != "-":
-            number_bet = num_cols[1].number_input("Bet on Number (35:1):", min_value=0, value=0, step=1, key="r_num_bet")
+            number_bet = num_cols[1].number_input("Bet on Number (35:1):", min_value=0, value=default_num_bet, step=1, key="r_num_bet")
             if number_bet > 0:
                 current_bets[f"number_{selected_number}"] = number_bet
                 total_current_bet += number_bet
@@ -800,22 +842,19 @@ with tab_roulette:
         st.markdown("**Outside Bets (1:1 Payout)**")
         ext_cols = st.columns(3)
         
-        red_bet = ext_cols[0].number_input("Bet on Red:", min_value=0, value=0, step=1, key="r_red_bet")
+        red_bet = ext_cols[0].number_input("Bet on Red:", min_value=0, value=st.session_state.last_roulette_bets.get("Red", 0), step=1, key="r_red_bet")
         if red_bet > 0: current_bets["Red"] = red_bet; total_current_bet += red_bet
-        
-        black_bet = ext_cols[0].number_input("Bet on Black:", min_value=0, value=0, step=1, key="r_black_bet")
+        black_bet = ext_cols[0].number_input("Bet on Black:", min_value=0, value=st.session_state.last_roulette_bets.get("Black", 0), step=1, key="r_black_bet")
         if black_bet > 0: current_bets["Black"] = black_bet; total_current_bet += black_bet
         
-        odd_bet = ext_cols[1].number_input("Bet on Odd:", min_value=0, value=0, step=1, key="r_odd_bet")
+        odd_bet = ext_cols[1].number_input("Bet on Odd:", min_value=0, value=st.session_state.last_roulette_bets.get("Odd", 0), step=1, key="r_odd_bet")
         if odd_bet > 0: current_bets["Odd"] = odd_bet; total_current_bet += odd_bet
-        
-        even_bet = ext_cols[1].number_input("Bet on Even:", min_value=0, value=0, step=1, key="r_even_bet")
+        even_bet = ext_cols[1].number_input("Bet on Even:", min_value=0, value=st.session_state.last_roulette_bets.get("Even", 0), step=1, key="r_even_bet")
         if even_bet > 0: current_bets["Even"] = even_bet; total_current_bet += even_bet
         
-        low_bet = ext_cols[2].number_input("Bet on Low (1-18):", min_value=0, value=0, step=1, key="r_low_bet")
+        low_bet = ext_cols[2].number_input("Bet on Low (1-18):", min_value=0, value=st.session_state.last_roulette_bets.get("Low", 0), step=1, key="r_low_bet")
         if low_bet > 0: current_bets["Low"] = low_bet; total_current_bet += low_bet
-        
-        high_bet = ext_cols[2].number_input("Bet on High (19-36):", min_value=0, value=0, step=1, key="r_high_bet")
+        high_bet = ext_cols[2].number_input("Bet on High (19-36):", min_value=0, value=st.session_state.last_roulette_bets.get("High", 0), step=1, key="r_high_bet")
         if high_bet > 0: current_bets["High"] = high_bet; total_current_bet += high_bet
 
         st.markdown(f"**Total Bet: {total_current_bet}**")
@@ -828,6 +867,7 @@ with tab_roulette:
             else:
                 st.session_state.player_balance -= total_current_bet
                 st.session_state.roulette_bets = current_bets 
+                st.session_state.last_roulette_bets = current_bets 
                 
                 winning_number = random.randint(0, 36)
                 winning_color = get_color(winning_number)
@@ -855,8 +895,8 @@ with tab_roulette:
 
                     if win:
                         winnings = bet_amount * payout_ratio
-                        total_winnings += winnings + bet_amount # Bahsi geri iade et
-                        winning_messages.append(f"Win on {bet_type.replace('_', ' ')}: +{winnings}!")
+                        total_winnings += winnings + bet_amount 
+                        winning_messages.append(f"Win on {bet_type.replace('_', ' ').title()}: +{winnings}!")
                 
                 if total_winnings > 0:
                     st.session_state.player_balance += total_winnings
@@ -871,3 +911,16 @@ with tab_roulette:
         st.subheader(f"Wheel Result: {st.session_state.roulette_result}")
         st.write(st.session_state.roulette_message)
         st.button("Place New Bets", on_click=lambda: st.session_state.update({"roulette_result":"", "roulette_message":"", "roulette_bets":{}}))
+
+
+# --- YENİ ÖZELLİK: SEKME 5 - MUSIC PLAYER ---
+with tab_music:
+    st.header("🎶 Music Player")
+    # --- YENİ: GÜNCELLENMİŞ TANITIM METNİ ---
+    st.markdown("How about a nice blues session? Maybe it will relax you.") 
+    
+    # --- YENİ: SİZİN İSTEDİĞİNİZ VİDEO LİNKİ ---
+    youtube_url = "https://www.youtube.com/watch?v=1eNSWZ4x2ZU&list=PLoPLEt1InO1x_fhNUCZW2HgRI3uTUn5NY" 
+    
+    st.video(youtube_url)
+    st.caption("Music provided via YouTube embed.")
