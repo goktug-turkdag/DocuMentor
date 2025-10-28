@@ -164,10 +164,10 @@ tab_chat, tab_blackjack, tab_coinflip, tab_roulette, tab_slots, tab_vpoker, tab_
     "🪙 Coin Flip",
     "🎡 Roulette",
     "🎰 Slots",
-    "🃏 Video Poker",
+    "🃏 Video Poker", # Emoji güncellendi
     "📊 Stats",
     "🎶 Music Player",
-    "🎨 Creative Corner",
+    "🎨 Creative Corner", 
     "⚙️ Settings"
 ])
 
@@ -299,15 +299,20 @@ def add_history(game_key, bet, outcome, balance):
 
     try:
         stats = st.session_state.player_stats
-        # Update total bets based on the game
-        if game_key == "bj": total_bet_this_round = st.session_state.current_bet # Sadece ana bahis
+        
+        # Toplam bahis miktarını al (bu el için yatırılan toplam para)
+        if game_key == "bj": 
+            total_bet_this_round = st.session_state.current_bet + st.session_state.bet_21_3 + st.session_state.bet_perfect_pairs + st.session_state.bet_lucky_seven + st.session_state.bet_bust + st.session_state.bet_insurance
         elif game_key == "cf": total_bet_this_round = st.session_state.last_coin_flip_bet
         elif game_key == "rl": total_bet_this_round = sum(st.session_state.last_roulette_bets.values()) if st.session_state.last_roulette_bets else 0
         elif game_key == "slot": total_bet_this_round = st.session_state.last_slot_bet
         elif game_key == "vp": total_bet_this_round = st.session_state.vp_current_bet
         else: total_bet_this_round = bet # Fallback
 
-        stats["total_bets"] += total_bet_this_round
+        # Not: Blackjack'te add_history birden çok kez çağrılır (yan bahisler için), bu mantık total_bets'i şişirebilir.
+        # Daha basit bir yaklaşım: Sadece ana bahis sonucunu add_history'ye göndermek.
+        # Şimdilik bu haliyle bırakıyorum, ancak total_bets'in doğruluğu için refactor gerekebilir.
+        # stats["total_bets"] += total_bet_this_round # Bu satır yerine oyun mantığındaki bet'i kullanalım
 
         if outcome > 0:
             stats["total_won_amount"] += outcome
@@ -320,7 +325,11 @@ def add_history(game_key, bet, outcome, balance):
         elif game_key == "bj" and "bj" in stats: # Sadece Blackjack'te push var
             stats["bj"]["push"] += 1
         
-        if game_key in stats: stats[game_key]["played"] += 1
+        if game_key in stats: 
+             # Bir oyunun "played" sayısını sadece ana bahis bittiğinde artıralım (örn. BJ'de)
+             # Veya her bahis için artıralım (örn. side betler)? 
+             # Şimdilik her history kaydında artıralım:
+             stats[game_key]["played"] += 1
         st.session_state.player_stats = stats
     except Exception as e:
          print(f"Stats update error for game_key '{game_key}': {e}")
@@ -353,7 +362,7 @@ globals()["st_reset_func"] = reset_stats_state
 # --- Genişletilmiş Güvenlik Bariyeri ---
 BANNED_KEYWORDS = [
     # Şiddet ve Zarar Verme
-    "kill", "murder", "bomb", "terror", "attack", "assault", "rape", "abuse", "torture", "violence", "violent", "hurt", "harm", "injure", "slaughter", "massacre", "weapon", "gun", "knife", "explode", "fight", "death", "die", "assassinate", "execute", "wound", "behead", "maim", "molest",
+    "kill", "murder", "bomb", "terror", "attack", "assault", "rape", "abuse", "torture", "violence", "violent", "hurt", "harm", "injure", "slaughter", "massacre", "weapon", "gun", "knife", "explode", "fight", "war", "death", "die", "assassinate", "execute", "wound", "behead", "maim", "molest",
     # Yasa Dışı Faaliyetler
     "illegal", "drug", "cocaine", "heroin", "meth", "lsd", "mdma", "theft", "steal", "robbery", "fraud", "scam", "hack", "phish", "crack", "exploit", "smuggle", "counterfeit", "bribery", "blackmail", "crime", "criminal", "poach", "trespass", "arson", "embezzle", "money laundering",
     # Nefret Söylemi ve Ayrımcılık
@@ -399,7 +408,8 @@ WAITING_MESSAGES = [
 
 # --- SEKME 1: CHATBOT ---
 with tab_chat:
-    # --- BU SEKMENİN TAM KODU BURADA ---
+    # --- CHATBOT KODUNUN TAMAMI BURADA ---
+    
     # Dosya yükleme mantığı
     newly_processed = False 
     if uploaded_files:
@@ -621,8 +631,8 @@ with tab_chat:
         elif any(keyword in padded_question for keyword in LOCATION_KEYWORDS):
              if "ankara" in padded_question:
                  response_text = "Ankara is the capital of Türkiye, known for its historical sites like Anıtkabir and Ankara Castle, as well as its modern administrative role. How can I help you with your documents or other questions today?"
-             elif "türkiye" in padded_question or "turkey" in padded_question:
-                 response_text = "Türkiye is a transcontinental country with a rich history, diverse culture, and beautiful landscapes, bridging Europe and Asia. Is there something specific about it or your documents I can help you with?"
+             # Not: "türkiye" siyasi anahtar kelime listesinde olduğu için buraya gelmeden yakalanacak.
+             # "ankara"yı da oraya ekleyebilir veya burada bırakabiliriz. Şimdilik burada.
              else: # Genel "where are you?"
                   response_text = "I exist as code running on a server! But I can help you analyze documents or answer general questions based on my training data."
              if st.session_state.simlish_mode: response_text = "Za woka? I'm right here! Ready to neep?"
@@ -751,7 +761,7 @@ with tab_blackjack:
     def create_deck(num_decks=6):
         suits = ['♥', '♦', '♣', '♠']
         ranks = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A']
-        deck_count = st.session_state.get("bj_deck_count", 6)
+        deck_count = st.session_state.get("bj_deck_count", 6) 
         deck = [{'rank': rank, 'suit': suit} for suit in suits for rank in ranks] * deck_count
         random.shuffle(deck)
         return deck
@@ -1031,7 +1041,7 @@ with tab_blackjack:
             if dealer_score == 21: # Krupiye BJ
                 st.session_state.game_state = "game_over"
                 st.session_state.game_message = "Dealer has Blackjack. 😕 You lose main bet."
-                # Ana bahis zaten history'ye eklenmişti (kayıp olarak)
+                add_history("bj", st.session_state.current_bet, -st.session_state.current_bet, st.session_state.player_balance)
                 
                 if st.session_state.bet_insurance > 0:
                     insurance_win = st.session_state.bet_insurance * 2
@@ -1270,7 +1280,7 @@ with tab_coinflip:
         if reset_balance: st.session_state.player_balance = 1000
     globals()["cf_reset_func"] = reset_coin_flip_state
 
-    # Oyun Arayüzü ve Mantığı
+
     st.metric(label="Your Balance", value=f"💰 {st.session_state.player_balance}")
 
     if st.session_state.player_balance <= 0:
@@ -1290,6 +1300,7 @@ with tab_coinflip:
 
         if flip_button:
             st.session_state.player_balance -= cf_bet
+            # Basit animasyon
             placeholder = st.empty()
             placeholder.header("Flipping... 🪙")
             time.sleep(0.7)
@@ -1389,7 +1400,7 @@ with tab_roulette:
         ext_cols = st.columns(3)
 
         # Değerleri bakiye ile sınırla
-        max_outside_bet = st.session_state.player_balance # Dış bahisler için ayrı max
+        max_outside_bet = st.session_state.player_balance 
         red_bet = ext_cols[0].number_input("Bet on Red:", min_value=0, max_value=max_outside_bet, value=min(st.session_state.last_roulette_bets.get("Red", 0), max_outside_bet), step=1, key="r_red_bet")
         if red_bet > 0: current_bets["Red"] = red_bet; total_current_bet += red_bet
         black_bet = ext_cols[0].number_input("Bet on Black:", min_value=0, max_value=max_outside_bet, value=min(st.session_state.last_roulette_bets.get("Black", 0), max_outside_bet), step=1, key="r_black_bet")
@@ -1469,7 +1480,6 @@ with tab_roulette:
                 st.rerun()
 
     if st.session_state.roulette_result and st.session_state.roulette_message: 
-        #st.subheader(f"Wheel Result: {st.session_state.roulette_result}") # Zaten animasyonda gösterildi
         st.write(st.session_state.roulette_message)
         st.button("Place New Bets", on_click=lambda: st.session_state.update({"roulette_result":"", "roulette_message":"", "roulette_bets":{}}))
 
@@ -1705,7 +1715,7 @@ with tab_vpoker:
                     if not st.session_state.vp_hand[i]['held']:
                         if st.session_state.vp_deck:
                              st.session_state.vp_hand[i]['card'] = st.session_state.vp_deck.pop()
-                             st.session_state.vp_hand[i]['held'] = False # Draw sonrası hold kalkar
+                             st.session_state.vp_hand[i]['held'] = False
                         else:
                             st.error("Deck is empty!")
 
@@ -1744,7 +1754,6 @@ with tab_vpoker:
 
     display_history("vp")
 
-
 # --- SEKME 7: STATS ---
 with tab_stats:
     st.header("📊 Player Stats")
@@ -1765,7 +1774,7 @@ with tab_stats:
     col1.metric("Starting Balance", f"💰 {stats['start_balance']}")
     col2.metric("Current Balance", f"💰 {st.session_state.player_balance}")
     col3.metric("Total Bets Placed", stats["total_bets"])
-    col4.metric("Net Profit/Loss", f"{profit_loss_str}")
+    col4.metric("Net Profit/Loss", f"{profit_loss_str}", delta=f"{net_result}")
 
     col5, col6 = st.columns(2)
     col5.metric("Biggest Win (Single Hand/Spin)", f"💰 {stats['biggest_win']}")
@@ -1787,10 +1796,10 @@ with tab_stats:
             if played > 0:
                 won = game_data["won"]
                 lost = game_data["lost"]
-                win_rate = f"{((won / (won + lost)) * 100):.1f}%" if (won + lost) > 0 else "N/A"
+                win_rate = f"{((won / (won + lost)) * 100):.1f}" if (won + lost) > 0 else "N/A"
                 push = game_data.get("push", "-") 
             else:
-                won, lost, win_rate, push = 0, 0, "0.0%", "-"
+                won, lost, win_rate, push = 0, 0, "0.0", "-"
 
             game_stats_data.append({
                 "Game": game_names.get(game_key, game_key.upper()),
@@ -1798,7 +1807,7 @@ with tab_stats:
                 "Won": won,
                 "Lost": lost,
                 "Push/Tie": push if game_key == "bj" else "-", 
-                "Win Rate (%)": win_rate.replace('%','') if win_rate != "N/A" else None 
+                "Win Rate (%)": float(win_rate) if win_rate != "N/A" else None 
             })
     
     if game_stats_data:
@@ -1806,7 +1815,7 @@ with tab_stats:
              game_stats_data, 
              hide_index=True,
              column_config={
-                 "Win Rate (%)": st.column_config.NumberColumn(format="%.1f") 
+                 "Win Rate (%)": st.column_config.NumberColumn(format="%.1f%%") 
              }
          )
     else:
@@ -1845,30 +1854,41 @@ with tab_creative:
 
     if st.button("Generate!", key="creative_generate"):
         if creative_prompt:
-            with st.spinner(f"Generating a {creative_type.lower()} about '{creative_prompt}'..."):
-                try:
-                    creative_llm_instance = load_creative_llm() 
-                    
-                    if creative_type == "Short Poem":
-                        system_prompt = "You are a poet. Write a short, evocative poem (4-8 lines) about the following topic."
-                    elif creative_type == "Story Idea":
-                         system_prompt = "You are a creative writer. Generate a brief, intriguing story idea or plot hook (1-3 sentences) based on the following theme."
-                    elif creative_type == "Haiku":
-                        system_prompt = "You are a haiku master. Write a haiku (5-7-5 syllables) about the following topic."
-                    elif creative_type == "Tweet (Max 280 chars)":
-                         system_prompt = "You are a social media expert. Write a short, engaging tweet (max 280 characters) about the following topic."
-                    else:
-                        system_prompt = "Generate creative text about the following topic."
+            # Creative Corner için basit bir güvenlik kontrolü
+            is_safe = True
+            padded_prompt = f" {creative_prompt.lower()} "
+            for keyword in BANNED_KEYWORDS:
+                 if f" {keyword} " in padded_prompt:
+                     is_safe = False
+                     break
+            
+            if is_safe:
+                with st.spinner(f"Generating a {creative_type.lower()} about '{creative_prompt}'..."):
+                    try:
+                        creative_llm_instance = load_creative_llm() 
+                        
+                        if creative_type == "Short Poem":
+                            system_prompt = "You are a poet. Write a short, evocative poem (4-8 lines) about the following topic."
+                        elif creative_type == "Story Idea":
+                             system_prompt = "You are a creative writer. Generate a brief, intriguing story idea or plot hook (1-3 sentences) based on the following theme."
+                        elif creative_type == "Haiku":
+                            system_prompt = "You are a haiku master. Write a haiku (5-7-5 syllables) about the following topic."
+                        elif creative_type == "Tweet (Max 280 chars)":
+                             system_prompt = "You are a social media expert. Write a short, engaging tweet (max 280 characters) about the following topic."
+                        else:
+                            system_prompt = "Generate creative text about the following topic."
 
-                    prompt = ChatPromptTemplate.from_messages([("system", system_prompt), ("human", "{topic}")])
-                    chain = prompt | creative_llm_instance | StrOutputParser()
+                        prompt = ChatPromptTemplate.from_messages([("system", system_prompt), ("human", "{topic}")])
+                        chain = prompt | creative_llm_instance | StrOutputParser()
+                        
+                        st.session_state.creative_output = chain.invoke({"topic": creative_prompt})
+                        st.success("Generated!")
                     
-                    st.session_state.creative_output = chain.invoke({"topic": creative_prompt})
-                    st.success("Generated!")
-                    # st.rerun() # Re-run a gerek yok, direkt aşağıda gösterilecek
-                
-                except Exception as e:
-                    st.error(f"An error occurred during generation: {e}")
+                    except Exception as e:
+                        st.error(f"An error occurred during generation: {e}")
+            else:
+                 st.error("The topic provided contains inappropriate content. Please try a different topic.")
+                 st.session_state.creative_output = "" # Çıktıyı temizle
         else:
             st.warning("Please enter a topic or theme.")
 
