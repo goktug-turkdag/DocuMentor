@@ -9,9 +9,7 @@ from langchain_community.vectorstores import Chroma
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_google_genai import ChatGoogleGenerativeAI # Chat modeli
 from langchain.chains import ConversationalRetrievalChain # Hafızalı zincir
-# --- DÜZELTME: Import yolu güncellendi ---
-from langchain.chains.summarize import create_summarization_chain # YENİ: Özetleyici için
-# --- DÜZELTME BİTTİ ---
+# --- ÖZETLEYİCİ IMPORT'U ÇIKARILDI ---
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.schema import Document
 from langchain.prompts import PromptTemplate
@@ -68,7 +66,7 @@ def load_default_retriever(_embeddings):
         )
     return vector_store.as_retriever(search_kwargs={'k': 3})
 
-# --- YENİ ÖZELLİK: ÇOKLU DOSYA İŞLEME ---
+# --- ÇOKLU DOSYA İŞLEME ---
 @st.cache_data(max_entries=1)
 def process_uploaded_files(uploaded_files):
     """
@@ -154,11 +152,10 @@ Question:
 Simlish Answer:
 """
 
-# --- 2. WEB ARAYÜZÜ (SEKMELİ YAPI) ---
+# --- 2. WEB ARAYÜZÜ (Sekmeler kaldırıldı) ---
 st.title("DocuMentor 📄")
+st.markdown("An intelligent Q&A chatbot built with RAG. Chat with the default knowledge base (Dolly-15k) or upload your own documents in the sidebar.")
 
-# --- YENİ ÖZELLİK: SEKMELER (CHAT vs. ÖZETLEYİCİ) ---
-tab_chat, tab_summarize = st.tabs(["💬 Chatbot", "✍️ Document Summarizer"])
 
 # --- Sidebar ---
 with st.sidebar:
@@ -210,171 +207,110 @@ if "messages" not in st.session_state:
     """
     st.session_state.messages.append({"role": "assistant", "content": welcome_message})
 
-# --- SEKME 1: CHATBOT ---
-with tab_chat:
+# --- SEKME 1: CHATBOT (Artık tek ana sayfa) ---
     
-    if uploaded_files:
-        new_file_names = [f.name for f in uploaded_files]
-        if "processed_files" not in st.session_state or st.session_state.processed_files != new_file_names:
-            with st.spinner(f"Processing {len(uploaded_files)} files..."):
-                file_retriever = process_uploaded_files(uploaded_files)
-                if file_retriever:
-                    st.session_state.file_retriever = file_retriever
-                    st.session_state.processed_files = new_file_names
-                    
-                    file_names_str = ", ".join(st.session_state.processed_files)
-                    st.session_state.messages = [{"role": "assistant", "content": f"OK, I'm ready to answer questions about: '{file_names_str}'."}]
-                    st.session_state.chat_history = []
-                    st.rerun()
-
-    if st.session_state.file_retriever is not None:
-        active_retriever = st.session_state.file_retriever
-        file_names_str = ", ".join(st.session_state.processed_files)
-        st.caption(f"ℹ️ *Querying document(s): {file_names_str}*")
-    else:
-        active_retriever = default_retriever
-
-    if st.session_state.simlish_mode:
-        PROMPT_TEMPLATE = simlish_prompt_template
-        st.caption("✨ *Simlish mode active! Za woka?*")
-    else:
-        PROMPT_TEMPLATE = default_prompt_template
-
-    COMBINE_DOCS_PROMPT = PromptTemplate.from_template(PROMPT_TEMPLATE)
-
-    rag_chain = ConversationalRetrievalChain.from_llm(
-        llm=llm,
-        retriever=active_retriever,
-        combine_docs_chain_kwargs={"prompt": COMBINE_DOCS_PROMPT},
-        return_source_documents=True
-    )
-
-    avatars = {"human": "👤", "assistant": "👽" if st.session_state.simlish_mode else "🤖"}
-
-    for message in st.session_state.messages:
-        with st.chat_message(message["role"], avatar=avatars.get(message["role"])):
-            st.markdown(message["content"])
-            if "sources" in message:
-                with st.expander("Sources considered:"):
-                    for src in message["sources"]:
-                        st.markdown(f"*{src.page_content[:200]}...*")
-
-    if user_question := st.chat_input("Ask a question..."):
-        st.chat_message("human", avatar=avatars["human"]).markdown(user_question)
-        st.session_state.messages.append({"role": "human", "content": user_question})
-
-        lower_question = user_question.lower()
-        creator_keywords = ["göktuğ", "türkdağ", "geliştirici", "developer", "who made you", "who created you"]
-
-        if any(keyword in lower_question for keyword in creator_keywords):
-            response_text = f"""
-            Ah, a great question! I was developed by **Göktuğ Türkdağ**. 🤖
-            He's a developer specializing in RAG architectures, LLMs, and Python. 
-            You can find him here:
-            🔗 **LinkedIn:** [linkedin.com/in/goktugturkdag](https://www.linkedin.com/in/goktugturkdag)
-            🐙 **GitHub:** [github.com/goktug-turkdag](https://github.com/goktug-turkdag)
-            """
-            
-            with st.chat_message("assistant", avatar=avatars["assistant"]):
-                st.markdown(response_text)
-            st.session_state.messages.append({"role": "assistant", "content": response_text})
-            st.session_state.chat_history.append(HumanMessage(content=user_question))
-            st.session_state.chat_history.append(AIMessage(content=response_text))
-
-        else:
-            spinner_text = "Searching for the answer... (Chumcha!)" if st.session_state.simlish_mode else "Searching for the answer..."
-            
-            with st.chat_message("assistant", avatar=avatars["assistant"]):
-                response_container = st.empty()
-
-                # Stream generator fonksiyonu (SyntaxError Düzeltmesi ile)
-                def stream_generator():
-                    full_response = ""
-                    sources = []
-                    
-                    stream = rag_chain.stream({
-                        "question": user_question,
-                        "chat_history": st.session_state.chat_history
-                    })
-                    
-                    for chunk in stream:
-                        if "answer" in chunk:
-                            full_response += chunk["answer"]
-                            yield full_response + "▌" 
-                        if "source_documents" in chunk:
-                            sources = chunk["source_documents"]
-                    
-                    yield full_response
-                    return full_response, sources
-
-                returned_values = st.write_stream(stream_generator())
-
-                if returned_values:
-                    full_response, sources = returned_values
-                else:
-                    full_response = "Sorry, I couldn't generate a response."
-                    sources = []
+if uploaded_files:
+    new_file_names = [f.name for f in uploaded_files]
+    if "processed_files" not in st.session_state or st.session_state.processed_files != new_file_names:
+        with st.spinner(f"Processing {len(uploaded_files)} files..."):
+            file_retriever = process_uploaded_files(uploaded_files)
+            if file_retriever:
+                st.session_state.file_retriever = file_retriever
+                st.session_state.processed_files = new_file_names
                 
-            st.session_state.messages.append({"role": "assistant", "content": full_response, "sources": sources})
-            st.session_state.chat_history.append(HumanMessage(content=user_question))
-            st.session_state.chat_history.append(AIMessage(content=full_response))
+                file_names_str = ", ".join(st.session_state.processed_files)
+                st.session_state.messages = [{"role": "assistant", "content": f"OK, I'm ready to answer questions about: '{file_names_str}'."}]
+                st.session_state.chat_history = []
+                st.rerun()
 
-# --- SEKME 2: DOKÜMAN ÖZETLEYİCİ ---
-with tab_summarize:
-    st.header("✍️ Document Summarizer")
-    st.markdown("Upload a document (PDF, DOCX, TXT) and get a quick summary.")
-    
-    summary_file = st.file_uploader(
-        "Upload a document for summary:", 
-        type=["pdf", "docx", "txt"], 
-        key="summarizer_file"
-    )
-    
-    summary_type = st.selectbox(
-        "Select summary type:",
-        ["Brief Paragraph", "Bullet Points (Top 5)", "One-sentence Headline"],
-        key="summary_type"
-    )
-    
-    if st.button("Generate Summary", key="summarize_button"):
-        if summary_file:
-            with st.spinner(f"Summarizing '{summary_file.name}'..."):
-                try:
-                    with tempfile.NamedTemporaryFile(delete=False, suffix=f".{summary_file.name.split('.')[-1]}") as temp_file:
-                        temp_file.write(summary_file.getvalue())
-                        temp_path = temp_file.name
+if st.session_state.file_retriever is not None:
+    active_retriever = st.session_state.file_retriever
+    file_names_str = ", ".join(st.session_state.processed_files)
+    st.caption(f"ℹ️ *Querying document(s): {file_names_str}*")
+else:
+    active_retriever = default_retriever
 
-                    if summary_file.name.endswith(".pdf"):
-                        loader = PyPDFLoader(temp_path)
-                    elif summary_file.name.endswith(".docx"):
-                        loader = Docx2txtLoader(temp_path)
-                    else:
-                        loader = TextLoader(temp_path, encoding="utf-8")
-                    
-                    docs = loader.load()
-                    
-                    summarize_chain = create_summarization_chain(llm, chain_type="map_reduce")
-                    
-                    if summary_type == "Bullet Points (Top 5)":
-                        prompt_instruction = "Generate a concise summary of the key findings in 5 bullet points."
-                    elif summary_type == "One-sentence Headline":
-                        prompt_instruction = "Generate a single, descriptive headline for this document."
-                    else:
-                        prompt_instruction = "Generate a brief, one-paragraph summary of this document."
-                    
-                    summary_output = summarize_chain.invoke({
-                        "input_documents": docs, 
-                        "question": prompt_instruction
-                    })
-                    
-                    st.success("Summary Generated!")
-                    st.markdown(f"### {summary_type}")
-                    st.markdown(summary_output.get("output_text", "Could not generate summary."))
+if st.session_state.simlish_mode:
+    PROMPT_TEMPLATE = simlish_prompt_template
+    st.caption("✨ *Simlish mode active! Za woka?*")
+else:
+    PROMPT_TEMPLATE = default_prompt_template
+
+COMBINE_DOCS_PROMPT = PromptTemplate.from_template(PROMPT_TEMPLATE)
+
+rag_chain = ConversationalRetrievalChain.from_llm(
+    llm=llm,
+    retriever=active_retriever,
+    combine_docs_chain_kwargs={"prompt": COMBINE_DOCS_PROMPT},
+    return_source_documents=True
+)
+
+avatars = {"human": "👤", "assistant": "👽" if st.session_state.simlish_mode else "🤖"}
+
+for message in st.session_state.messages:
+    with st.chat_message(message["role"], avatar=avatars.get(message["role"])):
+        st.markdown(message["content"])
+        if "sources" in message:
+            with st.expander("Sources considered:"):
+                for src in message["sources"]:
+                    st.markdown(f"*{src.page_content[:200]}...*")
+
+if user_question := st.chat_input("Ask a question..."):
+    st.chat_message("human", avatar=avatars["human"]).markdown(user_question)
+    st.session_state.messages.append({"role": "human", "content": user_question})
+
+    lower_question = user_question.lower()
+    creator_keywords = ["göktuğ", "türkdağ", "geliştirici", "developer", "who made you", "who created you"]
+
+    if any(keyword in lower_question for keyword in creator_keywords):
+        response_text = f"""
+        Ah, a great question! I was developed by **Göktuğ Türkdağ**. 🤖
+        He's a developer specializing in RAG architectures, LLMs, and Python. 
+        You can find him here:
+        🔗 **LinkedIn:** [linkedin.com/in/goktugturkdag](https://www.linkedin.com/in/goktugturkdag)
+        🐙 **GitHub:** [github.com/goktug-turkdag](https://github.com/goktug-turkdag)
+        """
+        
+        with st.chat_message("assistant", avatar=avatars["assistant"]):
+            st.markdown(response_text)
+        st.session_state.messages.append({"role": "assistant", "content": response_text})
+        st.session_state.chat_history.append(HumanMessage(content=user_question))
+        st.session_state.chat_history.append(AIMessage(content=response_text))
+
+    else:
+        spinner_text = "Searching for the answer... (Chumcha!)" if st.session_state.simlish_mode else "Searching for the answer..."
+        
+        with st.chat_message("assistant", avatar=avatars["assistant"]):
+            response_container = st.empty()
+
+            # Stream generator fonksiyonu
+            def stream_generator():
+                full_response = ""
+                sources = []
                 
-                except Exception as e:
-                    st.error(f"An error occurred during summarization: {e}")
-                finally:
-                    if 'temp_path' in locals() and os.path.exists(temp_path):
-                        os.remove(temp_path)
-        else:
-            st.warning("Please upload a document to summarize.")
+                stream = rag_chain.stream({
+                    "question": user_question,
+                    "chat_history": st.session_state.chat_history
+                })
+                
+                for chunk in stream:
+                    if "answer" in chunk:
+                        full_response += chunk["answer"]
+                        yield full_response + "▌" 
+                    if "source_documents" in chunk:
+                        sources = chunk["source_documents"]
+                
+                yield full_response
+                return full_response, sources
+
+            returned_values = st.write_stream(stream_generator())
+
+            if returned_values:
+                full_response, sources = returned_values
+            else:
+                full_response = "Sorry, I couldn't generate a response."
+                sources = []
+            
+        st.session_state.messages.append({"role": "assistant", "content": full_response, "sources": sources})
+        st.session_state.chat_history.append(HumanMessage(content=user_question))
+        st.session_state.chat_history.append(AIMessage(content=full_response))
