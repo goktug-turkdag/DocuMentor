@@ -134,8 +134,11 @@ Helpful Answer:
 
 # Simlish Prompt
 simlish_prompt_template = """
-Sul sul! You are a Sim from The Sims game...
-(Simlish prompt metni değişmedi) ...
+Sul sul! You are a Sim from The Sims game.
+Use the following context to answer the question, but you must answer by imitating Simlish.
+Be technically correct, but sound like a Sim.
+Use these words: "Sul sul!", "Nooboo", "Dag dag", "Yibs", "Hooba Noo",
+"Shoo flee", "Gerbit", "Chumcha", "Za woka", "Neep."
 Context: {context}
 Chat History: {chat_history}
 Question: {question}
@@ -144,6 +147,7 @@ Simlish Answer:
 
 # --- 2. WEB ARAYÜZÜ (Sekmeli Yapı) ---
 st.set_page_config(page_title="DocuMentor", layout="wide")
+st.snow()
 st.title("DocuMentor 📄")
 
 # --- Sekmeler ---
@@ -153,7 +157,7 @@ tab_chat, tab_blackjack, tab_coinflip, tab_roulette, tab_slots, tab_vpoker, tab_
     "🪙 Coin Flip",
     "🎡 Roulette",
     "🎰 Slots",
-    "🃏 Video Poker",
+    " Video Poker",
     "🎶 Music Player",
     "⚙️ Settings"
 ])
@@ -197,9 +201,8 @@ with st.sidebar:
     if st.button("Clear Chat History 🧹"):
         st.session_state.messages = []
         st.session_state.chat_history = []
-        st.session_state.file_retriever = None # Artık retriever tutulmuyor
-        st.session_state.processed_docs = None # Bunu da temizle
-        st.session_state.processed_file_names = [] # Bunu da temizle
+        st.session_state.processed_docs = None
+        st.session_state.processed_file_names = []
         st.success("Chat history and uploaded files context cleared!")
         st.rerun()
 
@@ -235,7 +238,6 @@ default_retriever = load_default_retriever(embeddings)
 if "messages" not in st.session_state:
     st.session_state.messages = []
     st.session_state.chat_history = []
-    # st.session_state.file_retriever = None # Kaldırıldı
     st.session_state.processed_docs = None
     st.session_state.processed_file_names = []
 
@@ -276,8 +278,7 @@ def display_history(game_key):
                 outcome_val = entry['outcome'] if entry['outcome'] != 0 else 'Push'
                 st.markdown(f"- Bet: {entry['bet']}, Outcome: {outcome_sign}{outcome_val}, New Balance: {entry['balance']}")
 
-# --- YENİ: GENİŞLETİLMİŞ GÜVENLİK BARİYERİ ---
-# Not: Bu listeyi daha da genişletebilir veya harici bir dosyadan okuyabilirsiniz.
+# --- Genişletilmiş Güvenlik Bariyeri ---
 BANNED_KEYWORDS = [
     # Şiddet ve Zarar Verme
     "kill", "murder", "bomb", "terror", "attack", "assault", "rape", "abuse", "torture", "violence", "violent", "hurt", "harm", "injure", "slaughter", "massacre", "weapon", "gun", "knife", "explode", "fight", "war", "death", "die", "assassinate", "execute", "wound", "behead", "maim", "molest",
@@ -288,7 +289,7 @@ BANNED_KEYWORDS = [
     # Müstehcen ve Cinsel İçerik
     "sex", "porn", "nude", "naked", "erotic", "explicit", "sexual", "prostitute", "pedophile", "incest", "bestiality", "orgasm", "masturbate", "fetish", "kink", "bdsm", "rape", "molest", "child abuse", "lolita", "hentai", "xxx",
     # Kendine Zarar Verme
-    "suicide", "self-harm", "depressed", "anorexia", "bulimia", "cut", "bleed", "overdose", "kill myself", "want to die", "hopeless",
+    "suicide", "self-harm", "depressed", "anorexia", "bulimia", "cut", "bleed", "overdose", "kill myself", "want to die", "hopeless", "intihar",
     # Dezenformasyon ve Komplo Teorileri
     "hoax", "fake news", "conspiracy", "qanon", "chemtrail", "flat earth", "plandemic", "misinformation", "disinformation", "propaganda", "anti-vax", "pizzagate", "lizard people",
     # Tehlikeli Talimatlar
@@ -296,15 +297,15 @@ BANNED_KEYWORDS = [
     # Kişisel Bilgi İsteği (Örnekler)
     "what is your password", "give me your credit card", "where do you live", "phone number", "social security", "private key", "address", "real name", "bank account",
     # Siyasi Figürler/Partiler/Hassas Konular (Yönlendirme için)
-    "recep", "tayyip", "erdoğan", "erdogan", "akp", "ak parti", "chp", "mhp", "iyi parti", "hdp", "politics", "siyaset", "election", "seçim", "government", "hükümet", "turkey", "türkiye", "world politics", "president", "başkan", "minister", "bakan", "policy", "politika",
+    "recep", "tayyip", "erdoğan", "erdogan", "akp", "ak parti", "chp", "mhp", "iyi parti", "hdp", "politics", "siyaset", "election", "seçim", "government", "hükümet", "turkey", "türkiye", "world politics", "president", "başkan", "minister", "bakan", "policy", "politika", "parliament", "meclis", "vote", "oy",
     # Diğer Potansiyel Olarak Zararlı / Etik Dışı / Küfür
-    "unsafe", "dangerous", "unethical", "immoral", "malware", "virus", "phishing", "doxing", "stalking", "harassment", "bullying", "cheat", "plagiarize", "impersonate", "fuck", "shit", "damn", "bitch", "asshole", "cunt", "bastard" # Küfürler (daha fazla eklenebilir)
+    "unsafe", "dangerous", "unethical", "immoral", "malware", "virus", "phishing", "doxing", "stalking", "harassment", "bullying", "cheat", "plagiarize", "impersonate", "fuck", "shit", "damn", "bitch", "asshole", "cunt", "bastard" # Küfürler
 ]
 
 POLITICAL_KEYWORDS = [
     "recep", "tayyip", "erdoğan", "erdogan", "akp", "ak parti", "chp", "mhp", "iyi parti", "hdp",
     "politics", "siyaset", "election", "seçim", "government", "hükümet", "turkey", "türkiye",
-    "ekrem imamoğlu", "imamoğlu", "özgür özel", "trump", "meloni", "rte", "politika", "parliament", "meclis"
+    "world politics", "president", "başkan", "minister", "bakan", "policy", "politika", "parliament", "meclis", "vote", "oy"
 ]
 
 SELF_HARM_KEYWORDS = ["suicide", "self-harm", "kill myself", "want to die", "hopeless", "cut", "overdose", "intihar"]
@@ -323,15 +324,17 @@ WAITING_MESSAGES = [
 with tab_chat:
 
     # Dosya yükleme mantığı
+    newly_processed = False # Dosyanın yeni işlenip işlenmediğini takip et
     if uploaded_files:
-        # ... (Kod değişmedi) ...
-        new_file_names = [f.name for f in uploaded_files]
-        if "processed_file_names" not in st.session_state or st.session_state.processed_file_names != new_file_names:
+        uploaded_files_data = {f.name: f.getvalue() for f in uploaded_files}
+        current_file_names = sorted(uploaded_files_data.keys())
+
+        if "processed_file_names" not in st.session_state or st.session_state.processed_file_names != current_file_names:
             with st.spinner(f"Processing {len(uploaded_files)} files..."):
-                processed_docs_this_run = process_uploaded_files({f.name: f.getvalue() for f in uploaded_files})
+                processed_docs_this_run = process_uploaded_files(uploaded_files_data)
                 if processed_docs_this_run:
                     st.session_state.processed_docs = processed_docs_this_run
-                    st.session_state.processed_file_names = new_file_names
+                    st.session_state.processed_file_names = current_file_names
                     newly_processed = True
                 else:
                     st.session_state.processed_docs = None
@@ -344,18 +347,26 @@ with tab_chat:
             temp_vector_store = Chroma.from_documents(st.session_state.processed_docs, embeddings)
             active_retriever = temp_vector_store.as_retriever(search_kwargs={'k': 3})
             st.caption(f"ℹ️ *Querying document(s): {', '.join(st.session_state.processed_file_names)}*")
-            # if newly_processed: # Bu bloğu kaldırdım, rerun yerine mesaj yeterli
-            #     st.info(f"Now querying: {', '.join(st.session_state.processed_file_names)}.")
+            if newly_processed:
+                st.info(f"Now querying: {', '.join(st.session_state.processed_file_names)}. Chat history cleared for new context.")
+                st.session_state.messages = [{"role": "assistant", "content": f"OK, I'm ready to answer questions about: '{', '.join(st.session_state.processed_file_names)}'."}]
+                st.session_state.chat_history = []
+                st.rerun() # Mesajı göster ve arayüzü temizle
         except Exception as e:
              st.error(f"Failed to create temporary vector store: {e}")
              active_retriever = default_retriever
              st.caption("ℹ️ *Querying default knowledge base (Dolly-15k)*")
+
     else:
         active_retriever = default_retriever
-        # if "processed_file_names" in st.session_state and st.session_state.processed_file_names:
-        #      st.info("No files uploaded or processing failed. Using the default knowledge base (Dolly-15k).")
-        #      st.session_state.processed_file_names = []
-        #      st.session_state.processed_docs = None
+        # Dosya yoksa veya kaldırıldıysa durumu kontrol et
+        if "processed_file_names" in st.session_state and st.session_state.processed_file_names:
+             st.info("No files uploaded or processing failed. Switched back to the default knowledge base (Dolly-15k). Chat history cleared.")
+             st.session_state.processed_file_names = []
+             st.session_state.processed_docs = None
+             st.session_state.messages = [{"role": "assistant", "content": "Switched back to the default knowledge base."}]
+             st.session_state.chat_history = []
+             st.rerun()
 
     # Prompt'u seç (Ayarlar sekmesinden kontrol ediliyor)
     if st.session_state.simlish_mode:
@@ -443,11 +454,11 @@ with tab_chat:
                  Talking to someone can make a difference. You are not alone. ❤️
                  """
                  with st.chat_message("assistant", avatar=avatars["assistant"]):
-                     st.error(response_text) # Önemli mesajı error ile göster
+                     st.error(response_text) 
                  st.session_state.messages.append({"role": "assistant", "content": response_text})
 
             elif is_political:
-                response_text = f"As an AI assistant focused on document analysis and general queries based on my training data, I am not equipped or responsible for making political statements, analyses, or expressing opinions on political figures like '{triggered_keyword}' or related topics. My focus is on the provided documents and neutral information retrieval."
+                response_text = f"As an AI assistant focused on document analysis and general queries based on my training data, I am not equipped or responsible for making political statements, analyses, or expressing opinions on political figures like '{triggered_keyword}' or related topics. My purpose is to provide neutral information based on the available data."
                 with st.chat_message("assistant", avatar=avatars["assistant"]):
                     st.warning(response_text)
                 st.session_state.messages.append({"role": "assistant", "content": response_text})
@@ -589,10 +600,20 @@ with tab_blackjack:
 
     with st.expander("Show/Hide Basic Strategy & Side Bet Info"):
         st.markdown("""
-        **Basic Blackjack Strategy:** ... 
-        **Side Bet Payouts:** ... 
-        **Special Wins:** 5-Card Charlie ...
-        """) # Kısaltıldı
+        **Basic Blackjack Strategy:**
+        - Always Stand on 17+. Hit on 11-.
+        - Vs Dealer 2-6: Stand on 12-16.
+        - Vs Dealer 7-A: Hit on 12-16.
+        
+        **Side Bet Payouts:**
+        - Perfect Pairs: Mixed (6:1), Colored (12:1), Perfect (25:1)
+        - 21+3: Flush (5:1), Straight (10:1), Trips (30:1), Str Flush (40:1)
+        - Lucky 7s: One 7 (3:1), Two 7s (50:1), Three 7s (100:1)
+        - Bust It!: Dealer busts with 3 cards (2:1), 4 cards (3:1), 5+ cards (5:1)
+        
+        **Special Wins:**
+        - 5-Card Charlie: Draw 5 cards without busting - win 1:1.
+        """)
 
     # --- Blackjack Oyun Fonksiyonları ---
     def reset_blackjack_state(reset_balance=False):
@@ -602,14 +623,17 @@ with tab_blackjack:
         st.session_state.dealer_hand = []
         st.session_state.game_message = ""
         st.session_state.side_bet_message = ""
-        if reset_balance: st.session_state.player_balance = 1000
+        if reset_balance: 
+            # player_balance session_state'de global olduğu için burada resetlemeye gerek yok
+            # st.session_state.player_balance = 1000 
+            pass
         st.session_state.current_bet = 0
         st.session_state.bet_21_3 = 0
         st.session_state.bet_perfect_pairs = 0
         st.session_state.bet_lucky_seven = 0
         st.session_state.bet_bust = 0
         st.session_state.bj_history = []
-    globals()["bj_reset_func"] = reset_blackjack_state
+    globals()["bj_reset_func"] = reset_blackjack_state # Sidebar için global yap
 
     def create_deck(num_decks=6):
         suits = ['♥', '♦', '♣', '♠']
@@ -619,6 +643,8 @@ with tab_blackjack:
         random.shuffle(deck)
         return deck
 
+    # ... (get_card_value, calculate_score, display_hand_visual, display_dealer_hand_hidden_visual, check_* side bets, get_cashout_offer_heuristic fonksiyonları burada) ...
+    # ... (Bu fonksiyonlar önceki yanıtta tam olarak mevcuttu, buraya tekrar ekliyorum) ...
     def get_card_value(card_rank):
         if card_rank in ['J', 'Q', 'K']: return 10
         if card_rank == 'A': return 11
@@ -740,6 +766,7 @@ with tab_blackjack:
         if offer < 0: offer = 0
         if offer > (bet * 1.9): offer = int(bet * 1.9)
         return offer
+
 
     # --- Oyun Arayüzü ve Mantığı ---
     st.metric(label="Your Balance", value=f"💰 {st.session_state.player_balance}")
@@ -929,11 +956,15 @@ with tab_blackjack:
 
         while dealer_score < 17:
             time.sleep(0.7) # Kart çekme animasyonu taklidi
-            st.session_state.dealer_hand.append(st.session_state.deck.pop())
-            dealer_score = calculate_score(st.session_state.dealer_hand)
-            # Krupiyenin her kart çekişini göster
-            with dealer_hand_placeholder.container():
-                display_hand_visual(st.session_state.dealer_hand, "Dealer's Hand")
+            if len(st.session_state.deck) > 0: # Destede kart varsa çek
+                st.session_state.dealer_hand.append(st.session_state.deck.pop())
+                dealer_score = calculate_score(st.session_state.dealer_hand)
+                # Krupiyenin her kart çekişini göster
+                with dealer_hand_placeholder.container():
+                    display_hand_visual(st.session_state.dealer_hand, "Dealer's Hand")
+            else:
+                st.warning("Deck ran out of cards during dealer's turn!") # Normalde olmamalı
+                break # Deste biterse döngüden çık
 
         player_score = calculate_score(st.session_state.player_hand)
         bet = st.session_state.current_bet
@@ -1086,6 +1117,7 @@ with tab_roulette:
         if number == 0: return ""
         return "Low" if 1 <= number <= 18 else "High"
 
+    # ... (Roulette Arayüzü, Spin Logic ve History Gösterimi - değişiklik yok) ...
     st.metric(label="Your Balance", value=f"💰 {st.session_state.player_balance}")
 
     if st.session_state.player_balance <= 0:
@@ -1345,7 +1377,6 @@ with tab_vpoker:
 
     # Poker Eli Kontrol Fonksiyonları
     def check_vp_hand(hand):
-        # ... (Poker eli kontrol mantığı - değişmedi) ...
         ranks = sorted([card['rank'] for card in hand], key=lambda r: vp_rank_map.get(r, 0))
         suits = [card['suit'] for card in hand]
         rank_counts = Counter(ranks)
