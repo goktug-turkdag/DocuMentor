@@ -74,7 +74,7 @@ def setup_rag_pipeline():
             )
 
     with st.spinner("Initializing the language model and RAG chain..."):
-        llm = GoogleGenerativeAI(model="gemini-1.5-pro-latest")
+        llm = GoogleGenerativeAI(model="gemini-flash-latest")
         
         # Retriever'ı en alakalı 3 sonucu getirecek şekilde ayarla
         retriever = vector_store.as_retriever(search_kwargs={'k': 3})
