@@ -7,26 +7,26 @@ from langchain_google_genai import GoogleGenerativeAI
 from langchain.chains import RetrievalQA
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.schema import Document
-from langchain.prompts import PromptTemplate  # Prompt şablonunu import ediyoruz
+from langchain.prompts import PromptTemplate
 import os
 
-# --- 1. KURULUM VE VERİ YÜKLEME ---
+# --- 1. SETUP AND DATA LOADING ---
 
-# API anahtarını .env dosyasından yükle
+# Load API key from .env
 load_dotenv()
 if "GOOGLE_API_KEY" not in os.environ:
     st.error("GOOGLE_API_KEY not found. Please check your .env file.")
     st.stop()
 
-# Kalıcı veritabanının saklanacağı klasör
+# Directory for the persistent database
 PERSIST_DIRECTORY = "chroma_db_multilingual"
 
-# --- YENİ MİMARİ: PAHALI KISIMLARI ÖNBELLEĞE AL ---
+# --- NEW ARCHITECTURE: CACHE EXPENSIVE PARTS ---
 
 @st.cache_resource
 def load_vector_store():
     """
-    SADECE pahalı olan veritabanı yükleme/oluşturma işini yapar.
+    Loads/creates ONLY the expensive vector database.
     """
     with st.spinner("Loading multilingual embedding model... (Hooba Noo!)"):
         embeddings = HuggingFaceEmbeddings(
@@ -40,7 +40,7 @@ def load_vector_store():
                 embedding_function=embeddings
             )
     else:
-        # Veritabanı yoksa oluştur (ilk çalıştırma)
+        # Create DB if it doesn't exist (first run)
         with st.spinner("Creating knowledge base for the first time..."):
             st.info("First-time setup: The knowledge base will be created...")
             dataset = load_dataset("databricks/databricks-dolly-15k", split="train")
@@ -63,75 +63,102 @@ def load_vector_store():
 @st.cache_resource
 def load_llm():
     """
-    SADECE dil modelini (LLM) yükler ve önbelleğe alır.
+    Loads AND caches the language model (LLM).
     """
-    # Listenizden onaylanan modeli kullanıyoruz
+    # Use the model confirmed from your model list
     return GoogleGenerativeAI(model="gemini-pro-latest")
 
-# --- PROMPT ŞABLONLARINI TANIMLA ---
+# --- DEFINE PROMPT TEMPLATES (IN ENGLISH) ---
 
-# Normal (Varsayılan) Cevap Şablonu
+# Default (Normal) Prompt Template
 default_prompt_template = """
-Aşağıdaki bağlamı kullanarak soruyu cevaplayın. 
-Eğer bilmiyorsanız, bilmediğinizi söyleyin. Bağlama sadık kalın.
+Use the following context to answer the question.
+If you don't know the answer, just say you don't know. Stick to the context.
 
-Bağlam:
+Context:
 {context}
 
-Soru:
+Question:
 {question}
 
-Yardımcı Cevap:
+Helpful Answer:
 """
 
-# Simlish (Eğlenceli) Cevap Şablonu
+# Simlish (Fun) Prompt Template
 simlish_prompt_template = """
-Sul sul! (Merhaba!) Sen, The Sims oyunundan bir Sim'sin ve DocuMentor'un yardımcısısın.
-Aşağıdaki bağlamı (context) kullanarak sana sorulan soruyu (question) cevaplamalısın.
+Sul sul! (Hello!) You are a Sim from The Sims game, acting as the DocuMentor assistant.
+You must answer the question based on the following context.
 
-ÖNEMLİ KURAL: Cevabın teknik olarak doğru olmalı (bağlamı kullanmalı), 
-ancak cevabı Sim dilini (Simlish) taklit ederek vermelisin.
-Cevabında bol bol "Sul sul!", "Nooboo", "Dag dag", "Yibs", "Hooba Noo", 
-"Shoo flee", "Gerbit", "Chumcha", "Za woka", "Neep" kelimelerini kullan.
+IMPORTANT RULE: Your answer must be technically correct (using the context),
+but you must deliver it by imitating the Simlish language.
+Use these words generously: "Sul sul!", "Nooboo", "Dag dag", "Yibs", "Hooba Noo", 
+"Shoo flee", "Gerbit", "Chumcha", "Za woka", "Neep."
 
-Bağlam:
+Context:
 {context}
 
-Soru:
+Question:
 {question}
 
-Sim Dili Cevabın:
+Simlish Answer:
 """
 
-# --- 2. WEB ARAYÜZÜ (GÜNCELLENMİŞ) ---
+# --- 2. WEB INTERFACE (UPDATED) ---
 
 st.title("DocuMentor 📄")
-st.markdown("Akıllı bir Soru-Cevap Chatbot'u. Başlamak için bir soru sorun.")
+st.markdown("An intelligent Q&A Chatbot. Ask a question about the knowledge base to get started.")
 
-# --- YENİ: Simlish Modu Düğmesi ---
-# Bu düğme, session_state'i kullanarak durumunu korur
-st.toggle("Simlish Mode 👽", key="simlish_mode", help="Sul sul! Cevapları Simlish al.")
+# --- BAŞLANGIÇ: REKLAM / GELİŞTİRİCİ BİLGİSİ (SIDEBAR) ---
+
+with st.sidebar:
+    st.header("About DocuMentor")
+    st.markdown(
+        "DocuMentor is an intelligent Q&A chatbot built using a RAG (Retrieval-Augmented Generation) "
+        "architecture with Google's Gemini and ChromaDB."
+    )
+    
+    st.markdown("---") # Ayırıcı çizgi
+    
+    st.subheader("Developed by Göktuğ Türkdağ")
+    st.markdown(
+        "Connect with the developer:"
+    )
+    
+    # URL'niz eklendi
+    st.markdown(
+        "🔗 [LinkedIn](https://www.linkedin.com/in/goktugturkdag)"
+    )
+    
+    st.markdown(
+        "🐙 [GitHub](https://github.com/goktug-turkdag)"
+    )
+
+# --- BİTİŞ: REKLAM / GELİŞTİRİCİ BİLGİSİ (SIDEBAR) ---
 
 
-# --- DİNAMİK RAG ZİNCİRİ OLUŞTURMA ---
+# --- Simlish Mode Toggle (with English help text) ---
+st.toggle("Simlish Mode 👽", key="simlish_mode", help="Sul sul! Get your answers in Simlish.")
+
+
+# --- DYNAMIC RAG CHAIN CREATION ---
 try:
-    # 1. Pahalı bileşenleri önbellekten hızla yükle
+    # 1. Load expensive components from cache
     vector_store = load_vector_store()
     llm = load_llm()
 
-    # 2. Düğmenin durumuna göre doğru prompt'u seç
+    # 2. Select the correct prompt based on the toggle state
     if st.session_state.simlish_mode:
         PROMPT_TEMPLATE = simlish_prompt_template
-        st.caption("✨ *Simlish modu aktif! Za woka?*")
+        st.caption("✨ *Simlish mode active! Za woka?*")
     else:
         PROMPT_TEMPLATE = default_prompt_template
 
-    # 3. Seçilen prompt ile bir PromptTemplate nesnesi oluştur
+    # 3. Create a PromptTemplate object
     PROMPT = PromptTemplate(
         template=PROMPT_TEMPLATE, input_variables=["context", "question"]
     )
 
-    # 4. RAG zincirini (hızlıca) oluştur
+    # 4. Create the RAG chain (fast)
     retriever = vector_store.as_retriever(search_kwargs={'k': 3})
     rag_chain = RetrievalQA.from_chain_type(
         llm=llm,
@@ -141,7 +168,7 @@ try:
         chain_type_kwargs={"prompt": PROMPT}
     )
     
-    st.success("DocuMentor is ready! (Ve belki biraz Simlish!)")
+    st.success("DocuMentor is ready! (And maybe a little Simlish!)")
     
 except Exception as e:
     st.error(f"An error occurred during setup: {e}")
@@ -149,12 +176,12 @@ except Exception as e:
     st.stop()
 
 
-# --- 3. CHATBİLEŞENİ (DEĞİŞİKLİK YOK) ---
+# --- 3. CHAT COMPONENT ---
 
 if 'messages' not in st.session_state:
     st.session_state.messages = []
 
-# Geçmiş mesajları yazdır
+# Display past messages
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         if isinstance(message["content"], dict):
@@ -167,16 +194,21 @@ for message in st.session_state.messages:
         else:
             st.markdown(message["content"])
 
-# Kullanıcıdan yeni soru al
+# Get new user question
 user_question = st.chat_input("Ask a question about the document...")
 
 if user_question:
     st.chat_message("user").markdown(user_question)
     st.session_state.messages.append({"role": "user", "content": user_question})
 
-    with st.spinner("Searching for the answer... (Chumcha!)"):
+    # Conditional Spinner Text
+    if st.session_state.simlish_mode:
+        spinner_text = "Searching for the answer... (Chumcha!)"
+    else:
+        spinner_text = "Searching for the answer..."
+
+    with st.spinner(spinner_text):
         try:
-            # rag_chain artık DİNAMİK olarak doğru prompt'u kullanıyor
             response_dict = rag_chain.invoke(user_question)
             answer = response_dict.get("result", "Sorry, I couldn't generate an answer.")
             sources = response_dict.get("source_documents", [])
@@ -186,7 +218,7 @@ if user_question:
             answer = f"An error occurred while generating the response: {e}"
             response_content = {"answer": answer, "sources": []}
 
-    # Asistan cevabını göster
+    # Display assistant's response
     with st.chat_message("assistant"):
         st.markdown(response_content["answer"])
         sources = response_content.get("sources", [])
