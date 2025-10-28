@@ -172,7 +172,7 @@ llm = load_llm()
 default_retriever = load_default_retriever(get_embeddings())
 
 # --- SESSION STATE BAŞLATMA ---
-# Sohbet için
+# Sadece Sohbet için
 if "messages" not in st.session_state:
     st.session_state.messages = []
     st.session_state.chat_history = []
@@ -188,18 +188,7 @@ if "messages" not in st.session_state:
     """
     st.session_state.messages.append({"role": "assistant", "content": welcome_message})
 
-# Blackjack için
-if "game_state" not in st.session_state:
-    st.session_state.game_state = "betting" 
-    st.session_state.deck = []
-    st.session_state.player_hand = []
-    st.session_state.dealer_hand = []
-    st.session_state.game_message = ""
-    st.session_state.side_bet_message = ""
-    st.session_state.player_balance = 1000 
-    st.session_state.current_bet = 0
-    st.session_state.bet_21_3 = 0
-    st.session_state.bet_perfect_pairs = 0
+# (Blackjack state başlatması buradan kaldırıldı ve ilgili sekmeye taşındı)
 
 # --- SEKME 1: CHATBOT (TAM KOD) ---
 with tab_chat:
@@ -421,7 +410,7 @@ with tab_blackjack:
         if is_flush: return 5 # Flush (5:1)
         return 0 
 
-    # --- YENİ ÖZELLİK: Dinamik Cashout Teklifi Hesaplayıcı ---
+    # --- Dinamik Cashout Teklifi Hesaplayıcı ---
     def get_cashout_offer_heuristic(player_hand, dealer_up_card, bet):
         """
         Oyuncunun kazanma olasılığına dayalı yaklaşık (heuristic) bir cashout teklifi hesaplar.
@@ -429,19 +418,15 @@ with tab_blackjack:
         p_score = calculate_score(player_hand)
         d_val = get_card_value(dealer_up_card['rank'])
         
-        # 1. Kazanma olasılığını (p_win) 0.0 ile 1.0 arasında tahmin et
-        p_win = 0.48 # Temel ev avantajı
+        p_win = 0.48 
 
-        # Oyuncunun güçlü elleri
         if p_score == 20: p_win = 0.85
         elif p_score == 19: p_win = 0.75
         elif p_score == 18: p_win = 0.65
-        # Oyuncunun "patlama" riski olan (stiff) elleri (12-16)
         elif p_score in [12, 13, 14, 15, 16]:
-            if d_val in [2, 3, 4, 5, 6]: p_win = 0.40 # Krupiye patlayabilir
-            elif d_val in [7, 8, 9]: p_win = 0.25 # Krupiye güçlü
-            elif d_val in [10, 11]: p_win = 0.20 # Krupiye çok güçlü
-        # Oyuncunun "Hit" elleri (9-11)
+            if d_val in [2, 3, 4, 5, 6]: p_win = 0.40
+            elif d_val in [7, 8, 9]: p_win = 0.25
+            elif d_val in [10, 11]: p_win = 0.20
         elif p_score == 11:
             if d_val in [10, 11]: p_win = 0.45
             else: p_win = 0.60
@@ -449,17 +434,11 @@ with tab_blackjack:
             if d_val in [10, 11]: p_win = 0.40
             else: p_win = 0.55
         elif p_score == 9:
-            if d_val in [10, 11]: p_win = 0.30 # Kullanıcının örneğine yakın (dezavantaj)
+            if d_val in [10, 11]: p_win = 0.30
             else: p_win = 0.40
-        # Diğer (yumuşak As'lı) eller
         elif p_score == 17 and (get_card_value('A') in [get_card_value(c['rank']) for c in player_hand]):
-             p_win = 0.45 # Yumuşak 17
+             p_win = 0.45 
 
-        # 2. Teklifi hesapla
-        # p_win > 0.5 ise (Avantaj): Bahsin (bet) üzerine, avantajın (p_win - 0.5) 1.5 katını ekle
-        # p_win < 0.5 ise (Dezavantaj): Bahisten, dezavantajın (0.5 - p_win) 3 katını çıkar
-        # (Bu çarpanlar, kullanıcının 9v10 -> 40 teklif örneğine uyması için ayarlanmıştır)
-        
         if p_win >= 0.5:
             multiplier = 1.0 + (p_win - 0.5) * 1.5
         else:
@@ -467,14 +446,27 @@ with tab_blackjack:
             
         offer = int(bet * multiplier)
         
-        # Teklifin negatif veya bahisten çok yüksek olmamasını sağla
         if offer < 0: offer = 0
-        if offer > (bet * 1.9): offer = int(bet * 1.9) # Max 1.9x teklif
+        if offer > (bet * 1.9): offer = int(bet * 1.9)
         
         return offer
 
-    # --- Oyun Durumu Yönetimi ---
+    # --- DÜZELTME: Oyun Durumu Yönetimi (Sekme içine taşındı) ---
+    if "game_state" not in st.session_state:
+        st.session_state.game_state = "betting" 
+        st.session_state.deck = []
+        st.session_state.player_hand = []
+        st.session_state.dealer_hand = []
+        st.session_state.game_message = ""
+        st.session_state.side_bet_message = ""
+        st.session_state.player_balance = 1000 
+        st.session_state.current_bet = 0
+        st.session_state.bet_21_3 = 0
+        st.session_state.bet_perfect_pairs = 0
+
     st.metric(label="Your Balance", value=f"💰 {st.session_state.player_balance}")
+    
+    # --- Oyun Arayüzü ---
     
     if st.session_state.game_state == "betting":
         st.session_state.side_bet_message = "" 
@@ -552,7 +544,7 @@ with tab_blackjack:
                         st.session_state.game_message = "Your turn! Hit or Stand?"
                     st.rerun()
 
-    # --- Oyun Akışı (Dinamik Cashout Eklendi) ---
+    # --- Oyun Akışı ---
     if st.session_state.game_state in ["player_turn", "dealer_turn", "game_over"]:
         
         if st.session_state.side_bet_message:
@@ -582,8 +574,6 @@ with tab_blackjack:
         
         if st.session_state.game_state == "player_turn":
             
-            # --- YENİ: DİNAMİK CASHOUT TEKLİFİ ---
-            # Oyuncunun eline ve krupiyenin açık kartına göre teklifi hesapla
             cashout_offer = get_cashout_offer_heuristic(
                 st.session_state.player_hand, 
                 st.session_state.dealer_hand[0], 
@@ -604,14 +594,12 @@ with tab_blackjack:
                 st.session_state.game_state = "dealer_turn"
                 st.rerun()
             
-            # Dinamik Cashout Butonu
             if col3.button(f"Cash Out for 💰 {cashout_offer}", key="cashout"):
                 st.session_state.player_balance += cashout_offer
                 st.session_state.game_state = "game_over"
                 st.session_state.game_message = f"You cashed out for {cashout_offer}! (Original bet was {st.session_state.current_bet})"
                 st.rerun()
                 
-    # Dağıtıcının sırası
     if st.session_state.game_state == "dealer_turn":
         dealer_score = calculate_score(st.session_state.dealer_hand)
         
