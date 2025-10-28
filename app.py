@@ -9,7 +9,9 @@ from langchain_community.vectorstores import Chroma
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_google_genai import ChatGoogleGenerativeAI # Chat modeli
 from langchain.chains import ConversationalRetrievalChain # Hafızalı zincir
-from langchain.chains import create_summarization_chain # YENİ: Özetleyici için
+# --- DÜZELTME: Import yolu güncellendi ---
+from langchain.chains.summarize import create_summarization_chain # YENİ: Özetleyici için
+# --- DÜZELTME BİTTİ ---
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.schema import Document
 from langchain.prompts import PromptTemplate
@@ -282,17 +284,14 @@ with tab_chat:
         else:
             spinner_text = "Searching for the answer... (Chumcha!)" if st.session_state.simlish_mode else "Searching for the answer..."
             
-            # --- BAŞLANGIÇ: DÜZELTİLMİŞ STREAMING KODU ---
             with st.chat_message("assistant", avatar=avatars["assistant"]):
                 response_container = st.empty()
 
-                # 1. Stream'i başlatan bir generator fonksiyonu tanımla
+                # Stream generator fonksiyonu (SyntaxError Düzeltmesi ile)
                 def stream_generator():
-                    # Değişkenleri generator'ın *içinde* başlat
                     full_response = ""
                     sources = []
                     
-                    # RAG zincirinden stream'i al
                     stream = rag_chain.stream({
                         "question": user_question,
                         "chat_history": st.session_state.chat_history
@@ -301,33 +300,24 @@ with tab_chat:
                     for chunk in stream:
                         if "answer" in chunk:
                             full_response += chunk["answer"]
-                            # Arayüze "yazıyor..." imleciyle birlikte metni 'yield' et
                             yield full_response + "▌" 
                         if "source_documents" in chunk:
                             sources = chunk["source_documents"]
                     
-                    # Akış bittiğinde, imleç olmadan son halini 'yield' et
                     yield full_response
-                    
-                    # Tam cevabı ve kaynakları 'return' ile dışarıdaki koda geri döndür
                     return full_response, sources
 
-                # 2. st.write_stream'i çalıştır. 
                 returned_values = st.write_stream(stream_generator())
 
-                # 3. Geri dönen değerleri yakala
                 if returned_values:
                     full_response, sources = returned_values
                 else:
-                    # Stream bir şey döndürmezse (hata vb.) fallback
                     full_response = "Sorry, I couldn't generate a response."
                     sources = []
                 
-            # 4. Tamamlanmış cevabı ve kaynakları session state'e kaydet
             st.session_state.messages.append({"role": "assistant", "content": full_response, "sources": sources})
             st.session_state.chat_history.append(HumanMessage(content=user_question))
             st.session_state.chat_history.append(AIMessage(content=full_response))
-            # --- BİTİŞ: DÜZELTİLMİŞ STREAMING KODU ---
 
 # --- SEKME 2: DOKÜMAN ÖZETLEYİCİ ---
 with tab_summarize:
