@@ -172,7 +172,7 @@ llm = load_llm()
 default_retriever = load_default_retriever(get_embeddings())
 
 # --- SESSION STATE BAŞLATMA ---
-# Sadece Sohbet için
+# Sohbet için
 if "messages" not in st.session_state:
     st.session_state.messages = []
     st.session_state.chat_history = []
@@ -188,7 +188,20 @@ if "messages" not in st.session_state:
     """
     st.session_state.messages.append({"role": "assistant", "content": welcome_message})
 
-# (Blackjack state başlatması buradan kaldırıldı ve ilgili sekmeye taşındı)
+# Blackjack için (YENİ BAHİSLER EKLENDİ)
+if "game_state" not in st.session_state:
+    st.session_state.game_state = "betting" 
+    st.session_state.deck = []
+    st.session_state.player_hand = []
+    st.session_state.dealer_hand = []
+    st.session_state.game_message = ""
+    st.session_state.side_bet_message = ""
+    st.session_state.player_balance = 1000 
+    st.session_state.current_bet = 0
+    st.session_state.bet_21_3 = 0
+    st.session_state.bet_perfect_pairs = 0
+    st.session_state.bet_lucky_seven = 0 # YENİ
+    st.session_state.bet_bust = 0        # YENİ
 
 # --- SEKME 1: CHATBOT (TAM KOD) ---
 with tab_chat:
@@ -309,27 +322,35 @@ with tab_chat:
             st.session_state.chat_history.append(AIMessage(content=full_response))
 
 
-# --- SEKME 2: BLACKJACK (DİNAMİK CASHOUT İLE) ---
+# --- SEKME 2: BLACKJACK (TÜM YAN BAHİSLER DAHİL) ---
 with tab_blackjack:
     st.header("🃏 Blackjack")
     st.markdown("Place your bet, and optional side bets, to beat the dealer!")
 
-    with st.expander("Show/Hide Basic Strategy Guide"):
+    with st.expander("Show/Hide Basic Strategy & Side Bet Info"):
         st.markdown("""
-        **Basic Blackjack Strategy** helps you make the best decision to minimize the house edge.
-        - **Hit:** Take another card.
-        - **Stand:** Keep your current hand.
+        **Basic Blackjack Strategy:**
+        - **Always Stand** on 17 or higher.
+        - **Always Hit** on 11 or lower.
+        - **vs. Dealer 2-6 (Weak):** Stand on 12-16 (Stiff hands).
+        - **vs. Dealer 7-A (Strong):** Hit on 12-16 (Stiff hands).
         
-        **General Rules:**
-        - **Always Stand** if your hand is 17 or higher.
-        - **Always Hit** if your hand is 11 or lower.
-        
-        **Your Hand vs. Dealer's Up Card:**
-        | Your Hand | Dealer's Up Card 2-6 | Dealer's Up Card 7-A |
-        | :--- | :--- | :--- |
-        | **12-16** (Stiff) | Stand (Dealer might bust) | Hit (Dealer likely has 17+) |
-        | **A, 2-6** (Soft 13-17) | Hit | Hit |
-        | **A, 7** (Soft 18) | Stand | Hit (Stand vs 2,7,8) |
+        **Side Bet Payouts (Standard):**
+        - **Perfect Pairs:** Pays if your first two cards are a pair.
+            - *Mixed Pair (6:1)*: Same rank, different color (e.g., 5♥, 5♣)
+            - *Colored Pair (12:1)*: Same rank, same color (e.g., 5♥, 5♦)
+            - *Perfect Pair (25:1)*: Same rank, same suit (e.g., 5♥, 5♥ - multi-deck)
+        - **21+3:** Pays on your first two cards + dealer's up card.
+            - *Flush (5:1)*: All three cards same suit.
+            - *Straight (10:1)*: e.g., 6-7-8 (A-2-3 also counts).
+            - *Three of a Kind (30:1)*: e.g., 8-8-8.
+            - *Straight Flush (40:1)*: A straight where all cards are the same suit.
+        - **Lucky 7s:** Pays based on the number of 7s in your hand *when you finish playing*.
+            - *One 7 (3:1)*
+            - *Two 7s (50:1)*
+            - *Three 7s (100:1)*
+        - **Bust It!:** Pays if the *dealer busts* (goes over 21).
+            - *Simple Payout (2:1)*
         """)
 
     # --- Blackjack Oyun Fonksiyonları ---
@@ -346,11 +367,14 @@ with tab_blackjack:
         st.session_state.current_bet = 0
         st.session_state.bet_21_3 = 0
         st.session_state.bet_perfect_pairs = 0
+        st.session_state.bet_lucky_seven = 0
+        st.session_state.bet_bust = 0
 
     def create_deck():
         suits = ['♥', '♦', '♣', '♠']
         ranks = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A']
-        deck = [{'rank': rank, 'suit': suit} for suit in suits for rank in ranks]
+        # 6 deste kullanalım (yan bahisler için daha standart)
+        deck = [{'rank': rank, 'suit': suit} for suit in suits for rank in ranks] * 6
         random.shuffle(deck)
         return deck
 
@@ -371,7 +395,9 @@ with tab_blackjack:
         st.subheader(title)
         cols = st.columns(len(hand) if hand else 1)
         for i, card in enumerate(hand):
-            cols[i].container(border=True).markdown(f"## {card['rank']}{card['suit']}")
+            # Kartları daha küçük ve yatay yapmak için use_container_width
+            with cols[i].container(border=True):
+                st.markdown(f"<h3 style='text-align: center; margin: 0;'>{card['rank']}{card['suit']}</h3>", unsafe_allow_html=True)
         score = calculate_score(hand)
         st.markdown(f"**Score: {score}**")
         return score
@@ -379,8 +405,10 @@ with tab_blackjack:
     def display_dealer_hand_hidden(hand):
         st.subheader("Dealer's Hand")
         cols = st.columns(2)
-        cols[0].container(border=True).markdown(f"## {hand[0]['rank']}{hand[0]['suit']}")
-        cols[1].container(border=True).markdown("## ❔")
+        with cols[0].container(border=True):
+            st.markdown(f"<h3 style='text-align: center; margin: 0;'>{hand[0]['rank']}{hand[0]['suit']}</h3>", unsafe_allow_html=True)
+        with cols[1].container(border=True):
+            st.markdown(f"<h3 style='text-align: center; margin: 0;'>❔</h3>", unsafe_allow_html=True)
         st.markdown("**Score: ?**")
 
     # --- Yan Bahis Kontrol Fonksiyonları ---
@@ -409,17 +437,35 @@ with tab_blackjack:
         if is_straight: return 10 # Straight (10:1)
         if is_flush: return 5 # Flush (5:1)
         return 0 
+    
+    # YENİ: Lucky 7s Kontrolü
+    def check_lucky_sevens(hand, bet):
+        """El bittiğinde (Stand veya Bust) çağrılır."""
+        if bet == 0:
+            return 0, "" # Bahis yok
+        
+        num_sevens = sum(1 for card in hand if card['rank'] == '7')
+        
+        if num_sevens == 3:
+            winnings = bet * 100
+            message = f"**Lucky 7s Win: +{winnings}!** (Three 7s, 100:1)"
+            return winnings + bet, message # Kazanç + ana bahis
+        elif num_sevens == 2:
+            winnings = bet * 50
+            message = f"**Lucky 7s Win: +{winnings}!** (Two 7s, 50:1)"
+            return winnings + bet, message
+        elif num_sevens == 1:
+            winnings = bet * 3
+            message = f"**Lucky 7s Win: +{winnings}!** (One 7, 3:1)"
+            return winnings + bet, message
+        
+        return 0, "Lucky 7s bet lost."
 
     # --- Dinamik Cashout Teklifi Hesaplayıcı ---
     def get_cashout_offer_heuristic(player_hand, dealer_up_card, bet):
-        """
-        Oyuncunun kazanma olasılığına dayalı yaklaşık (heuristic) bir cashout teklifi hesaplar.
-        """
         p_score = calculate_score(player_hand)
         d_val = get_card_value(dealer_up_card['rank'])
-        
         p_win = 0.48 
-
         if p_score == 20: p_win = 0.85
         elif p_score == 19: p_win = 0.75
         elif p_score == 18: p_win = 0.65
@@ -438,36 +484,20 @@ with tab_blackjack:
             else: p_win = 0.40
         elif p_score == 17 and (get_card_value('A') in [get_card_value(c['rank']) for c in player_hand]):
              p_win = 0.45 
-
-        if p_win >= 0.5:
-            multiplier = 1.0 + (p_win - 0.5) * 1.5
-        else:
-            multiplier = 1.0 - (0.5 - p_win) * 3.0
-            
+        if p_win >= 0.5: multiplier = 1.0 + (p_win - 0.5) * 1.5
+        else: multiplier = 1.0 - (0.5 - p_win) * 3.0
         offer = int(bet * multiplier)
-        
         if offer < 0: offer = 0
         if offer > (bet * 1.9): offer = int(bet * 1.9)
-        
         return offer
 
-    # --- DÜZELTME: Oyun Durumu Yönetimi (Sekme içine taşındı) ---
+    # --- Oyun Durumu Yönetimi ---
     if "game_state" not in st.session_state:
-        st.session_state.game_state = "betting" 
-        st.session_state.deck = []
-        st.session_state.player_hand = []
-        st.session_state.dealer_hand = []
-        st.session_state.game_message = ""
-        st.session_state.side_bet_message = ""
-        st.session_state.player_balance = 1000 
-        st.session_state.current_bet = 0
-        st.session_state.bet_21_3 = 0
-        st.session_state.bet_perfect_pairs = 0
+        reset_game_state() # Tüm oyun durumunu sıfırla
 
     st.metric(label="Your Balance", value=f"💰 {st.session_state.player_balance}")
     
-    # --- Oyun Arayüzü ---
-    
+    # --- Bahis Arayüzü ---
     if st.session_state.game_state == "betting":
         st.session_state.side_bet_message = "" 
         
@@ -485,12 +515,12 @@ with tab_blackjack:
                 
                 st.markdown("---")
                 st.markdown("**Side Bets (Optional)**")
-                bet_21_3_amount = st.number_input(
-                    "21+3 Bet (5:1 to 40:1):", min_value=0, max_value=min(100, st.session_state.player_balance - bet_amount), value=0, step=5
-                )
-                bet_pp_amount = st.number_input(
-                    "Perfect Pairs Bet (6:1 to 25:1):", min_value=0, max_value=min(100, st.session_state.player_balance - bet_amount - bet_21_3_amount), value=0, step=5
-                )
+                
+                # Basit max_value (her biri max 100)
+                bet_21_3_amount = st.number_input("21+3 Bet:", min_value=0, max_value=min(100, st.session_state.player_balance), value=0, step=5)
+                bet_pp_amount = st.number_input("Perfect Pairs Bet:", min_value=0, max_value=min(100, st.session_state.player_balance), value=0, step=5)
+                bet_lucky_seven_amount = st.number_input("Lucky 7s Bet:", min_value=0, max_value=min(100, st.session_state.player_balance), value=0, step=5)
+                bet_bust_amount = st.number_input("Bust It! (Dealer Busts) Bet:", min_value=0, max_value=min(100, st.session_state.player_balance), value=0, step=5)
                 
                 deal_button = st.form_submit_button("Deal")
 
@@ -501,19 +531,22 @@ with tab_blackjack:
                 st.rerun()
 
             if deal_button:
-                total_bet = bet_amount + bet_21_3_amount + bet_pp_amount
+                total_bet = bet_amount + bet_21_3_amount + bet_pp_amount + bet_lucky_seven_amount + bet_bust_amount
                 if total_bet > st.session_state.player_balance:
-                    st.error("Total bet cannot exceed your balance.")
+                    st.error(f"Total bet ({total_bet}) cannot exceed your balance ({st.session_state.player_balance}).")
                 else:
                     st.session_state.player_balance -= total_bet
                     st.session_state.current_bet = bet_amount
                     st.session_state.bet_21_3 = bet_21_3_amount
                     st.session_state.bet_perfect_pairs = bet_pp_amount
+                    st.session_state.bet_lucky_seven = bet_lucky_seven_amount
+                    st.session_state.bet_bust = bet_bust_amount
                     
                     st.session_state.deck = create_deck()
                     st.session_state.player_hand = [st.session_state.deck.pop(), st.session_state.deck.pop()]
                     st.session_state.dealer_hand = [st.session_state.deck.pop(), st.session_state.deck.pop()]
                     
+                    # 21+3 ve Perfect Pairs'i hemen kontrol et
                     side_messages = []
                     if st.session_state.bet_perfect_pairs > 0:
                         pp_payout = check_perfect_pairs(st.session_state.player_hand)
@@ -530,15 +563,23 @@ with tab_blackjack:
                             side_messages.append(f"**21+3 Win: +{winnings}!** ({p3_payout}:1)")
                     
                     if not side_messages and (st.session_state.bet_21_3 > 0 or st.session_state.bet_perfect_pairs > 0):
-                        st.session_state.side_bet_message = "No side bet wins."
+                        st.session_state.side_bet_message = "21+3 / Perfect Pairs bets lost."
                     else:
                         st.session_state.side_bet_message = " \n".join(side_messages)
                     
+                    # Ana Oyun Blackjack Kontrolü
                     player_score = calculate_score(st.session_state.player_hand)
                     if player_score == 21:
                         st.session_state.game_state = "game_over"
                         st.session_state.game_message = "Blackjack! 🎉 You win!"
                         st.session_state.player_balance += int(st.session_state.current_bet * 2.5) 
+                        
+                        # Blackjack (21) aynı zamanda Lucky 7s'i de tetikleyebilir
+                        l7_winnings, l7_msg = check_lucky_sevens(st.session_state.player_hand, st.session_state.bet_lucky_seven)
+                        if l7_winnings > 0:
+                            st.session_state.player_balance += l7_winnings
+                            st.session_state.side_bet_message += "\n" + l7_msg
+                            
                     else:
                         st.session_state.game_state = "player_turn"
                         st.session_state.game_message = "Your turn! Hit or Stand?"
@@ -562,6 +603,7 @@ with tab_blackjack:
         if st.session_state.game_state == "game_over":
             st.header(st.session_state.game_message)
             if st.button("Play Again?", key="play_again"):
+                # Ana oyun durumunu sıfırla, bakiyeyi koru
                 st.session_state.game_state = "betting"
                 st.session_state.player_hand = []
                 st.session_state.dealer_hand = []
@@ -569,6 +611,8 @@ with tab_blackjack:
                 st.session_state.current_bet = 0
                 st.session_state.bet_21_3 = 0
                 st.session_state.bet_perfect_pairs = 0
+                st.session_state.bet_lucky_seven = 0
+                st.session_state.bet_bust = 0
                 st.session_state.side_bet_message = ""
                 st.rerun()
         
@@ -588,10 +632,24 @@ with tab_blackjack:
                 if player_score > 21:
                     st.session_state.game_state = "game_over"
                     st.session_state.game_message = "Bust! 💥 You lose."
+                    
+                    # Oyuncu patladığında Lucky 7s'i kontrol et
+                    l7_winnings, l7_msg = check_lucky_sevens(st.session_state.player_hand, st.session_state.bet_lucky_seven)
+                    if l7_winnings > 0:
+                        st.session_state.player_balance += l7_winnings
+                        st.session_state.side_bet_message += "\n" + l7_msg
+                        
                 st.rerun()
 
             if col2.button("Stand (Dur)", key="stand"):
                 st.session_state.game_state = "dealer_turn"
+                
+                # Oyuncu durduğunda Lucky 7s'i kontrol et
+                l7_winnings, l7_msg = check_lucky_sevens(st.session_state.player_hand, st.session_state.bet_lucky_seven)
+                if l7_winnings > 0:
+                    st.session_state.player_balance += l7_winnings
+                    st.session_state.side_bet_message += "\n" + l7_msg
+                    
                 st.rerun()
             
             if col3.button(f"Cash Out for 💰 {cashout_offer}", key="cashout"):
@@ -610,6 +668,17 @@ with tab_blackjack:
         player_score = calculate_score(st.session_state.player_hand)
         bet = st.session_state.current_bet
         
+        # YENİ: Bust It! bahsini kontrol et
+        bust_win_message = ""
+        if st.session_state.bet_bust > 0:
+            if dealer_score > 21:
+                winnings = st.session_state.bet_bust * 2 # Basit 2:1 ödeme
+                st.session_state.player_balance += winnings + st.session_state.bet_bust
+                bust_win_message = f"**Bust It! Bet Win: +{winnings}!** (2:1)"
+            else:
+                bust_win_message = "Bust It! bet lost."
+        
+        # Ana bahsi öde ve mesajı oluştur
         if dealer_score > 21:
             st.session_state.game_message = "Dealer busts! 🎉 You win!"
             st.session_state.player_balance += bet * 2 
@@ -621,6 +690,10 @@ with tab_blackjack:
         else:
             st.session_state.game_message = "It's a tie! (Push) 😐"
             st.session_state.player_balance += bet 
+        
+        # Bust It! mesajını ana mesaja ekle
+        if bust_win_message:
+            st.session_state.game_message += f"\n{bust_win_message}"
             
         st.session_state.game_state = "game_over"
         st.rerun()
