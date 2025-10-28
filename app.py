@@ -138,7 +138,6 @@ Simlish Answer:
 
 # --- 2. WEB ARAYÜZÜ (Sekmeli Yapı) ---
 st.set_page_config(page_title="DocuMentor", layout="wide")
-st.snow() # Açılış animasyonu
 st.title("DocuMentor 📄")
 
 # --- Sekmeler ---
