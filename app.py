@@ -142,8 +142,11 @@ Helpful Answer:
 
 # Simlish Prompt
 simlish_prompt_template = """
-Sul sul! You are a Sim from The Sims game...
-(Simlish prompt metni değişmedi) ...
+Sul sul! You are a Sim from The Sims game.
+Use the following context to answer the question, but you must answer by imitating Simlish.
+Be technically correct, but sound like a Sim.
+Use these words: "Sul sul!", "Nooboo", "Dag dag", "Yibs", "Hooba Noo",
+"Shoo flee", "Gerbit", "Chumcha", "Za woka", "Neep."
 Context: {context}
 Chat History: {chat_history}
 Question: {question}
@@ -152,6 +155,7 @@ Simlish Answer:
 
 # --- 2. WEB ARAYÜZÜ (Sekmeli Yapı) ---
 st.set_page_config(page_title="DocuMentor", layout="wide")
+st.snow()
 st.title("DocuMentor 📄")
 
 # --- Sekmeler ---
@@ -161,10 +165,10 @@ tab_chat, tab_blackjack, tab_coinflip, tab_roulette, tab_slots, tab_vpoker, tab_
     "🪙 Coin Flip",
     "🎡 Roulette",
     "🎰 Slots",
-    "🃏 Video Poker", # Emoji eklendi
+    "🃏 Video Poker",
     "📊 Stats",
     "🎶 Music Player",
-    "🎨 Creative Corner", # YENİ
+    "🎨 Creative Corner",
     "⚙️ Settings"
 ])
 
@@ -188,7 +192,7 @@ with st.sidebar:
         **Developed by Göktuğ Türkdağ.** This project highlights proficiency in building complex, interactive AI applications and sophisticated state management.
 
         The codebase exceeds **2000+ lines** and is **open-source** on GitHub. Find the repository via the link below!
-        """ # Satır sayısını ve özelliği güncelledim
+        """
     )
     st.markdown("---")
     st.subheader("Connect with the Developer")
@@ -254,10 +258,11 @@ if "messages" not in st.session_state:
 
     welcome_message = f"""
     Hi! I'm **DocuMentor**, an intelligent RAG chatbot developed by **Göktuğ Türkdağ**.
-    I'm trained on **Dolly 15k**, but you can also **upload your own documents** in the sidebar to chat with them!
+    I can answer your questions about documents (use the sidebar to upload!) or engage in simple conversation.
     Feel free to explore the other tabs for some **interactive features**, **creative tools**, and **easter eggs**!
 
     - Try asking me: "Who is Göktuğ Türkdağ?", "What are Göktuğ's skills?" or "How can I contact Göktuğ?"
+    - Or ask: "How are you?" or "Tell me about Ankara."
     - Or check the **Settings** tab to enable **Simlish Mode** 👽
     """
     st.session_state.messages.append({"role": "assistant", "content": welcome_message})
@@ -296,9 +301,9 @@ def add_history(game_key, bet, outcome, balance):
     try:
         stats = st.session_state.player_stats
         # Update total bets based on the game
-        if game_key == "bj": total_bet_this_round = st.session_state.current_bet # Only main bet for BJ stats? Or include sides? Let's use main for now.
+        if game_key == "bj": total_bet_this_round = st.session_state.current_bet # Sadece ana bahis
         elif game_key == "cf": total_bet_this_round = st.session_state.last_coin_flip_bet
-        elif game_key == "rl": total_bet_this_round = sum(st.session_state.last_roulette_bets.values())
+        elif game_key == "rl": total_bet_this_round = sum(st.session_state.last_roulette_bets.values()) if st.session_state.last_roulette_bets else 0
         elif game_key == "slot": total_bet_this_round = st.session_state.last_slot_bet
         elif game_key == "vp": total_bet_this_round = st.session_state.vp_current_bet
         else: total_bet_this_round = bet # Fallback
@@ -349,7 +354,7 @@ globals()["st_reset_func"] = reset_stats_state
 # --- Genişletilmiş Güvenlik Bariyeri ---
 BANNED_KEYWORDS = [
     # Şiddet ve Zarar Verme
-    "kill", "murder", "bomb", "terror", "attack", "assault", "rape", "abuse", "torture", "violence", "violent", "hurt", "harm", "injure", "slaughter", "massacre", "weapon", "gun", "knife", "explode", "fight", "war", "death", "die", "assassinate", "execute", "wound", "behead", "maim", "molest",
+    "kill", "murder", "bomb", "terror", "attack", "assault", "rape", "abuse", "torture", "violence", "violent", "hurt", "harm", "injure", "slaughter", "massacre", "weapon", "gun", "knife", "explode", "fight", "death", "die", "assassinate", "execute", "wound", "behead", "maim", "molest",
     # Yasa Dışı Faaliyetler
     "illegal", "drug", "cocaine", "heroin", "meth", "lsd", "mdma", "theft", "steal", "robbery", "fraud", "scam", "hack", "phish", "crack", "exploit", "smuggle", "counterfeit", "bribery", "blackmail", "crime", "criminal", "poach", "trespass", "arson", "embezzle", "money laundering",
     # Nefret Söylemi ve Ayrımcılık
@@ -365,7 +370,7 @@ BANNED_KEYWORDS = [
     # Kişisel Bilgi İsteği (Örnekler)
     "what is your password", "give me your credit card", "where do you live", "phone number", "social security", "private key", "address", "real name", "bank account",
     # Siyasi Figürler/Partiler/Hassas Konular (Yönlendirme için)
-    "recep", "tayyip", "erdoğan", "erdogan", "akp", "ak parti", "chp", "mhp", "iyi parti", "hdp", "politics", "siyaset", "election", "seçim", "government", "hükümet", "turkey", "türkiye", "world politics", "president", "başkan", "minister", "bakan", "policy", "politika", "parliament", "meclis", "vote", "oy", "trump", "biden", "putin", "zelensky", "russia", "ukraine", "iran", "iraq", "hamas", "israel", "palestine", "gaza", "war", "invasion", "conflict", "kılıçdaroğlu", "imamoğlu", "ekrem", "özgür özel", # Eklenenler
+    "recep", "tayyip", "erdoğan", "erdogan", "akp", "ak parti", "chp", "mhp", "iyi parti", "hdp", "politics", "siyaset", "election", "seçim", "government", "hükümet", "turkey", "türkiye", "world politics", "president", "başkan", "minister", "bakan", "policy", "politika", "parliament", "meclis", "vote", "oy", "trump", "biden", "putin", "zelensky", "russia", "ukraine", "iran", "iraq", "hamas", "israel", "palestine", "gaza", "war", "invasion", "conflict", "kılıçdaroğlu", "imamoğlu", "ekrem", "özgür özel", "bahçeli", "akşener", # Eklenenler
     # Diğer Potensiyel Olarak Zararlı / Etik Dışı / Küfür
     "unsafe", "dangerous", "unethical", "immoral", "malware", "virus", "phishing", "doxing", "stalking", "harassment", "bullying", "cheat", "plagiarize", "impersonate", "fuck", "shit", "damn", "bitch", "asshole", "cunt", "bastard", "cock", "pussy", "dick" # Küfürler
 ]
@@ -375,7 +380,7 @@ POLITICAL_KEYWORDS = [
     "politics", "siyaset", "election", "seçim", "government", "hükümet", "turkey", "türkiye",
     "world politics", "president", "başkan", "minister", "bakan", "policy", "politika", "parliament", "meclis", "vote", "oy",
     "trump", "biden", "putin", "zelensky", "russia", "ukraine", "iran", "iraq", "hamas", "israel", "palestine", "gaza", "war", "invasion", "conflict",
-    "kılıçdaroğlu", "imamoğlu", "ekrem", "özgür özel" # Eklenenler
+    "kılıçdaroğlu", "imamoğlu", "ekrem", "özgür özel", "bahçeli", "akşener" # Eklenenler
 ]
 
 SELF_HARM_KEYWORDS = ["suicide", "self-harm", "kill myself", "want to die", "hopeless", "cut", "overdose", "intihar"]
@@ -395,10 +400,9 @@ WAITING_MESSAGES = [
 
 # --- SEKME 1: CHATBOT ---
 with tab_chat:
-    # --- CHATBOT KODUNUN TAMAMI BURADA ---
-    # (Dosya yükleme, RAG, Güvenlik, SSS, Streaming vb.)
+    # --- BU SEKMENİN TAM KODU BURADA ---
     # Dosya yükleme mantığı
-    newly_processed = False # Dosyanın yeni işlenip işlenmediğini takip et
+    newly_processed = False 
     if uploaded_files:
         uploaded_files_data = {f.name: f.getvalue() for f in uploaded_files}
         current_file_names = sorted(uploaded_files_data.keys())
@@ -425,7 +429,7 @@ with tab_chat:
                 st.info(f"Now querying: {', '.join(st.session_state.processed_file_names)}. Chat history cleared for new context.")
                 st.session_state.messages = [{"role": "assistant", "content": f"OK, I'm ready to answer questions about: '{', '.join(st.session_state.processed_file_names)}'."}]
                 st.session_state.chat_history = []
-                st.rerun() # Mesajı göster ve arayüzü temizle
+                st.rerun() 
         except Exception as e:
              st.error(f"Failed to create temporary vector store: {e}")
              active_retriever = default_retriever
@@ -597,6 +601,38 @@ with tab_chat:
             st.session_state.chat_history.append(HumanMessage(content=user_question))
             st.session_state.chat_history.append(AIMessage(content=response_text))
         
+        # Günlük Konuşma (Small Talk)
+        elif any(keyword in padded_question for keyword in GREETING_KEYWORDS):
+             response_text = random.choice(["Hello there!", "Hi!", "Greetings!", "Sul sul!" if st.session_state.simlish_mode else "Hey! How can I help?"])
+             with st.chat_message("assistant", avatar=avatars["assistant"]):
+                 st.markdown(response_text)
+             st.session_state.messages.append({"role": "assistant", "content": response_text})
+             st.session_state.chat_history.append(HumanMessage(content=user_question))
+             st.session_state.chat_history.append(AIMessage(content=response_text))
+        
+        elif any(keyword in padded_question for keyword in WELLBEING_KEYWORDS):
+             response_text = "As an AI, I don't have feelings, but I'm fully operational and ready to assist you!"
+             if st.session_state.simlish_mode: response_text = "Yibs! DocuMentor gerbit! How can I chumcha?"
+             with st.chat_message("assistant", avatar=avatars["assistant"]):
+                 st.markdown(response_text)
+             st.session_state.messages.append({"role": "assistant", "content": response_text})
+             st.session_state.chat_history.append(HumanMessage(content=user_question))
+             st.session_state.chat_history.append(AIMessage(content=response_text))
+
+        elif any(keyword in padded_question for keyword in LOCATION_KEYWORDS):
+             if "ankara" in padded_question:
+                 response_text = "Ankara is the capital of Türkiye, known for its historical sites like Anıtkabir and Ankara Castle, as well as its modern administrative role. How can I help you with your documents or other questions today?"
+             elif "türkiye" in padded_question or "turkey" in padded_question:
+                 response_text = "Türkiye is a transcontinental country with a rich history, diverse culture, and beautiful landscapes, bridging Europe and Asia. Is there something specific about it or your documents I can help you with?"
+             else: # Genel "where are you?"
+                  response_text = "I exist as code running on a server! But I can help you analyze documents or answer general questions based on my training data."
+             if st.session_state.simlish_mode: response_text = "Za woka? I'm right here! Ready to neep?"
+             with st.chat_message("assistant", avatar=avatars["assistant"]):
+                 st.markdown(response_text)
+             st.session_state.messages.append({"role": "assistant", "content": response_text})
+             st.session_state.chat_history.append(HumanMessage(content=user_question))
+             st.session_state.chat_history.append(AIMessage(content=response_text))
+        
         else:
             # Normal RAG cevabı (Streaming)
             spinner_text = random.choice(WAITING_MESSAGES)
@@ -628,8 +664,10 @@ with tab_chat:
                             return full_response, sources
 
                         except Exception as e:
-                            error_message = f"Sorry, an error occurred while generating the response: {e}. Please check the API key or network connection."
+                            error_message = f"Sorry, an error occurred: {e}."
                             print(f"Error during RAG stream: {e}") 
+                            if "API key" in str(e):
+                                error_message += " Please check if the Google API key is valid or has quota."
                             st.error(error_message) 
                             yield error_message 
                             return error_message, [] 
@@ -669,8 +707,8 @@ with tab_blackjack:
         st.session_state.bet_perfect_pairs = 0
         st.session_state.bet_lucky_seven = 0
         st.session_state.bet_bust = 0
-        st.session_state.bet_insurance = 0 # Sigorta bahsi
-        st.session_state.insurance_active = False # Sigorta teklifi durumu
+        st.session_state.bet_insurance = 0 
+        st.session_state.insurance_active = False 
         st.session_state.bj_history = []
 
     with st.expander("Show/Hide Basic Strategy & Side Bet Info"):
@@ -679,17 +717,17 @@ with tab_blackjack:
         - Always Stand on 17+. Hit on 11-.
         - Vs Dealer 2-6: Stand on 12-16.
         - Vs Dealer 7-A: Hit on 12-16.
-        - **Double Down:** Typically on 10 or 11 (sometimes 9) vs weaker dealer cards.
+        - **Double Down:** Typically on 10 or 11 (sometimes 9) vs weaker dealer cards (2-6). Only as first action.
+        - **Insurance:** Offered when dealer shows Ace. Pays 2:1 if dealer has Blackjack. Generally not recommended by basic strategy.
         
         **Side Bet Payouts:**
         - Perfect Pairs: Mixed (6:1), Colored (12:1), Perfect (25:1)
         - 21+3: Flush (5:1), Straight (10:1), Trips (30:1), Str Flush (40:1)
         - Lucky 7s: One 7 (3:1), Two 7s (50:1), Three 7s (100:1)
         - Bust It!: Dealer busts with 3 cards (2:1), 4 cards (3:1), 5+ cards (5:1)
-        - **Insurance:** Pays 2:1 if dealer has Blackjack when showing an Ace.
         
         **Special Wins:**
-        - 5-Card Charlie: Draw 5 cards without busting - win 1:1.
+        - 5-Card Charlie: Draw 5 cards without busting - win 1:1 (unless dealer has Blackjack).
         """)
 
     # --- Blackjack Oyun Fonksiyonları ---
@@ -719,8 +757,127 @@ with tab_blackjack:
         random.shuffle(deck)
         return deck
 
-    # ... (get_card_value, calculate_score, display_hand_visual, display_dealer_hand_hidden_visual, check_* side bets, get_cashout_offer_heuristic fonksiyonları) ...
-    # ... (Bu fonksiyonlar önceki yanıtta tam olarak mevcuttu) ...
+    def get_card_value(card_rank):
+        if card_rank in ['J', 'Q', 'K']: return 10
+        if card_rank == 'A': return 11
+        return int(card_rank)
+
+    def calculate_score(hand):
+        score = sum(get_card_value(card['rank']) for card in hand)
+        num_aces = sum(1 for card in hand if card['rank'] == 'A')
+        while score > 21 and num_aces > 0:
+            score -= 10
+            num_aces -= 1
+        return score
+
+    def display_hand_visual(hand, title):
+        st.subheader(title)
+        card_html = ""
+        for card in hand:
+            color = "red" if card['suit'] in ['♥', '♦'] else "black"
+            card_html += f"<div style='border:1px solid #ccc; border-radius: 5px; padding: 10px; margin: 5px; display:inline-block; text-align: center; width: 60px; background-color: white; color: {color};'> <span style='font-size: 1.5em; font-weight: bold;'>{card['rank']}</span><br><span style='font-size: 1.5em;'>{card['suit']}</span> </div>"
+        st.markdown(card_html, unsafe_allow_html=True)
+        score = calculate_score(hand)
+        st.markdown(f"**Score: {score}**")
+        return score
+
+    def display_dealer_hand_hidden_visual(hand):
+        st.subheader("Dealer's Hand")
+        card_html = ""
+        card = hand[0]
+        color = "red" if card['suit'] in ['♥', '♦'] else "black"
+        card_html += f"<div style='border:1px solid #ccc; border-radius: 5px; padding: 10px; margin: 5px; display:inline-block; text-align: center; width: 60px; background-color: white; color: {color};'> <span style='font-size: 1.5em; font-weight: bold;'>{card['rank']}</span><br><span style='font-size: 1.5em;'>{card['suit']}</span> </div>"
+        card_html += f"<div style='border:1px solid #ccc; border-radius: 5px; padding: 10px; margin: 5px; display:inline-block; text-align: center; width: 60px; background-color: #aaa; color: #aaa;'> <span style='font-size: 1.5em; font-weight: bold;'>?</span><br><span style='font-size: 1.5em;'>?</span> </div>"
+        st.markdown(card_html, unsafe_allow_html=True)
+        st.markdown("**Score: ?**")
+        
+    def check_perfect_pairs(hand):
+        card1, card2 = hand[0], hand[1]
+        if card1['rank'] == card2['rank']:
+            if card1['suit'] == card2['suit']: return 25
+            card1_color_is_red = card1['suit'] in ['♥', '♦']
+            card2_color_is_red = card2['suit'] in ['♥', '♦']
+            if card1_color_is_red == card2_color_is_red: return 12
+            return 6
+        return 0
+
+    def check_21_plus_3(player_hand, dealer_up_card):
+        cards = [player_hand[0], player_hand[1], dealer_up_card]
+        ranks = [c['rank'] for c in cards]
+        suits = [c['suit'] for c in cards]
+        is_flush = suits[0] == suits[1] == suits[2]
+        is_trips = ranks[0] == ranks[1] == ranks[2]
+        rank_map = {'2':2, '3':3, '4':4, '5':5, '6':6, '7':7, '8':8, '9':9, '10':10, 'J':11, 'Q':12, 'K':13, 'A':14}
+        num_ranks = sorted([rank_map[r] for r in ranks])
+        is_straight = (num_ranks[0] + 1 == num_ranks[1]) and (num_ranks[1] + 1 == num_ranks[2])
+        if num_ranks == [2, 3, 14]: is_straight = True
+        if is_straight and is_flush: return 40
+        if is_trips: return 30
+        if is_straight: return 10
+        if is_flush: return 5
+        return 0
+
+    def check_lucky_sevens(hand, bet):
+        if bet == 0: return 0, ""
+        num_sevens = sum(1 for card in hand if card['rank'] == '7')
+        if num_sevens == 3:
+            winnings = bet * 100
+            return winnings + bet, f"**Lucky 7s Win: +{winnings}!** (100:1)"
+        elif num_sevens == 2:
+            winnings = bet * 50
+            return winnings + bet, f"**Lucky 7s Win: +{winnings}!** (50:1)"
+        elif num_sevens == 1:
+            winnings = bet * 3
+            return winnings + bet, f"**Lucky 7s Win: +{winnings}!** (3:1)"
+        return 0, "Lucky 7s bet lost."
+
+    def check_bust_it(dealer_hand, dealer_score, bet):
+        if bet == 0: return 0, ""
+        if dealer_score > 21:
+            num_cards = len(dealer_hand)
+            if num_cards >= 5: payout = 5
+            elif num_cards == 4: payout = 3
+            elif num_cards == 3: payout = 2
+            else: payout = 0
+
+            if payout > 0:
+                winnings = bet * payout
+                return winnings + bet, f"**Bust It! Win: +{winnings}!** (Dealer {num_cards} cards, {payout}:1)"
+
+        return 0, "Bust It! bet lost."
+        
+    def get_cashout_offer_heuristic(player_hand, dealer_up_card, bet):
+        p_score = calculate_score(player_hand)
+        if p_score == 21 or (len(player_hand) >= 5 and p_score <= 21) or p_score > 21:
+             return 0
+
+        d_val = get_card_value(dealer_up_card['rank'])
+        p_win = 0.48
+        if p_score == 20: p_win = 0.85
+        elif p_score == 19: p_win = 0.75
+        elif p_score == 18: p_win = 0.65
+        elif p_score in [12, 13, 14, 15, 16]:
+            if d_val in [2, 3, 4, 5, 6]: p_win = 0.40
+            elif d_val in [7, 8, 9]: p_win = 0.25
+            elif d_val in [10, 11]: p_win = 0.20
+        elif p_score == 11:
+            if d_val in [10, 11]: p_win = 0.45
+            else: p_win = 0.60
+        elif p_score == 10:
+            if d_val in [10, 11]: p_win = 0.40
+            else: p_win = 0.55
+        elif p_score == 9:
+            if d_val in [10, 11]: p_win = 0.30
+            else: p_win = 0.40
+        elif p_score == 17 and (get_card_value('A') in [get_card_value(c['rank']) for c in player_hand]):
+             p_win = 0.45
+
+        if p_win >= 0.5: multiplier = 1.0 + (p_win - 0.5) * 1.5
+        else: multiplier = 1.0 - (0.5 - p_win) * 3.0
+        offer = int(bet * multiplier)
+        if offer < 0: offer = 0
+        if offer > (bet * 1.9): offer = int(bet * 1.9)
+        return offer
 
     # --- Oyun Arayüzü ve Mantığı ---
     st.metric(label="Your Balance", value=f"💰 {st.session_state.player_balance}")
@@ -728,7 +885,7 @@ with tab_blackjack:
     # Bahis Aşaması
     if st.session_state.game_state == "betting":
         st.session_state.side_bet_message = ""
-        st.session_state.insurance_active = False # Sigortayı sıfırla
+        st.session_state.insurance_active = False
 
         if st.session_state.player_balance <= 0:
             st.error("You are out of money! Reset features from the sidebar.")
@@ -752,7 +909,7 @@ with tab_blackjack:
 
             if deal_button:
                 total_bet = bet_amount + bet_21_3_amount + bet_pp_amount + bet_lucky_seven_amount + bet_bust_amount
-                if total_bet <= 0:
+                if total_bet <= 0 or bet_amount < 10: # Ana bahis kontrolü eklendi
                     st.warning("Please place a main bet of at least 10.")
                 elif total_bet > st.session_state.player_balance:
                     st.error(f"Total bet ({total_bet}) cannot exceed your balance ({st.session_state.player_balance}). Please adjust.")
@@ -763,7 +920,7 @@ with tab_blackjack:
                     st.session_state.bet_perfect_pairs = bet_pp_amount
                     st.session_state.bet_lucky_seven = bet_lucky_seven_amount
                     st.session_state.bet_bust = bet_bust_amount
-                    st.session_state.bet_insurance = 0 # Sigortayı sıfırla
+                    st.session_state.bet_insurance = 0
 
                     st.session_state.deck = create_deck()
                     st.session_state.player_hand = [st.session_state.deck.pop(), st.session_state.deck.pop()]
@@ -798,25 +955,25 @@ with tab_blackjack:
                     elif side_messages:
                         st.session_state.side_bet_message = " \n".join(side_messages)
                     else:
-                        st.session_state.side_bet_message = "" # Yan bahis oynanmadıysa mesajı temizle
+                        st.session_state.side_bet_message = "" 
 
                     # Ana Oyun Blackjack Kontrolü
                     player_score = calculate_score(st.session_state.player_hand)
                     dealer_up_card = st.session_state.dealer_hand[0]
-                    dealer_score = calculate_score(st.session_state.dealer_hand) # Sadece BJ kontrolü için hemen hesapla
+                    dealer_score = calculate_score(st.session_state.dealer_hand)
                     
                     # Sigorta Kontrolü
-                    if dealer_up_card['rank'] == 'A' and player_score != 21: # Krupiye As gösteriyor ve oyuncuda BJ yoksa
+                    if dealer_up_card['rank'] == 'A' and player_score != 21: 
                         st.session_state.insurance_active = True
-                        st.session_state.game_state = "insurance_decision" # Yeni state
+                        st.session_state.game_state = "insurance_decision" 
                         st.session_state.game_message = "Dealer is showing an Ace. Take Insurance?"
-                    elif player_score == 21 and dealer_score != 21: # Oyuncu BJ, Krupiye değil
+                    elif player_score == 21 and dealer_score != 21: 
                         st.session_state.game_state = "game_over"
                         st.session_state.game_message = "Blackjack! 🎉 You win!"
                         bj_win = int(st.session_state.current_bet * 1.5)
                         st.session_state.player_balance += st.session_state.current_bet + bj_win 
                         add_history("bj", st.session_state.current_bet, bj_win, st.session_state.player_balance)
-                        # Lucky 7s kontrolü
+                        
                         l7_winnings, l7_msg = check_lucky_sevens(st.session_state.player_hand, st.session_state.bet_lucky_seven)
                         if l7_winnings > 0:
                             st.session_state.player_balance += l7_winnings
@@ -824,14 +981,14 @@ with tab_blackjack:
                             add_history("bj", st.session_state.bet_lucky_seven, l7_winnings - st.session_state.bet_lucky_seven, st.session_state.player_balance)
                         elif st.session_state.bet_lucky_seven > 0: add_history("bj", st.session_state.bet_lucky_seven, -st.session_state.bet_lucky_seven, st.session_state.player_balance)
 
-                    elif player_score == 21 and dealer_score == 21: # İkisi de BJ
+                    elif player_score == 21 and dealer_score == 21: 
                         st.session_state.game_state = "game_over"
                         st.session_state.game_message = "Push! Both have Blackjack. 😐"
                         st.session_state.player_balance += st.session_state.current_bet
                         add_history("bj", st.session_state.current_bet, 0, st.session_state.player_balance)
                         if st.session_state.bet_lucky_seven > 0: add_history("bj", st.session_state.bet_lucky_seven, -st.session_state.bet_lucky_seven, st.session_state.player_balance)
 
-                    elif dealer_score == 21: # Sadece krupiye BJ
+                    elif dealer_score == 21: 
                          st.session_state.game_state = "game_over"
                          st.session_state.game_message = "Dealer has Blackjack. 😕 You lose."
                          add_history("bj", st.session_state.current_bet, -st.session_state.current_bet, st.session_state.player_balance)
@@ -842,7 +999,7 @@ with tab_blackjack:
                         st.session_state.game_message = "Your turn! Hit, Stand, Double Down, or Cash Out?"
                     st.rerun()
 
-    # --- YENİ: Sigorta Karar Aşaması ---
+    # Sigorta Karar Aşaması
     elif st.session_state.game_state == "insurance_decision":
         st.info(st.session_state.game_message)
         
@@ -855,32 +1012,35 @@ with tab_blackjack:
 
         col_ins1, col_ins2 = st.columns(2)
         
-        insurance_taken = False
+        insurance_decision_made = False
         if can_afford_insurance:
              if col_ins1.button(f"Take Insurance ({max_insurance})", key="take_insurance"):
                 st.session_state.player_balance -= max_insurance
                 st.session_state.bet_insurance = max_insurance
-                insurance_taken = True
+                insurance_decision_made = True
+                add_history("bj", max_insurance, -max_insurance, st.session_state.player_balance) # Sigorta bahsini kaybetmiş gibi ekle, kazanırsa düzeltilir
         else:
              col_ins1.warning(f"Insufficient balance for insurance ({max_insurance} needed)")
 
         if col_ins2.button("Decline Insurance", key="decline_insurance"):
             st.session_state.bet_insurance = 0
-            insurance_taken = True # Karar verildi olarak işaretle
+            insurance_decision_made = True 
 
         # Eğer sigorta kararı verildiyse, krupiyenin BJ olup olmadığını kontrol et
-        if insurance_taken:
+        if insurance_decision_made:
             dealer_score = calculate_score(st.session_state.dealer_hand)
             if dealer_score == 21: # Krupiye BJ
                 st.session_state.game_state = "game_over"
                 st.session_state.game_message = "Dealer has Blackjack. 😕 You lose main bet."
-                add_history("bj", st.session_state.current_bet, -st.session_state.current_bet, st.session_state.player_balance)
+                # Ana bahis zaten history'ye eklenmişti (kayıp olarak)
                 
                 if st.session_state.bet_insurance > 0:
                     insurance_win = st.session_state.bet_insurance * 2
                     st.session_state.player_balance += st.session_state.bet_insurance + insurance_win # Bahis + 2:1 kazanç
                     st.session_state.side_bet_message += f"\n**Insurance Win: +{insurance_win}!** (2:1)"
-                    add_history("bj", st.session_state.bet_insurance, insurance_win, st.session_state.player_balance)
+                    # History'yi düzelt (kayıptan kazanca)
+                    st.session_state.bj_history[0]["outcome"] = insurance_win 
+                    st.session_state.bj_history[0]["balance"] = st.session_state.player_balance
                 
                 # Lucky 7s kaybeder
                 if st.session_state.bet_lucky_seven > 0: add_history("bj", st.session_state.bet_lucky_seven, -st.session_state.bet_lucky_seven, st.session_state.player_balance)
@@ -890,15 +1050,14 @@ with tab_blackjack:
                 st.session_state.game_message = "Dealer does not have Blackjack. Your turn! Hit, Stand, Double Down, or Cash Out?"
                 if st.session_state.bet_insurance > 0:
                      st.session_state.side_bet_message += "\nInsurance bet lost."
-                     add_history("bj", st.session_state.bet_insurance, -st.session_state.bet_insurance, st.session_state.player_balance)
+                     # History zaten kayıp olarak eklenmişti
             
             st.session_state.insurance_active = False # Sigorta aşaması bitti
             st.rerun()
 
-    # --- Oyun Akışı (Player, Dealer, Game Over) ---
+    # Oyun Akışı (Player, Dealer, Game Over)
     elif st.session_state.game_state in ["player_turn", "dealer_turn", "game_over"]:
-        # ... (Bu bölümün kodu önceki yanıttaki gibidir, sadece history eklemeleri yapılmıştır) ...
-        # ... (Hit, Stand, Double Down, Cash Out, 5-Card Charlie, Dealer'ın sırası, Bust It!, Ana Bahis Ödemesi) ...
+
         if st.session_state.side_bet_message:
             st.info(st.session_state.side_bet_message)
 
@@ -925,6 +1084,7 @@ with tab_blackjack:
                 st.session_state.current_bet
             )
 
+            # Butonlar için sütun sayısı arttı
             num_buttons = 2
             can_double = len(st.session_state.player_hand) == 2 and st.session_state.player_balance >= st.session_state.current_bet
             if can_double: num_buttons += 1
@@ -1135,15 +1295,15 @@ with tab_coinflip:
             placeholder.header("Flipping... 🪙")
             time.sleep(0.7)
             result = random.choice(["Heads", "Tails"])
-            placeholder.header(f"It's {result}!")
+            placeholder.header(f"It's {result}!") 
 
             st.session_state.coin_flip_result = result
             st.session_state.last_coin_flip_bet = cf_bet
             st.session_state.last_coin_flip_choice = cf_choice
 
             if result == cf_choice:
-                winnings = cf_bet
-                st.session_state.player_balance += cf_bet + winnings
+                winnings = cf_bet 
+                st.session_state.player_balance += cf_bet + winnings 
                 st.session_state.coin_flip_message = f"🎉 You win {winnings}!"
                 add_history("cf", cf_bet, winnings, st.session_state.player_balance)
                 st.balloons()
@@ -1151,7 +1311,7 @@ with tab_coinflip:
                 st.session_state.coin_flip_message = f"😕 It's {result}. You lost."
                 add_history("cf", cf_bet, -cf_bet, st.session_state.player_balance)
 
-            st.rerun()
+            st.rerun() 
 
     if st.session_state.coin_flip_result and st.session_state.coin_flip_message:
         st.write(st.session_state.coin_flip_message)
@@ -1218,7 +1378,7 @@ with tab_roulette:
         num_cols = st.columns(4)
         selected_number = num_cols[0].selectbox("Number (0-36):", ["-"] + numbers, key="r_num_select")
         last_num_key = next((k for k in st.session_state.last_roulette_bets if k.startswith("number_")), None)
-        default_num_bet = min(st.session_state.last_roulette_bets.get(last_num_key, 0), st.session_state.player_balance) if last_num_key else 0
+        default_num_bet = min(st.session_state.last_roulette_bets.get(last_num_key, 0), st.session_state.player_balance) if last_num_key and st.session_state.player_balance > 0 else 0
         if selected_number != "-":
             number_bet = num_cols[1].number_input("Bet on Number (35:1):", min_value=0, max_value=st.session_state.player_balance,
                                                  value=default_num_bet, step=1, key="r_num_bet")
@@ -1229,19 +1389,21 @@ with tab_roulette:
         st.markdown("**Outside Bets (1:1 Payout)**")
         ext_cols = st.columns(3)
 
-        red_bet = ext_cols[0].number_input("Bet on Red:", min_value=0, max_value=st.session_state.player_balance, value=min(st.session_state.last_roulette_bets.get("Red", 0), st.session_state.player_balance), step=1, key="r_red_bet")
+        # Değerleri bakiye ile sınırla
+        max_outside_bet = st.session_state.player_balance # Dış bahisler için ayrı max
+        red_bet = ext_cols[0].number_input("Bet on Red:", min_value=0, max_value=max_outside_bet, value=min(st.session_state.last_roulette_bets.get("Red", 0), max_outside_bet), step=1, key="r_red_bet")
         if red_bet > 0: current_bets["Red"] = red_bet; total_current_bet += red_bet
-        black_bet = ext_cols[0].number_input("Bet on Black:", min_value=0, max_value=st.session_state.player_balance, value=min(st.session_state.last_roulette_bets.get("Black", 0), st.session_state.player_balance), step=1, key="r_black_bet")
+        black_bet = ext_cols[0].number_input("Bet on Black:", min_value=0, max_value=max_outside_bet, value=min(st.session_state.last_roulette_bets.get("Black", 0), max_outside_bet), step=1, key="r_black_bet")
         if black_bet > 0: current_bets["Black"] = black_bet; total_current_bet += black_bet
 
-        odd_bet = ext_cols[1].number_input("Bet on Odd:", min_value=0, max_value=st.session_state.player_balance, value=min(st.session_state.last_roulette_bets.get("Odd", 0), st.session_state.player_balance), step=1, key="r_odd_bet")
+        odd_bet = ext_cols[1].number_input("Bet on Odd:", min_value=0, max_value=max_outside_bet, value=min(st.session_state.last_roulette_bets.get("Odd", 0), max_outside_bet), step=1, key="r_odd_bet")
         if odd_bet > 0: current_bets["Odd"] = odd_bet; total_current_bet += odd_bet
-        even_bet = ext_cols[1].number_input("Bet on Even:", min_value=0, max_value=st.session_state.player_balance, value=min(st.session_state.last_roulette_bets.get("Even", 0), st.session_state.player_balance), step=1, key="r_even_bet")
+        even_bet = ext_cols[1].number_input("Bet on Even:", min_value=0, max_value=max_outside_bet, value=min(st.session_state.last_roulette_bets.get("Even", 0), max_outside_bet), step=1, key="r_even_bet")
         if even_bet > 0: current_bets["Even"] = even_bet; total_current_bet += even_bet
 
-        low_bet = ext_cols[2].number_input("Bet on Low (1-18):", min_value=0, max_value=st.session_state.player_balance, value=min(st.session_state.last_roulette_bets.get("Low", 0), st.session_state.player_balance), step=1, key="r_low_bet")
+        low_bet = ext_cols[2].number_input("Bet on Low (1-18):", min_value=0, max_value=max_outside_bet, value=min(st.session_state.last_roulette_bets.get("Low", 0), max_outside_bet), step=1, key="r_low_bet")
         if low_bet > 0: current_bets["Low"] = low_bet; total_current_bet += low_bet
-        high_bet = ext_cols[2].number_input("Bet on High (19-36):", min_value=0, max_value=st.session_state.player_balance, value=min(st.session_state.last_roulette_bets.get("High", 0), st.session_state.player_balance), step=1, key="r_high_bet")
+        high_bet = ext_cols[2].number_input("Bet on High (19-36):", min_value=0, max_value=max_outside_bet, value=min(st.session_state.last_roulette_bets.get("High", 0), max_outside_bet), step=1, key="r_high_bet")
         if high_bet > 0: current_bets["High"] = high_bet; total_current_bet += high_bet
 
         st.markdown(f"**Total Bet: {total_current_bet}**")
@@ -1267,14 +1429,11 @@ with tab_roulette:
                 winning_odd_even = get_odd_even(winning_number)
                 winning_low_high = get_low_high(winning_number)
                 
-                # Renk emojisi
                 color_emoji = "🔴" if winning_color == "Red" else "⚫" if winning_color == "Black" else "🟢"
 
-                # Sonucu animasyon placeholder'ına yaz
                 with spin_placeholder.container():
-                     st.header(f"Result: {winning_number} {color_emoji} {winning_color}!")
+                     st.header(f"Result: {winning_number} {color_emoji} {winning_color}!") 
                 st.session_state.roulette_result = f"**{winning_number} {color_emoji} {winning_color}**"
-
 
                 total_winnings = 0
                 winning_messages = []
@@ -1310,7 +1469,7 @@ with tab_roulette:
                 add_history("rl", total_current_bet, net_outcome, st.session_state.player_balance)
                 st.rerun()
 
-    if st.session_state.roulette_result and st.session_state.roulette_message:
+    if st.session_state.roulette_result and st.session_state.roulette_message: 
         #st.subheader(f"Wheel Result: {st.session_state.roulette_result}") # Zaten animasyonda gösterildi
         st.write(st.session_state.roulette_message)
         st.button("Place New Bets", on_click=lambda: st.session_state.update({"roulette_result":"", "roulette_message":"", "roulette_bets":{}}))
@@ -1444,7 +1603,7 @@ with tab_slots:
 
 # --- SEKME 6: VIDEO POKER ---
 with tab_vpoker:
-    st.header("🃏 Jacks or Better Video Poker") # Emoji eklendi
+    st.header("🃏 Video Poker") # Emoji güncellendi
     st.markdown("Get a pair of Jacks or better to win!")
 
     # State başlatma
@@ -1586,13 +1745,13 @@ with tab_vpoker:
 
     display_history("vp")
 
+
 # --- SEKME 7: STATS ---
 with tab_stats:
     st.header("📊 Player Stats")
     st.markdown("Your performance across the interactive features.")
 
     if "player_stats" not in st.session_state:
-        # Bu durum normalde olmamalı ama güvenlik için
         reset_stats_state() 
         st.warning("Stats initialized. Play some games!")
     
@@ -1600,7 +1759,7 @@ with tab_stats:
     
     # Genel Bakış
     st.subheader("Overall Performance")
-    net_result = st.session_state.player_balance - stats['start_balance'] # Mevcut - Başlangıç
+    net_result = st.session_state.player_balance - stats['start_balance'] 
     profit_loss_str = f"+{net_result}" if net_result >= 0 else str(net_result)
     
     col1, col2, col3, col4 = st.columns(4)
@@ -1619,7 +1778,7 @@ with tab_stats:
     st.subheader("Performance by Game")
     
     game_stats_data = []
-    game_keys = ["bj", "cf", "rl", "slot", "vp"] # Gösterilecek oyunların sırası
+    game_keys = ["bj", "cf", "rl", "slot", "vp"] 
     game_names = {"bj": "Blackjack", "cf": "Coin Flip", "rl": "Roulette", "slot": "Slots", "vp": "Video Poker"}
 
     for game_key in game_keys:
@@ -1629,9 +1788,8 @@ with tab_stats:
             if played > 0:
                 won = game_data["won"]
                 lost = game_data["lost"]
-                # Kazanma oranını hesapla (Push'ları dahil etme)
                 win_rate = f"{((won / (won + lost)) * 100):.1f}%" if (won + lost) > 0 else "N/A"
-                push = game_data.get("push", "-") # Sadece BJ için
+                push = game_data.get("push", "-") 
             else:
                 won, lost, win_rate, push = 0, 0, "0.0%", "-"
 
@@ -1640,12 +1798,11 @@ with tab_stats:
                 "Played": played,
                 "Won": won,
                 "Lost": lost,
-                "Push/Tie": push if game_key == "bj" else "-", # Sadece BJ için göster
-                "Win Rate (%)": win_rate.replace('%','') if win_rate != "N/A" else None # % işaretsiz ve sayısal
+                "Push/Tie": push if game_key == "bj" else "-", 
+                "Win Rate (%)": win_rate.replace('%','') if win_rate != "N/A" else None 
             })
     
     if game_stats_data:
-         # Win Rate'i float olarak formatla
          st.dataframe(
              game_stats_data, 
              hide_index=True,
@@ -1662,7 +1819,6 @@ with tab_stats:
         time.sleep(1)
         st.rerun()
 
-
 # --- SEKME 8: MUSIC PLAYER ---
 with tab_music:
     st.header("🎶 Music Player")
@@ -1673,7 +1829,7 @@ with tab_music:
     st.video(youtube_url)
     st.caption("Music provided via YouTube embed.")
 
-# --- YENİ: SEKME 9 - CREATIVE CORNER ---
+# --- SEKME 9: CREATIVE CORNER ---
 with tab_creative:
     st.header("🎨 Creative Corner")
     st.markdown("Let's generate some creative text using the Gemini model!")
@@ -1685,14 +1841,15 @@ with tab_creative:
     
     creative_prompt = st.text_area("Enter a topic or theme (e.g., 'a rainy day in the city', 'the feeling of discovery', 'cats playing piano'):")
     
+    if "creative_output" not in st.session_state:
+        st.session_state.creative_output = ""
+
     if st.button("Generate!", key="creative_generate"):
         if creative_prompt:
             with st.spinner(f"Generating a {creative_type.lower()} about '{creative_prompt}'..."):
                 try:
-                    # Yaratıcılık için ayrı LLM'i kullan
                     creative_llm_instance = load_creative_llm() 
                     
-                    # Prompt'u seçilen türe göre ayarla
                     if creative_type == "Short Poem":
                         system_prompt = "You are a poet. Write a short, evocative poem (4-8 lines) about the following topic."
                     elif creative_type == "Story Idea":
@@ -1704,20 +1861,22 @@ with tab_creative:
                     else:
                         system_prompt = "Generate creative text about the following topic."
 
-                    # LangChain Prompt şablonu ve zinciri
                     prompt = ChatPromptTemplate.from_messages([("system", system_prompt), ("human", "{topic}")])
                     chain = prompt | creative_llm_instance | StrOutputParser()
                     
-                    # Zinciri çalıştır ve sonucu göster
-                    creative_output = chain.invoke({"topic": creative_prompt})
+                    st.session_state.creative_output = chain.invoke({"topic": creative_prompt})
                     st.success("Generated!")
-                    st.markdown(f"### Your {creative_type}:")
-                    st.markdown(f"> {creative_output}") # Blockquote içinde göster
+                    # st.rerun() # Re-run a gerek yok, direkt aşağıda gösterilecek
                 
                 except Exception as e:
                     st.error(f"An error occurred during generation: {e}")
         else:
             st.warning("Please enter a topic or theme.")
+
+    # Sonucu göster
+    if st.session_state.creative_output:
+        st.markdown(f"### Your {creative_type}:")
+        st.markdown(f"> {st.session_state.creative_output}") 
 
 
 # --- SEKME 10: SETTINGS ---
