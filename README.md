@@ -1,95 +1,202 @@
-# DocuMentor: A RAG-Powered Q&A Chatbot for Technical Documents
+````markdown
+# DocuMentor 📄 - Advanced AI Chatbot & Interactive Features
 
-**DocuMentor** is an intelligent, web-based chatbot designed to navigate and answer questions from dense technical knowledge bases. Developed as a final project for the Akbank GenAI Bootcamp, this application showcases the power of Retrieval-Augmented Generation (RAG) in making complex information accessible and understandable.
+**DocuMentor** is a multi-functional Streamlit web application developed by Göktuğ Türkdağ. It started as an intelligent Q&A chatbot leveraging Retrieval-Augmented Generation (RAG) but has evolved into a comprehensive platform showcasing advanced AI integration, complex state management, and interactive features, including several games of chance and creative text generation.
 
-## The Problem: Information Overload in Technical Fields
+This project serves as a portfolio piece demonstrating proficiency in building sophisticated, interactive AI applications using Python and modern AI frameworks.
 
-Professionals in fields like business administration, public finance, and tax law often face the challenge of navigating vast and complex datasets. Finding a specific piece of information within thousands of pages of technical documentation can be a daunting task. A simple Ctrl+F search is often insufficient as it lacks contextual understanding. The core problem is the inability to ask a direct question and receive a precise, relevant answer—or to be quickly informed if the information is outside the document's scope.
+---
 
-## The Solution: Intelligent, Context-Aware Retrieval
+## ✨ Features
 
-**DocuMentor** addresses this challenge by acting as an intelligent search assistant. Instead of just matching keywords, it leverages a sophisticated RAG architecture to *understand* the user's query and retrieve the most relevant information from its knowledge base. It provides users with:
+The application is organized into several tabs, each offering distinct functionalities:
 
-* **Precise Answers:** Delivers direct answers based on the context provided in the dataset.
+### 💬 Chatbot
+* **Intelligent Q&A:** Answers questions based on a knowledge base using a RAG architecture.
+* **Multi-Document Chat:** Users can upload multiple `.pdf`, `.docx`, or `.txt` files via the sidebar and chat specifically with their content.
+* **Default Knowledge Base:** Utilizes the Databricks Dolly 15k dataset when no user files are uploaded.
+* **Conversational Memory:** Remembers the context of the conversation for follow-up questions (`ConversationalRetrievalChain`).
+* **Streaming Responses:** Answers are streamed token-by-token for a smoother user experience (`st.write_stream`).
+* **Multilingual Understanding:** Can understand questions in various languages thanks to multilingual embeddings.
+* **Source Highlighting:** Shows snippets of the source documents used to generate the answer.
+* **Simlish Mode 👽:** An optional fun mode (toggleable in Settings) where the chatbot responds by imitating Simlish, demonstrating prompt engineering.
+* **Developer FAQ Easter Egg:** The chatbot can answer specific questions about its developer, Göktuğ Türkdağ (skills, experience, contact), in multiple languages.
+* **Content Moderation:** Includes an expanded safety barrier to detect and refuse to answer inappropriate, unethical, harmful, or sensitive political questions, providing helpful redirections where appropriate (e.g., for self-harm related queries).
 
-* **Semantic Understanding:** Goes beyond keyword matching to find conceptually related information.
+### 🃏 Blackjack
+* **Classic Game:** Full implementation of Blackjack rules.
+* **Multiple Decks:** Uses a configurable number of decks (4, 6, or 8 via Settings).
+* **Betting System:** Players bet using a shared balance.
+* **Side Bets:** Includes popular side bets:
+    * Perfect Pairs (Mixed, Colored, Perfect)
+    * 21+3 (Flush, Straight, Trips, Straight Flush)
+    * Lucky 7s (Pays on number of 7s)
+    * Bust It! (Pays based on the number of cards the dealer busts with)
+* **Advanced Rules:** Implements **Double Down** and **Insurance**.
+* **Special Wins:** Includes the **5-Card Charlie** rule.
+* **Dynamic Cash Out:** Offers a cash-out value based on a heuristic evaluation of the player's hand vs. the dealer's upcard before the player acts.
+* **Visual Card Display:** Uses styled text and emojis to represent cards.
+* **Basic Strategy Guide:** An expandable section explains optimal play.
+* **History Tracking:** Records the outcome of the last 5 hands.
 
-* **Scope Awareness:** Can infer when a question cannot be answered by the available data.
+### 🪙 Coin Flip
+* **Simple Betting:** Classic Heads or Tails game.
+* **Balance Integration:** Uses the shared player balance.
+* **Last Bet Memory:** Remembers the previous bet amount and choice.
+* **History Tracking:** Records the outcome of the last 5 flips.
+* **Simple Animation:** Includes a basic "Flipping..." visual effect.
 
-## Knowledge Base: The Databricks Dolly 15k Dataset
+### 🎡 Roulette
+* **European Roulette:** Single zero wheel (0-36).
+* **Basic Bets:** Supports betting on individual numbers (Straight Up) and outside bets (Red/Black, Odd/Even, Low/High).
+* **Balance Integration:** Uses the shared player balance.
+* **Last Bet Memory:** Remembers the previous bets placed.
+* **History Tracking:** Records the outcome of the last 5 spins.
+* **Visual Result:** Displays the winning number with a color emoji.
+* **Simple Animation:** Includes a basic "Spinning..." visual effect.
 
-**Dataset:** [Databricks Dolly 15k](https://huggingface.co/datasets/databricks/databricks-dolly-15k)
+### 🎰 Slots
+* **Simple 3-Reel Slot:** Classic slot machine mechanic.
+* **Weighted Symbols:** Uses different probabilities for symbols (`random.choices`).
+* **Payout Table:** Clear payouts for 3-of-a-kind and cherry combinations on the middle line.
+* **Balance Integration:** Uses the shared player balance.
+* **Last Bet Memory:** Remembers the previous bet amount.
+* **History Tracking:** Records the outcome of the last 5 spins.
+* **Simple Animation:** Includes a basic reel "spinning" effect using `time.sleep`.
 
-**Description:** This project is powered by the Dolly 15k dataset, a high-quality collection of \~15,000 instruction/response pairs crowdsourced from Databricks employees. It covers diverse categories such as information extraction, brainstorming, and summarization.
+### 🃏 Video Poker (Jacks or Better)
+* **Classic Game:** Standard Jacks or Better rules (Pair of Jacks or higher wins).
+* **5-Card Draw:** Player receives 5 cards and chooses which ones to hold.
+* **Payout Table:** Displays standard payout ratios for poker hands.
+* **Balance Integration:** Uses the shared player balance (bet 1-5 credits).
+* **History Tracking:** Records the outcome of the last 5 hands.
+* **Visual Card Display:** Uses styled text and emojis with clear "Hold" indication.
 
-**Application:** The "context" paragraphs from this dataset, many of which are sourced from Wikipedia, serve as the foundational knowledge base for DocuMentor. The chatbot relies exclusively on this context to formulate its answers.
+### 📊 Stats
+* **Overall Performance:** Tracks Starting Balance, Current Balance, Total Bets Placed, Net Profit/Loss, Biggest Win, Biggest Loss.
+* **Performance by Game:** Shows Played, Won, Lost, Push (for BJ), and Win Rate (%) for each game.
+* **Reset Option:** Allows resetting statistics independently.
 
-## System Architecture and Technology Stack
+### 🎶 Music Player
+* **YouTube Embed:** Plays a selected YouTube playlist (currently a Blues playlist) using `st.video`.
 
-DocuMentor is built on a RAG (Retrieval-Augmented Generation) pipeline orchestrated with the LangChain framework. The system's workflow is as follows:
+### 🎨 Creative Corner
+* **Text Generation:** Uses the creative Gemini model (`load_creative_llm`) to generate:
+    * Short Poems
+    * Story Ideas
+    * Haikus
+    * Tweets
+* **User Prompts:** Takes a topic or theme from the user as input.
 
-1. **Ingestion:** The "context" texts from the databricks-dolly-15k dataset are loaded into the system.
+### ⚙️ Settings
+* **Simlish Mode Toggle:** Enable/disable the chatbot's Simlish personality.
+* **Blackjack Deck Count:** Select the number of decks used in the Blackjack game.
+* **General Info:** Points to the sidebar reset button.
 
-2. **Embedding:** Each text document is converted into a numerical vector representation using HuggingFaceEmbeddings with thesentence-transformers/all-MiniLM-L6-v2 model.
+---
 
-3. **Indexing:** These vectors are stored and indexed in a FAISS vector database, allowing for efficient, high-speed semantic searches.
+## 🛠️ Tech Stack
 
-4. **Retrieval:** When a user asks a question, it is also converted into a vector. The FAISS database is then queried to find the most semantically similar text chunks (the context)
+* **UI Framework:** [Streamlit](https://streamlit.io/)
+* **Core Logic:** Python 3.11+
+* **AI/LLM Framework:** [LangChain](https://python.langchain.com/)
+* **LLM:** Google Gemini Pro (via `langchain-google-genai`)
+* **Embeddings:** HuggingFace Sentence Transformers (`paraphrase-multilingual-MiniLM-L12-v2` via `langchain-huggingface`)
+* **Vector Database:** [ChromaDB](https://www.trychroma.com/) (via `langchain-community`)
+* **Data Handling:** `datasets` (for Dolly 15k), `PyPDFLoader`, `Docx2txtLoader`, `TextLoader` (via `langchain-community`), `tempfile`
+* **Environment Variables:** `python-dotenv`
+* **Utilities:** `random`, `time`, `collections.Counter`, `math`
 
-5. **Generation:** The retrieved context and the original user query are passed to the Google Gemini (gemini-pro-latest) model. The model then generates a human-like, contextually accurate answer.
+---
 
-**Technology Stack:**
+## 🚀 Setup & Installation
 
-* **Web Framework:** Streamlit
+1.  **Clone the repository:**
+    ```bash
+    git clone [https://github.com/goktug-turkdag/DocuMentor.git](https://github.com/goktug-turkdag/DocuMentor.git) # Replace with your actual repo URL if different
+    cd DocuMentor
+    ```
 
-* **RAG Orchestration:** LangChain
+2.  **Create and activate a virtual environment:** (Recommended)
+    ```bash
+    python -m venv venv
+    # On Windows:
+    .\venv\Scripts\activate
+    # On macOS/Linux:
+    source venv/bin/activate
+    ```
 
-* **Generation Model:** Google Gemini (gemini-pro-latest)
+3.  **Install dependencies:**
+    Make sure your `requirements.txt` file includes all necessary packages:
+    ```txt
+    streamlit
+    python-dotenv
+    datasets
+    langchain
+    langchain-core
+    langchain-community
+    langchain-huggingface
+    langchain-google-genai
+    google-generativeai
+    sentence-transformers
+    chromadb
+    pypdf
+    docx2txt
+    # Add any other specific versions if needed
+    ```
+    Then run:
+    ```bash
+    pip install -r requirements.txt
+    ```
 
-* **Embedding Model:** Hugging Face (sentence-transformers/all-MiniLM-L6-v2)
+4.  **Create a `.env` file:**
+    In the root directory of the project, create a file named `.env` and add your Google API key:
+    ```ini
+    GOOGLE_API_KEY="YOUR_GOOGLE_API_KEY_HERE"
+    ```
+    *(You can get an API key from Google AI Studio.)*
 
-* **Vector Database:** FAISS (CPU)
+---
 
-## Getting Started
+## ▶️ Running the Application
 
-To run this project on your local machine, please follow the steps below.
+Once the setup is complete, run the Streamlit app from your terminal:
 
-1. **Clone the Repository:**
+```bash
+streamlit run app.py
+````
 
-   git clone https://github.com/goktug-turkdag/DocuMentor.git
+The application should open automatically in your web browser.
 
-   cd DocuMentor
+-----
 
-2. **Set Up and Activate the Virtual Environment:**
+## usage
 
-   python -m venv venv
+  * Navigate between the different features (Chatbot, Games, Music, Settings) using the tabs at the top.
+  * **Chatbot:** Ask questions in the input bar. Use the sidebar to upload your own documents to chat with them instead of the default knowledge base.
+  * **Games:** Follow the on-screen instructions to place bets and play. Use the sidebar button to reset game states and balance.
+  * **Settings:** Toggle Simlish mode or adjust Blackjack deck settings.
 
-   venv\Scripts\activate  # On Windows
+-----
 
-   source venv/bin/activate  # On macOS/Linux
+## 💻 Codebase
 
-3. **Install Dependencies:**
+This entire application, including the AI logic, multiple game implementations, and UI, is contained within a single `app.py` file exceeding 2000 lines. While this demonstrates the ability to manage a large script, in a production scenario, breaking the code into multiple modules (e.g., `chatbot.py`, `blackjack.py`, `utils.py`) would be recommended for better maintainability.
 
-   pip install --upgrade -r requirements.txt
+-----
 
-4. **Configure the API Key:**
+## 👨‍💻 Developer
 
-  * Create a file named.env in the root directory.
+Developed by **Göktuğ Türkdağ**.
 
-  * Add your Google API key to the file in the following format:GOOGLE_API_KEY="YOUR_API_KEY_HERE"``
+  * **LinkedIn:** [linkedin.com/in/goktugturkdag](https://www.google.com/search?q=https://www.linkedin.com/in/goktugturkdag)
+  * **GitHub:** [github.com/goktug-turkdag](https://www.google.com/search?q=https://github.com/goktug-turkdag)
+  * **Book a Meeting:** [cal.com/goktugturkdag](https://www.google.com/search?q=https://cal.com/goktugturkdag)
 
-5. **Run the Application:**
+-----
 
-   streamlit run app.py
+Enjoy using DocuMentor\!
 
-   *Note: The initial startup may take a few minutes as the application needs to download the dataset and models for the first time.*
+```
 
-## Live Demo
-
-A live version of the DocuMentor application is available at the following link:
-➡️ [**https://documentor1.streamlit.app**](https://documentor1.streamlit.app)
-
-*Developed by **Göktuğ Türkdağ** as a part of the Akbank GenAI Bootcamp to merge a passion for AI with new skills.*
-
-<img width="716" height="349" alt="Screenshot_10" src="https://github.com/user-attachments/assets/2e9b044e-8d56-4b82-9da2-0e084258513b" />
-<img width="742" height="779" alt="Screenshot_11" src="https://github.com/user-attachments/assets/05b620e3-c690-4d97-81a4-0b1a9f6b96bb" />
+```
