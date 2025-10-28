@@ -7,3 +7,6 @@ venv/
 # Python'un oluşturduğu geçici klasörleri yok say
 __pycache__/
 *.pyc
+
+# Oluşturulan vektör veritabanını yoksay
+chroma_db_multilingual/
