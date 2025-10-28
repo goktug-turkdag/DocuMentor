@@ -76,7 +76,6 @@ def process_uploaded_files(uploaded_files):
     if not uploaded_files:
         return None
     all_documents = []
-    # ... (Dosya işleme kodunun geri kalanı)...
     with tempfile.TemporaryDirectory() as temp_dir:
         for uploaded_file in uploaded_files:
             temp_path = os.path.join(temp_dir, uploaded_file.name)
@@ -120,8 +119,11 @@ Helpful Answer:
 
 # Simlish Prompt
 simlish_prompt_template = """
-Sul sul! You are a Sim from The Sims game...
-(Simlish prompt metni değişmedi) ...
+Sul sul! You are a Sim from The Sims game.
+Use the following context to answer the question, but you must answer by imitating Simlish.
+Be technically correct, but sound like a Sim.
+Use these words: "Sul sul!", "Nooboo", "Dag dag", "Yibs", "Hooba Noo",
+"Shoo flee", "Gerbit", "Chumcha", "Za woka", "Neep."
 Context: {context}
 Chat History: {chat_history}
 Question: {question}
@@ -149,9 +151,19 @@ with st.sidebar:
     st.header("About DocuMentor")
     st.markdown(
         """
-        **DocuMentor** demonstrates advanced application development...
-        (Sidebar açıklamanız burada - değişiklik yok)
-        ... The codebase exceeds **1500+ lines** and is **open-source** on GitHub.
+        **DocuMentor** demonstrates advanced application development, combining:
+        1.  An **intelligent Q&A chatbot** leveraging cutting-edge AI.
+        2.  Several **interactive features & games of chance** demonstrating Python logic and state handling.
+
+        **Technical Architecture & Features:**
+        * **UI:** Built with **Streamlit**.
+        * **Core Logic:** **Python**.
+        * **Chatbot Engine:** RAG architecture, Google Gemini Pro LLM (via LangChain), HuggingFace multilingual embeddings, ChromaDB vector store, Dolly 15k dataset baseline, multi-document upload (.pdf, .docx, .txt), conversational memory, streaming responses, and Simlish mode easter egg.
+        * **Interactive Features (Games):** Blackjack (with 4 side bets, dynamic cashout, 5-Card Charlie), Coin Flip, Roulette, Slots, and Video Poker (Jacks or Better) implemented using pure Python logic and Streamlit Session State for complex state management (balance, bets, game flow, history).
+
+        **Developed by Göktuğ Türkdağ.** This project highlights proficiency in building complex, interactive AI applications and sophisticated state management.
+
+        The codebase exceeds **1500+ lines** and is **open-source** on GitHub. Find the repository via the link below!
         """
     )
     st.markdown("---")
@@ -159,6 +171,15 @@ with st.sidebar:
     st.markdown("🔗 [LinkedIn](https://www.linkedin.com/in/goktugturkdag)")
     st.markdown("🐙 [GitHub](https://github.com/goktug-turkdag)")
     st.markdown("---")
+
+    # Reset fonksiyonlarını global scope'a ekleyelim (Bu satırlar önemli)
+    # Bu fonksiyonlar ilgili sekmelerde tanımlanacak
+    bj_reset_func = lambda reset_balance=False: None
+    cf_reset_func = lambda reset_balance=False: None
+    rl_reset_func = lambda reset_balance=False: None
+    sl_reset_func = lambda reset_balance=False: None
+    vp_reset_func = lambda reset_balance=False: None
+
 
     # Butonlar
     if st.button("Clear Chat History 🧹"):
@@ -169,16 +190,13 @@ with st.sidebar:
         st.success("Chat history and uploaded files cleared!")
         st.rerun()
 
-    # Reset fonksiyonlarını global scope'a taşıyalım
-    # (Bu fonksiyonlar ilgili sekmelerde tanımlanacak)
-
     if st.button("Reset Interactive Features 💰"):
-        # Reset fonksiyonlarını çağır (eğer varsa)
-        if "bj_reset_func" in globals(): globals()["bj_reset_func"](reset_balance=True)
-        if "cf_reset_func" in globals(): globals()["cf_reset_func"](reset_balance=True)
-        if "rl_reset_func" in globals(): globals()["rl_reset_func"](reset_balance=True)
-        if "sl_reset_func" in globals(): globals()["sl_reset_func"](reset_balance=True)
-        if "vp_reset_func" in globals(): globals()["vp_reset_func"](reset_balance=True)
+        # Reset fonksiyonlarını çağır
+        bj_reset_func(reset_balance=True)
+        cf_reset_func(reset_balance=True)
+        rl_reset_func(reset_balance=True)
+        sl_reset_func(reset_balance=True)
+        vp_reset_func(reset_balance=True)
 
         st.session_state.player_balance = 1000 # Bakiyeyi sıfırla
         st.success("Balance and feature states reset!")
@@ -211,7 +229,7 @@ if "messages" not in st.session_state:
     I'm trained on **Dolly 15k**, but you can also **upload your own documents** in the sidebar to chat with them!
     Feel free to explore the other tabs for some **interactive features** and **easter eggs**!
 
-    - Try asking me: "Who is Göktuğ Türkdağ?"
+    - Try asking me: "Who is Göktuğ Türkdağ?" or "What technologies were used?"
     - Or check the **Settings** tab to enable **Simlish Mode** 👽
     """
     st.session_state.messages.append({"role": "assistant", "content": welcome_message})
@@ -243,6 +261,12 @@ def display_history(game_key):
                 outcome_val = entry['outcome'] if entry['outcome'] != 0 else 'Push'
                 st.markdown(f"- Bet: {entry['bet']}, Outcome: {outcome_sign}{outcome_val}, New Balance: {entry['balance']}")
 
+# --- İçerik Güvenlik Bariyeri Kelimeleri ---
+BANNED_KEYWORDS = [
+    "kill", "murder", "bomb", "terror", "illegal", "suicide",
+    "hate", "nazi", "racist", "sex", "porn",
+    # Daha fazla kelime eklenebilir
+]
 
 # --- SEKME 1: CHATBOT ---
 with tab_chat:
@@ -304,18 +328,51 @@ with tab_chat:
         st.chat_message("human", avatar=avatars["human"]).markdown(user_question)
         st.session_state.messages.append({"role": "human", "content": user_question})
 
-        # Easter Egg kontrolü
         lower_question = user_question.lower()
-        creator_keywords = ["göktuğ", "türkdağ", "geliştirici", "developer", "who made you", "who created you"]
 
-        if any(keyword in lower_question for keyword in creator_keywords):
-            response_text = f"""
-            Ah, a great question! I was developed by **Göktuğ Türkdağ**. 🤖
-            He's a developer specializing in RAG architectures, LLMs, and Python.
-            You can find him here:
-            🔗 **LinkedIn:** [linkedin.com/in/goktugturkdag](https://www.linkedin.com/in/goktugturkdag)
-            🐙 **GitHub:** [github.com/goktug-turkdag](https://github.com/goktug-turkdag)
-            """
+        # İçerik Güvenlik Bariyeri
+        is_safe = True
+        for keyword in BANNED_KEYWORDS:
+            if keyword in lower_question:
+                is_safe = False
+                break
+
+        if not is_safe:
+            response_text = "I cannot answer questions that are inappropriate, unethical, or promote harmful content. Please ask something else."
+            with st.chat_message("assistant", avatar=avatars["assistant"]):
+                st.warning(response_text)
+            st.session_state.messages.append({"role": "assistant", "content": response_text})
+
+        # Gelişmiş Easter Egg (SSS)
+        elif any(keyword in lower_question for keyword in ["göktuğ", "türkdağ", "developer", "geliştirici"]):
+            response_text = ""
+            if any(k in lower_question for k in ["who", "kimdir", "about"]):
+                response_text = f"""
+                Ah, a great question! I was developed by **Göktuğ Türkdağ**. 🤖
+                He's a developer specializing in RAG architectures, Large Language Models (LLMs), and Python application development using frameworks like Streamlit and LangChain.
+                You can find his contact details below or ask about the technologies used in this project!
+                """
+            elif any(k in lower_question for k in ["tech", "skills", "uzmanlık", "teknoloji", "architecture"]):
+                 response_text = f"""
+                 This DocuMentor application utilizes several modern technologies:
+                 * **UI:** Streamlit
+                 * **Core:** Python
+                 * **AI Engine:** Google Gemini Pro (via LangChain)
+                 * **RAG:** LangChain's `ConversationalRetrievalChain`
+                 * **Embeddings:** HuggingFace Sentence Transformers (multilingual)
+                 * **Vector DB:** ChromaDB
+                 * **State Management:** Streamlit Session State
+
+                 Göktuğ Türkdağ has experience implementing these and building complex interactive applications.
+                 """
+            elif any(k in lower_question for k in ["contact", "iletişim", "connect", "linkedin", "github"]):
+                 response_text = f"""
+                 You can connect with Göktuğ Türkdağ here:
+                 🔗 **LinkedIn:** [linkedin.com/in/goktugturkdag](https://www.linkedin.com/in/goktugturkdag)
+                 🐙 **GitHub:** [github.com/goktug-turkdag](https://github.com/goktug-turkdag)
+                 """
+            else:
+                 response_text = "It looks like you're asking about my developer, Göktuğ Türkdağ! You can ask 'Who is Göktuğ Türkdağ?', 'What technologies were used?', or 'How to contact him?'."
 
             with st.chat_message("assistant", avatar=avatars["assistant"]):
                 st.markdown(response_text)
@@ -324,54 +381,49 @@ with tab_chat:
             st.session_state.chat_history.append(AIMessage(content=response_text))
 
         else:
-            # Normal RAG cevabı
+            # Normal RAG cevabı (Streaming)
             spinner_text = "Searching for the answer... (Chumcha!)" if st.session_state.simlish_mode else "Searching for the answer..."
 
             with st.chat_message("assistant", avatar=avatars["assistant"]):
                 response_container = st.empty()
 
-                # --- BAŞLANGIÇ: DÜZELTİLMİŞ VE GÜVENLİ STREAMING KODU ---
                 # Stream generator fonksiyonu (Hata Ayıklama ile)
                 def stream_generator():
                     full_response = ""
                     sources = []
-                    try: # Hata yakalama eklendi
+                    try:
                         stream = rag_chain.stream({
                             "question": user_question,
                             "chat_history": st.session_state.chat_history
                         })
 
                         for chunk in stream:
-                            if "answer" in chunk and chunk["answer"] is not None: # None kontrolü
+                            if "answer" in chunk and chunk["answer"] is not None:
                                 full_response += chunk["answer"]
                                 yield full_response + "▌"
-                            if "source_documents" in chunk and chunk["source_documents"] is not None: # None kontrolü
+                            if "source_documents" in chunk and chunk["source_documents"] is not None:
                                 sources = chunk["source_documents"]
 
-                        yield full_response # Son hali imleçsiz yield et
+                        yield full_response
                         return full_response, sources
 
                     except Exception as e:
-                        error_message = f"Sorry, an error occurred: {e}"
-                        st.error(error_message) # Hata mesajını logla/göster
-                        yield error_message # Hata mesajını UI'a yield et
-                        return error_message, [] # Fallback return değeri
+                        error_message = f"Sorry, an error occurred while generating the response: {e}. Please check the API key or network connection."
+                        st.error(error_message)
+                        yield error_message
+                        return error_message, []
 
-                # st.write_stream'i çalıştır ve geri dönen değeri al
                 returned_values = st.write_stream(stream_generator())
 
-                # Geri dönen değerleri GÜVENLİ bir şekilde yakala
                 if isinstance(returned_values, tuple) and len(returned_values) == 2:
                     full_response, sources = returned_values
-                elif isinstance(returned_values, str): # Eğer sadece string döndüyse (hata durumu)
+                elif isinstance(returned_values, str):
                      full_response = returned_values
                      sources = []
-                else: # Diğer beklenmedik durumlar için fallback
+                else:
                     full_response = "Sorry, I couldn't generate a response properly."
                     sources = []
-                # --- BİTİŞ: DÜZELTİLMİŞ VE GÜVENLİ STREAMING KODU ---
 
-            # Session state'i güncelle
             st.session_state.messages.append({"role": "assistant", "content": full_response, "sources": sources})
             st.session_state.chat_history.append(HumanMessage(content=user_question))
             st.session_state.chat_history.append(AIMessage(content=full_response))
@@ -382,7 +434,7 @@ with tab_blackjack:
     st.header("🃏 Blackjack")
     st.markdown("Place your bet, and optional side bets, to beat the dealer!")
 
-    # State başlatma (Hata önlemek için sekme başında)
+    # State başlatma
     if "game_state" not in st.session_state:
         st.session_state.game_state = "betting"
         st.session_state.deck = []
@@ -399,14 +451,15 @@ with tab_blackjack:
 
     with st.expander("Show/Hide Basic Strategy & Side Bet Info"):
         st.markdown("""
-        **Basic Blackjack Strategy:** ... (Strateji bilgisi) ...
-        **Side Bet Payouts:** ... (Payout bilgisi) ...
-        **Special Wins:** 5-Card Charlie: Draw 5 cards without busting - win 1:1.
-        """)
+        **Basic Blackjack Strategy:** ...
+        **Side Bet Payouts:** ...
+        **Special Wins:** 5-Card Charlie ...
+        """) # Kısaltıldı
 
     # --- Blackjack Oyun Fonksiyonları ---
     def reset_blackjack_state(reset_balance=False):
         st.session_state.game_state = "betting"
+        # ... (Diğer state sıfırlamaları) ...
         st.session_state.deck = []
         st.session_state.player_hand = []
         st.session_state.dealer_hand = []
@@ -419,8 +472,7 @@ with tab_blackjack:
         st.session_state.bet_lucky_seven = 0
         st.session_state.bet_bust = 0
         st.session_state.bj_history = []
-    
-    globals()["bj_reset_func"] = reset_blackjack_state # Sidebar için global yap
+    globals()["bj_reset_func"] = reset_blackjack_state
 
     def create_deck(num_decks=6):
         suits = ['♥', '♦', '♣', '♠']
@@ -429,7 +481,7 @@ with tab_blackjack:
         random.shuffle(deck)
         return deck
 
-    # ... (get_card_value, calculate_score, check_* side bets, get_cashout_offer_heuristic fonksiyonları burada - değişiklik yok) ...
+    # ... (get_card_value, calculate_score değişmedi) ...
     def get_card_value(card_rank):
         if card_rank in ['J', 'Q', 'K']: return 10
         if card_rank == 'A': return 11
@@ -446,6 +498,7 @@ with tab_blackjack:
     def display_hand_visual(hand, title):
         st.subheader(title)
         card_html = ""
+        # ... (Kart görselleştirme kodu) ...
         for card in hand:
             color = "red" if card['suit'] in ['♥', '♦'] else "black"
             card_html += f"<div style='border:1px solid #ccc; border-radius: 5px; padding: 10px; margin: 5px; display:inline-block; text-align: center; width: 60px; background-color: white; color: {color};'> <span style='font-size: 1.5em; font-weight: bold;'>{card['rank']}</span><br><span style='font-size: 1.5em;'>{card['suit']}</span> </div>"
@@ -457,13 +510,15 @@ with tab_blackjack:
     def display_dealer_hand_hidden_visual(hand):
         st.subheader("Dealer's Hand")
         card_html = ""
+        # ... (Gizli kart görselleştirme kodu) ...
         card = hand[0]
         color = "red" if card['suit'] in ['♥', '♦'] else "black"
         card_html += f"<div style='border:1px solid #ccc; border-radius: 5px; padding: 10px; margin: 5px; display:inline-block; text-align: center; width: 60px; background-color: white; color: {color};'> <span style='font-size: 1.5em; font-weight: bold;'>{card['rank']}</span><br><span style='font-size: 1.5em;'>{card['suit']}</span> </div>"
         card_html += f"<div style='border:1px solid #ccc; border-radius: 5px; padding: 10px; margin: 5px; display:inline-block; text-align: center; width: 60px; background-color: #aaa; color: #aaa;'> <span style='font-size: 1.5em; font-weight: bold;'>?</span><br><span style='font-size: 1.5em;'>?</span> </div>"
         st.markdown(card_html, unsafe_allow_html=True)
         st.markdown("**Score: ?**")
-        
+
+    # ... (Yan Bahis Kontrol Fonksiyonları - check_perfect_pairs, check_21_plus_3, check_lucky_sevens, check_bust_it değişmedi) ...
     def check_perfect_pairs(hand):
         card1, card2 = hand[0], hand[1]
         if card1['rank'] == card2['rank']:
@@ -519,6 +574,7 @@ with tab_blackjack:
 
         return 0, "Bust It! bet lost."
 
+    # ... (Dinamik Cashout Hesaplayıcı - get_cashout_offer_heuristic değişmedi) ...
     def get_cashout_offer_heuristic(player_hand, dealer_up_card, bet):
         p_score = calculate_score(player_hand)
         if p_score == 21 or (len(player_hand) >= 5 and p_score <= 21) or p_score > 21:
@@ -552,12 +608,12 @@ with tab_blackjack:
         if offer > (bet * 1.9): offer = int(bet * 1.9)
         return offer
 
-
     # --- Oyun Arayüzü ---
     st.metric(label="Your Balance", value=f"💰 {st.session_state.player_balance}")
 
     # Bahis Aşaması
     if st.session_state.game_state == "betting":
+        # ... (Bahis formu ve Deal butonu mantığı - history eklemeleri dahil) ...
         st.session_state.side_bet_message = ""
 
         if st.session_state.player_balance <= 0:
@@ -585,8 +641,6 @@ with tab_blackjack:
                 if total_bet > st.session_state.player_balance:
                     st.error(f"Total bet ({total_bet}) cannot exceed your balance ({st.session_state.player_balance}). Please adjust.")
                 else:
-                    # ... (Bahisleri kaydetme, kart dağıtma, PP ve 21+3 kontrolü, BJ kontrolü ve history ekleme mantığı) ...
-                    # ... (Bu kısım bir önceki kodla aynı, sadece history eklemeleri var) ...
                     st.session_state.player_balance -= total_bet
                     st.session_state.current_bet = bet_amount
                     st.session_state.bet_21_3 = bet_21_3_amount
@@ -624,14 +678,14 @@ with tab_blackjack:
                     # Ana Oyun Blackjack Kontrolü
                     player_score = calculate_score(st.session_state.player_hand)
                     dealer_score = calculate_score(st.session_state.dealer_hand)
-
+                    
                     if player_score == 21 and dealer_score != 21:
                         st.session_state.game_state = "game_over"
                         st.session_state.game_message = "Blackjack! 🎉 You win!"
                         bj_win = int(st.session_state.current_bet * 1.5)
                         st.session_state.player_balance += st.session_state.current_bet + bj_win # Bahis + 3:2 kazanç
                         add_history("bj", st.session_state.current_bet, bj_win, st.session_state.player_balance)
-
+                        
                         l7_winnings, l7_msg = check_lucky_sevens(st.session_state.player_hand, st.session_state.bet_lucky_seven)
                         if l7_winnings > 0:
                             st.session_state.player_balance += l7_winnings
@@ -654,9 +708,11 @@ with tab_blackjack:
                         st.session_state.game_message = "Your turn! Hit, Stand, or Cash Out?"
                     st.rerun()
 
+
     # Oyun Akışı
     if st.session_state.game_state in ["player_turn", "dealer_turn", "game_over"]:
-
+        # ... (Oyun akışı mantığı - Hit, Stand, Cashout, Dealer'ın sırası, 5-Card Charlie, history eklemeleri dahil) ...
+        # ... (Bu kısım bir önceki kodla aynı) ...
         if st.session_state.side_bet_message:
             st.info(st.session_state.side_bet_message)
 
@@ -775,6 +831,7 @@ with tab_blackjack:
         st.session_state.game_state = "game_over"
         st.rerun()
 
+
     # Bakiye Geçmişi
     display_history("bj")
 
@@ -791,7 +848,7 @@ with tab_coinflip:
         st.session_state.last_coin_flip_bet = 10
         st.session_state.last_coin_flip_choice = "Heads"
         st.session_state.cf_history = []
-    
+
     def reset_coin_flip_state(reset_balance=False):
         st.session_state.coin_flip_result = ""
         st.session_state.coin_flip_message = ""
@@ -799,7 +856,6 @@ with tab_coinflip:
         st.session_state.last_coin_flip_choice = "Heads"
         st.session_state.cf_history = []
         if reset_balance: st.session_state.player_balance = 1000
-        
     globals()["cf_reset_func"] = reset_coin_flip_state
 
 
@@ -865,7 +921,6 @@ with tab_roulette:
         st.session_state.last_roulette_bets = {}
         st.session_state.rl_history = []
         if reset_balance: st.session_state.player_balance = 1000
-        
     globals()["rl_reset_func"] = reset_roulette_state
 
     numbers = list(range(37))
@@ -978,7 +1033,7 @@ with tab_roulette:
                     st.balloons()
                 else:
                     st.session_state.roulette_message = "😕 No winning bets this round."
-                
+
                 add_history("rl", total_current_bet, net_outcome, st.session_state.player_balance)
                 st.rerun()
 
@@ -997,26 +1052,26 @@ with tab_slots:
 
     # Slot Sembolleri ve Olasılıkları
     symbols = ["🍒", "🍋", "🍊", "🍉", "⭐", "💎", "❼"]
-    weights = [   25,   20,   18,   15,   10,    7,   5] 
+    weights = [   25,   20,   18,   15,   10,    7,   5]
 
     # Payout Oranları
     payouts = {
-        "🍒": {2: 2, 3: 5},   
+        "🍒": {2: 2, 3: 5},
         "🍋": {3: 10},
         "🍊": {3: 15},
         "🍉": {3: 20},
         "⭐": {3: 50},
         "💎": {3: 75},
-        "❼": {3: 100}         
+        "❼": {3: 100}
     }
-    
+
     # State başlatma
     if "slot_state" not in st.session_state:
         st.session_state.slot_state = "ready"
         st.session_state.slot_reels = ["❓", "❓", "❓"]
         st.session_state.slot_message = "Place your bet and spin!"
         st.session_state.slot_history = []
-        st.session_state.last_slot_bet = 5 
+        st.session_state.last_slot_bet = 5
 
     def reset_slots_state(reset_balance=False):
         st.session_state.slot_state = "ready"
@@ -1025,15 +1080,14 @@ with tab_slots:
         st.session_state.slot_history = []
         st.session_state.last_slot_bet = 5
         if reset_balance: st.session_state.player_balance = 1000
-    
     globals()["sl_reset_func"] = reset_slots_state
 
     def spin_reels():
         return random.choices(symbols, weights=weights, k=3)
 
     def check_win(reels, bet):
-        middle_symbol = reels[1] 
-        
+        middle_symbol = reels[1]
+
         # Üçlü eşleşme
         if reels[0] == middle_symbol == reels[2]:
             symbol = middle_symbol
@@ -1041,14 +1095,14 @@ with tab_slots:
                 multiplier = payouts[symbol][3]
                 winnings = bet * multiplier
                 return winnings, f"🎉 JACKPOT! Three {symbol}! Win {winnings} ({multiplier}x)!"
-        
+
         # İkili kiraz (sadece ortada başlarsa)
         if (reels[0] == "🍒" == reels[1]) or (reels[1] == "🍒" == reels[2]):
              if "🍒" in payouts and 2 in payouts["🍒"]:
                  multiplier = payouts["🍒"][2]
                  winnings = bet * multiplier
                  return winnings, f"🍒 Two Cherries! Win {winnings} ({multiplier}x)!"
-                 
+
         return 0, "😕 No win this time."
 
     st.metric(label="Your Balance", value=f"💰 {st.session_state.player_balance}")
@@ -1056,13 +1110,13 @@ with tab_slots:
     if st.session_state.player_balance <= 0:
         st.error("You are out of money! Reset features from the sidebar.")
     else:
-        slot_bet = st.number_input("Bet Amount per Spin:", min_value=1, max_value=st.session_state.player_balance, 
+        slot_bet = st.number_input("Bet Amount per Spin:", min_value=1, max_value=st.session_state.player_balance,
                                      value=st.session_state.last_slot_bet, step=1, key="slot_bet")
-        
+
         if st.button("Spin Reels!", key="spin_slots", disabled=(st.session_state.slot_state == "spinning")):
             st.session_state.slot_state = "spinning"
             st.session_state.player_balance -= slot_bet
-            st.session_state.last_slot_bet = slot_bet 
+            st.session_state.last_slot_bet = slot_bet
             st.session_state.slot_message = "Spinning..."
             st.rerun()
 
@@ -1075,38 +1129,38 @@ with tab_slots:
     # Sonuçları işle
     if st.session_state.slot_state == "spinning":
         st.session_state.slot_reels = spin_reels()
-        winnings, message = check_win(st.session_state.slot_reels, st.session_state.last_slot_bet) 
-        
+        winnings, message = check_win(st.session_state.slot_reels, st.session_state.last_slot_bet)
+
         if winnings > 0:
-            st.session_state.player_balance += winnings + st.session_state.last_slot_bet 
+            st.session_state.player_balance += winnings + st.session_state.last_slot_bet
             add_history("slot", st.session_state.last_slot_bet, winnings, st.session_state.player_balance)
             st.balloons()
         else:
              add_history("slot", st.session_state.last_slot_bet, -st.session_state.last_slot_bet, st.session_state.player_balance)
-             
+
         st.session_state.slot_message = message
-        st.session_state.slot_state = "result" 
+        st.session_state.slot_state = "result"
         st.rerun()
-        
+
     if st.session_state.slot_state == "result":
         st.markdown(f"**{st.session_state.slot_message}**")
-        st.session_state.slot_state = "ready" 
-        
+        st.session_state.slot_state = "ready"
+
     display_history("slot")
 
 # --- SEKME 6: VIDEO POKER ---
 with tab_vpoker:
     st.header(" Jacks or Better Video Poker")
     st.markdown("Get a pair of Jacks or better to win!")
-    
+
     # State başlatma
     if "vp_state" not in st.session_state:
-        st.session_state.vp_state = "betting" 
+        st.session_state.vp_state = "betting"
         st.session_state.vp_deck = []
-        st.session_state.vp_hand = [] 
+        st.session_state.vp_hand = []
         st.session_state.vp_message = ""
         st.session_state.vp_history = []
-        st.session_state.vp_current_bet = 1 
+        st.session_state.vp_current_bet = 1
 
     # Payout Tablosu
     vp_payouts = {
@@ -1117,15 +1171,15 @@ with tab_vpoker:
     st.dataframe(vp_payouts.items(), column_config={"0": "Hand", "1": "Payout (for 1 credit bet)"})
 
     # Poker Eli Kontrol Fonksiyonları
-    def check_vp_hand(hand): 
+    def check_vp_hand(hand):
         ranks = sorted([card['rank'] for card in hand], key=lambda r: vp_rank_map.get(r, 0))
         suits = [card['suit'] for card in hand]
         rank_counts = Counter(ranks)
         is_flush = len(set(suits)) == 1
         numerical_ranks = sorted(list(set(vp_rank_map.get(r, 0) for r in ranks)))
         is_straight = len(numerical_ranks) == 5 and (numerical_ranks[-1] - numerical_ranks[0] == 4)
-        if numerical_ranks == [2, 3, 4, 5, 14]: is_straight = True 
-        
+        if numerical_ranks == [2, 3, 4, 5, 14]: is_straight = True
+
         if is_straight and is_flush and numerical_ranks[-1] == 14 and numerical_ranks[0] == 10: return "Royal Flush"
         if is_straight and is_flush: return "Straight Flush"
         if 4 in rank_counts.values(): return "Four of a Kind"
@@ -1137,7 +1191,7 @@ with tab_vpoker:
         for rank, count in rank_counts.items():
             if count == 2 and rank in ['J', 'Q', 'K', 'A']:
                 return "Jacks or Better"
-        return "Nothing" 
+        return "Nothing"
 
     vp_rank_map = {'2':2, '3':3, '4':4, '5':5, '6':6, '7':7, '8':8, '9':9, '10':10, 'J':11, 'Q':12, 'K':13, 'A':14}
 
@@ -1149,7 +1203,6 @@ with tab_vpoker:
         st.session_state.vp_history = []
         # st.session_state.vp_current_bet = 1 # Keep last bet
         if reset_balance: st.session_state.player_balance = 1000
-    
     globals()["vp_reset_func"] = reset_vpoker_state
 
     st.metric(label="Your Balance", value=f"💰 {st.session_state.player_balance}")
@@ -1159,13 +1212,13 @@ with tab_vpoker:
     else:
         # Bahis Aşaması
         if st.session_state.vp_state == "betting":
-            vp_bet = st.number_input("Bet Amount (1-5 credits):", min_value=1, max_value=min(5, st.session_state.player_balance), 
+            vp_bet = st.number_input("Bet Amount (1-5 credits):", min_value=1, max_value=min(5, st.session_state.player_balance),
                                      value=st.session_state.vp_current_bet, step=1, key="vp_bet")
-            
+
             if st.button("Deal Hand", key="vp_deal"):
                 st.session_state.player_balance -= vp_bet
                 st.session_state.vp_current_bet = vp_bet
-                st.session_state.vp_deck = create_deck()[:52] 
+                st.session_state.vp_deck = create_deck()[:52]
                 st.session_state.vp_hand = [{'card': st.session_state.vp_deck.pop(), 'held': False} for _ in range(5)]
                 st.session_state.vp_state = "dealt"
                 st.session_state.vp_message = "Select cards to hold and click Draw."
@@ -1183,28 +1236,28 @@ with tab_vpoker:
                 card_html = f"<div style='border:1px solid #ccc; border-radius: 5px; padding: 10px; margin: 5px; text-align: center; background-color: white; color: {color};'> <span style='font-size: 1.5em; font-weight: bold;'>{card['rank']}</span><br><span style='font-size: 1.5em;'>{card['suit']}</span> </div>"
                 cols[i].markdown(card_html, unsafe_allow_html=True)
                 if cols[i].button("Hold" if not is_held else "Discard", key=f"vp_card_{i}", type=button_type, use_container_width=True):
-                    st.session_state.vp_hand[i]['held'] = not is_held 
+                    st.session_state.vp_hand[i]['held'] = not is_held
                     st.session_state.vp_state = "holding"
-                    st.rerun() 
+                    st.rerun()
 
             st.caption(st.session_state.vp_message)
 
             if st.button("Draw", key="vp_draw", disabled=(st.session_state.vp_state != "holding")):
                 for i in range(5):
                     if not st.session_state.vp_hand[i]['held']:
-                        if st.session_state.vp_deck: 
+                        if st.session_state.vp_deck:
                              st.session_state.vp_hand[i]['card'] = st.session_state.vp_deck.pop()
-                             st.session_state.vp_hand[i]['held'] = False 
+                             st.session_state.vp_hand[i]['held'] = False
                         else:
-                            st.error("Deck is empty!") 
-                
+                            st.error("Deck is empty!")
+
                 final_hand_cards = [info['card'] for info in st.session_state.vp_hand]
                 hand_rank = check_vp_hand(final_hand_cards)
                 payout_multiplier = vp_payouts.get(hand_rank, 0)
-                
+
                 if payout_multiplier > 0:
                     winnings = st.session_state.vp_current_bet * payout_multiplier
-                    st.session_state.player_balance += winnings + st.session_state.vp_current_bet 
+                    st.session_state.player_balance += winnings + st.session_state.vp_current_bet
                     st.session_state.vp_message = f"🎉 {hand_rank}! You win {winnings}!"
                     add_history("vp", st.session_state.vp_current_bet, winnings, st.session_state.player_balance)
                     st.balloons()
@@ -1224,42 +1277,42 @@ with tab_vpoker:
                 color = "red" if card['suit'] in ['♥', '♦'] else "black"
                 card_html = f"<div style='border:1px solid #ccc; border-radius: 5px; padding: 10px; margin: 5px; text-align: center; background-color: white; color: {color};'> <span style='font-size: 1.5em; font-weight: bold;'>{card['rank']}</span><br><span style='font-size: 1.5em;'>{card['suit']}</span> </div>"
                 cols[i].markdown(card_html, unsafe_allow_html=True)
-            
+
             st.header(st.session_state.vp_message)
             if st.button("Deal New Hand", key="vp_new_deal"):
-                reset_vpoker_state() 
+                reset_vpoker_state()
                 st.rerun()
-                
+
     display_history("vp")
 
 
 # --- SEKME 7: MUSIC PLAYER ---
 with tab_music:
     st.header("🎶 Music Player")
-    st.markdown("How about a nice blues session? Maybe it will relax you.") 
-    
-    youtube_url = "https://www.youtube.com/watch?v=1eNSWZ4x2ZU&list=PLoPLEt1InO1x_fhNUCZW2HgRI3uTUn5NY" 
-    
+    st.markdown("How about a nice blues session? Maybe it will relax you.")
+
+    youtube_url = "https://www.youtube.com/watch?v=1eNSWZ4x2ZU&list=PLoPLEt1InO1x_fhNUCZW2HgRI3uTUn5NY"
+
     st.video(youtube_url)
     st.caption("Music provided via YouTube embed.")
 
 # --- SEKME 8: SETTINGS ---
 with tab_settings:
     st.header("⚙️ Settings")
-    
+
     st.subheader("Chatbot Settings")
     simlish_on = st.toggle("Enable Simlish Mode 👽", value=st.session_state.simlish_mode, key="settings_simlish")
     if simlish_on != st.session_state.simlish_mode:
         st.session_state.simlish_mode = simlish_on
-        st.rerun() 
-        
+        st.rerun()
+
     st.subheader("Blackjack Settings")
     st.session_state.bj_deck_count = st.selectbox(
-        "Number of Decks", 
-        [4, 6, 8], 
-        index=[4, 6, 8].index(st.session_state.get("bj_deck_count", 6)) 
+        "Number of Decks",
+        [4, 6, 8],
+        index=[4, 6, 8].index(st.session_state.get("bj_deck_count", 6))
     )
-    # st.caption("Note: Changing the number of decks currently only updates the display. The game logic still uses 6 decks for calculations.") # Bu notu kaldırabiliriz, create_deck artık bunu kullanıyor.
+    # st.caption("Note: The game logic now uses this setting.") # Eğer create_deck fonksiyonunu güncellediyseniz bu notu kullanabilirsiniz.
 
     st.subheader("General Settings")
-    st.markdown("Use the 'Reset Interactive Features' button in the sidebar to reset game states and balance.")
+    st.markdown("Use the 'Reset Interactive Features' button in the sidebar to reset game states and the shared balance.")
