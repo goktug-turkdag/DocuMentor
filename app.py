@@ -2,24 +2,23 @@ import streamlit as st
 from dotenv import load_dotenv
 from datasets import load_dataset
 import os
+import tempfile # Dosyaları geçici işlemek için
 
-# --- YENİ KÜTÜPHANE IMPORTLARI ---
+# --- GEREKLİ LANGCHAIN IMPORTLARI ---
 from langchain_community.vectorstores import Chroma
 from langchain_huggingface import HuggingFaceEmbeddings
-from langchain_google_genai import ChatGoogleGenerativeAI # Chat modeli (streaming için daha iyi)
+from langchain_google_genai import ChatGoogleGenerativeAI # Chat modeli
 from langchain.chains import ConversationalRetrievalChain # Hafızalı zincir
+from langchain.chains import create_summarization_chain # YENİ: Özetleyici için
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.schema import Document
 from langchain.prompts import PromptTemplate
-from langchain_core.messages import HumanMessage, AIMessage # Sohbet geçmişi için
+from langchain_core.messages import HumanMessage, AIMessage
 
-# Dosya yükleme için loader'lar
+# --- DOSYA OKUYUCULAR ---
 from langchain_community.document_loaders import PyPDFLoader, Docx2txtLoader, TextLoader 
-# --- BİTİŞ: YENİ IMPORTLAR ---
 
-# --- 1. SETUP AND CACHING ---
-
-# Load API key
+# --- 1. SETUP, CACHING VE API ANAHTARLARI ---
 load_dotenv()
 if "GOOGLE_API_KEY" not in os.environ:
     st.error("GOOGLE_API_KEY not found. Please check your .env file.")
@@ -27,25 +26,22 @@ if "GOOGLE_API_KEY" not in os.environ:
 
 PERSIST_DIRECTORY = "chroma_db_multilingual"
 
-# --- PAHALI PARÇALARI ÖNBELLEĞE AL ---
+# --- ÖNBELLEKLEME (PAHALI İŞLEMLER) ---
 @st.cache_resource
 def get_embeddings():
-    """Embedding modelini yükler (Pahalı)"""
+    """Embedding modelini yükler"""
     return HuggingFaceEmbeddings(
         model_name="sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
     )
 
 @st.cache_resource
 def load_llm():
-    """LLM'i yükler (Pahalı)"""
-    # Streaming için Chat modelini kullanıyoruz
+    """LLM'i yükler"""
     return ChatGoogleGenerativeAI(model="gemini-pro-latest", temperature=0.6)
 
 @st.cache_resource
 def load_default_retriever(_embeddings):
-    """
-    Varsayılan (Dolly-15k) bilgi tabanını yükler. (Pahalı)
-    """
+    """Varsayılan (Dolly-15k) bilgi tabanını yükler."""
     if not os.path.exists(PERSIST_DIRECTORY):
         with st.spinner("Creating default knowledge base for the first time..."):
             st.info("First-time setup: The default (Dolly-15k) knowledge base is being created.")
@@ -56,9 +52,8 @@ def load_default_retriever(_embeddings):
             documents = [Document(page_content=item['context'], metadata={"source": f"dolly_15k_item_{i}"})
                          for i, item in enumerate(data_with_context)]
             
-            text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200, length_function=len)
+            text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
             split_documents = text_splitter.split_documents(documents)
-            
             vector_store = Chroma.from_documents(
                 documents=split_documents,
                 embedding=_embeddings,
@@ -71,61 +66,59 @@ def load_default_retriever(_embeddings):
         )
     return vector_store.as_retriever(search_kwargs={'k': 3})
 
-# --- YENİ FONKSİYON: YÜKLENEN DOSYAYI İŞLEME ---
-@st.cache_data(max_entries=5) # Son 5 yüklenen dosyayı hafızada tut
-def process_uploaded_file(uploaded_file):
+# --- YENİ ÖZELLİK: ÇOKLU DOSYA İŞLEME ---
+@st.cache_data(max_entries=1) # Sadece son yüklenen dosya grubunu önbellekte tut
+def process_uploaded_files(uploaded_files):
     """
-    Yüklenen dosyayı okur, parçalar ve geçici bir vektör veritabanı (retriever) oluşturur.
+    Yüklenen (birden fazla) dosyayı okur, parçalar ve geçici bir vektör veritabanı (retriever) oluşturur.
     """
-    if uploaded_file is None:
+    if not uploaded_files:
         return None
 
-    # Dosyayı geçici bir yere yazmak, loader'ların okuyabilmesi için en stabil yoldur
-    temp_dir = "temp_files"
-    if not os.path.exists(temp_dir):
-        os.makedirs(temp_dir)
+    all_documents = []
     
-    temp_path = os.path.join(temp_dir, uploaded_file.name)
-    
-    with open(temp_path, "wb") as f:
-        f.write(uploaded_file.getvalue())
-    
-    # Dosya uzantısına göre doğru loader'ı seç
-    try:
-        if uploaded_file.name.endswith(".pdf"):
-            loader = PyPDFLoader(temp_path)
-        elif uploaded_file.name.endswith(".docx"):
-            loader = Docx2txtLoader(temp_path)
-        elif uploaded_file.name.endswith(".txt"):
-            loader = TextLoader(temp_path, encoding="utf-8")
-        else:
-            st.error(f"Unsupported file type: {uploaded_file.name}")
-            return None
-
-        documents = loader.load()
-        
-        # Metinleri parçala (chunking)
-        text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
-        split_documents = text_splitter.split_documents(documents)
-        
-        # Yüklenen dosya için *geçici* bir vektör veritabanı oluştur
-        embeddings = get_embeddings() # Önbellekten al
-        vector_store = Chroma.from_documents(split_documents, embeddings)
-        
-        st.success(f"Successfully processed '{uploaded_file.name}'. You can now ask questions about it.")
-        
-        # Retriever'ı (arayıcıyı) döndür
-        return vector_store.as_retriever(search_kwargs={'k': 3})
-
-    except Exception as e:
-        st.error(f"An error occurred while processing the file: {e}")
+    # Geçici bir klasör kullanarak dosyaları güvenle işle
+    with tempfile.TemporaryDirectory() as temp_dir:
+        for uploaded_file in uploaded_files:
+            temp_path = os.path.join(temp_dir, uploaded_file.name)
+            with open(temp_path, "wb") as f:
+                f.write(uploaded_file.getvalue())
+            
+            try:
+                if uploaded_file.name.endswith(".pdf"):
+                    loader = PyPDFLoader(temp_path)
+                elif uploaded_file.name.endswith(".docx"):
+                    loader = Docx2txtLoader(temp_path)
+                elif uploaded_file.name.endswith(".txt"):
+                    loader = TextLoader(temp_path, encoding="utf-8")
+                else:
+                    st.warning(f"Unsupported file type: {uploaded_file.name}. Skipping.")
+                    continue
+                
+                # Yüklenen dokümanları listeye ekle
+                all_documents.extend(loader.load())
+            except Exception as e:
+                st.error(f"Error processing {uploaded_file.name}: {e}")
+                
+    if not all_documents:
+        st.error("No documents could be processed.")
         return None
-    finally:
-        # Geçici dosyayı sil
-        if os.path.exists(temp_path):
-            os.remove(temp_path)
 
-# --- PROMPT ŞABLONLARI ---
+    # Tüm dokümanları birlikte parçala
+    text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
+    split_documents = text_splitter.split_documents(all_documents)
+    
+    # Geçici vektör veritabanını oluştur
+    embeddings = get_embeddings() # Önbellekten al
+    vector_store = Chroma.from_documents(split_documents, embeddings)
+    
+    file_names = ", ".join([f.name for f in uploaded_files])
+    st.success(f"Successfully processed {len(uploaded_files)} files: {file_names}.")
+    
+    # Retriever'ı (arayıcıyı) döndür
+    return vector_store.as_retriever(search_kwargs={'k': 3})
+
+# --- PROMPT ŞABLONLARI (Hafızalı sohbet için güncellendi) ---
 
 # Normal Prompt
 default_prompt_template = """
@@ -164,160 +157,160 @@ Question:
 Simlish Answer:
 """
 
-# --- 2. WEB ARAYÜZÜ (TAMAMEN YENİLENDİ) ---
-
+# --- 2. WEB ARAYÜZÜ (SEKMELİ YAPI) ---
 st.title("DocuMentor 📄")
-st.markdown("An intelligent Q&A Chatbot trained on the **Databricks Dolly 15k** dataset. Ask a question, or upload your own document!")
+
+# --- YENİ ÖZELLİK: SEKMELER (CHAT vs. ÖZETLEYİCİ) ---
+tab_chat, tab_summarize = st.tabs(["💬 Chatbot", "✍️ Document Summarizer"])
 
 # --- Sidebar ---
 with st.sidebar:
     st.header("About DocuMentor")
     st.markdown(
-        "DocuMentor is an intelligent Q&A chatbot built using a RAG "
+        "An intelligent Q&A chatbot built using a RAG "
         "architecture with Google's Gemini and ChromaDB."
     )
-    
     st.markdown("---")
-    
     st.subheader("Developed by Göktuğ Türkdağ")
     st.markdown("🔗 [LinkedIn](https://www.linkedin.com/in/goktugturkdag)")
     st.markdown("🐙 [GitHub](https://github.com/goktug-turkdag)")
-    
     st.markdown("---")
-
-    # --- YENİ ÖZELLİK 4: SOHBETİ TEMİZLE BUTONU ---
+    
+    # Sohbeti Temizle Butonu
     if st.button("Clear Chat History 🧹"):
-        st.session_state.messages = []
-        st.session_state.chat_history = []
-        st.session_state.file_retriever = None # Yüklenen dosya hafızasını da temizle
-        st.success("Chat history cleared!")
-        st.rerun() # Sayfayı temizle
+        st.session_state.clear() # Tüm session state'i temizle
+        st.success("Chat history and uploaded files cleared!")
+        st.rerun()
 
     st.markdown("---")
     
-    # --- YENİ ÖZELLİK 2: DOSYA YÜKLEME ---
-    st.subheader("Upload Your Document")
-    st.markdown("Chat with your own PDF, DOCX, or TXT file.")
-    uploaded_file = st.file_uploader("Upload a file:", type=["pdf", "docx", "txt"])
+    # YENİ ÖZELLİK: ÇOKLU DOSYA YÜKLEME
+    st.subheader("Chat with Your Documents")
+    st.markdown("Upload one or multiple PDF, DOCX, or TXT files.")
+    uploaded_files = st.file_uploader( # Adı 'uploaded_files' (çoğul) olarak değişti
+        "Upload files for chat:", 
+        type=["pdf", "docx", "txt"], 
+        accept_multiple_files=True # ÇOKLU dosya kabul et
+    )
+    
+    st.markdown("---")
+    # Simlish Modu
+    st.toggle("Simlish Mode 👽", key="simlish_mode", help="Sul sul! Get your answers in Simlish.")
 
-# --- Simlish Mode Toggle ---
-st.toggle("Simlish Mode 👽", key="simlish_mode", help="Sul sul! Get your answers in Simlish.")
-
-# --- ANA SOHBET MANTIĞI ---
-
-# Pahalı bileşenleri yükle
+# --- BİLEŞENLERİ YÜKLE ---
 llm = load_llm()
 default_retriever = load_default_retriever(get_embeddings())
 
-# --- Session State (Oturum Hafızası) Başlatma ---
+# --- SESSION STATE BAŞLATMA ---
 if "messages" not in st.session_state:
     st.session_state.messages = []
-    st.session_state.chat_history = [] # Hafızalı sohbet için
-    st.session_state.file_retriever = None # Yüklenen dosyanın retriever'ı
+    st.session_state.chat_history = []
+    st.session_state.file_retriever = None
     
     # Karşılama Mesajı
     welcome_message = f"""
     Hi! I'm **DocuMentor**, an intelligent RAG chatbot developed by **Göktuğ Türkdağ**.
-    I'm trained on the **Databricks Dolly 15k** dataset, but you can also **upload your own document** in the sidebar!
+    I'm trained on **Dolly 15k**, but you can also **upload your own documents** in the sidebar to chat with them!
     
     - Try asking me: "Who is Göktuğ Türkdağ?"
     - Or toggle **Simlish Mode** 👽
     """
     st.session_state.messages.append({"role": "assistant", "content": welcome_message})
 
-# --- Dosya Yükleme Mantığı ---
-# Eğer yeni bir dosya yüklendiyse, onu işle ve retriever'ı session state'e kaydet
-if uploaded_file:
-    # Dosyanın daha önce işlenip işlenmediğini kontrol et
-    if "processed_file_name" not in st.session_state or st.session_state.processed_file_name != uploaded_file.name:
-        with st.spinner(f"Processing '{uploaded_file.name}'... This may take a moment."):
-            file_retriever = process_uploaded_file(uploaded_file)
-            if file_retriever:
-                st.session_state.file_retriever = file_retriever
-                st.session_state.processed_file_name = uploaded_file.name
-                # Dosya değiştiğinde sohbet geçmişini temizle
-                st.session_state.messages = [{"role": "assistant", "content": f"OK, I'm ready to answer questions about '{uploaded_file.name}'."}]
-                st.session_state.chat_history = []
-                st.rerun() # Arayüzü temizle
+# --- SEKME 1: CHATBOT ---
+with tab_chat:
+    
+    # --- Dosya Yükleme Mantığı (Çoklu) ---
+    if uploaded_files:
+        # Yüklenen dosya listesinin değişip değişmediğini kontrol et
+        new_file_names = [f.name for f in uploaded_files]
+        if "processed_files" not in st.session_state or st.session_state.processed_files != new_file_names:
+            with st.spinner(f"Processing {len(uploaded_files)} files..."):
+                file_retriever = process_uploaded_files(uploaded_files)
+                if file_retriever:
+                    st.session_state.file_retriever = file_retriever
+                    st.session_state.processed_files = new_file_names
+                    
+                    # Dosyalar değiştiğinde sohbeti temizle
+                    file_names_str = ", ".join(st.session_state.processed_files)
+                    st.session_state.messages = [{"role": "assistant", "content": f"OK, I'm ready to answer questions about: '{file_names_str}'."}]
+                    st.session_state.chat_history = []
+                    st.rerun()
 
-# Hangi retriever'ın (bilgi tabanının) aktif olduğunu belirle
-if st.session_state.file_retriever is not None:
-    active_retriever = st.session_state.file_retriever
-    st.caption(f"ℹ️ *Querying document: {st.session_state.processed_file_name}*")
-else:
-    active_retriever = default_retriever
-
-# --- Dinamik RAG Zinciri Oluşturma ---
-
-# 1. Simlish modu için doğru prompt'u seç
-if st.session_state.simlish_mode:
-    PROMPT_TEMPLATE = simlish_prompt_template
-    st.caption("✨ *Simlish mode active! Za woka?*")
-else:
-    PROMPT_TEMPLATE = default_prompt_template
-
-# 2. Seçilen prompt ile bir PromptTemplate nesnesi oluştur
-COMBINE_DOCS_PROMPT = PromptTemplate.from_template(PROMPT_TEMPLATE)
-
-# 3. YENİ ÖZELLİK 1: HAFİALI SOHBET ZİNCİRİ (ConversationalRetrievalChain)
-# Bu zincir, sohbet geçmişini (chat_history) kullanarak takip sorularını anlar
-rag_chain = ConversationalRetrievalChain.from_llm(
-    llm=llm,
-    retriever=active_retriever,
-    combine_docs_chain_kwargs={"prompt": COMBINE_DOCS_PROMPT},
-    return_source_documents=True # Kaynakları göstermek için
-)
-
-# --- Sohbet Arayüzü ---
-
-# Geçmiş mesajları göster
-for message in st.session_state.messages:
-    with st.chat_message(message["role"]):
-        st.markdown(message["content"])
-        # Kaynakları göster (eğer varsa)
-        if "sources" in message:
-            with st.expander("Sources considered:"):
-                for src in message["sources"]:
-                    st.markdown(f"*{src.page_content[:200]}...*")
-
-# Yeni kullanıcı sorusu al
-if user_question := st.chat_input("Ask a question..."):
-    # Kullanıcı mesajını ekle
-    st.chat_message("user").markdown(user_question)
-    st.session_state.messages.append({"role": "user", "content": user_question})
-
-    # --- Easter Egg ---
-    lower_question = user_question.lower()
-    creator_keywords = ["göktuğ", "türkdağ", "geliştirici", "developer", "who made you", "who created you"]
-
-    if any(keyword in lower_question for keyword in creator_keywords):
-        response_text = f"""
-        Ah, a great question! I was developed by **Göktuğ Türkdağ**. 🤖
-        He's a developer specializing in RAG architectures, LLMs, and Python. 
-        You can find him here:
-        🔗 **LinkedIn:** [linkedin.com/in/goktugturkdag](https://www.linkedin.com/in/goktugturkdag)
-        🐙 **GitHub:** [github.com/goktug-turkdag](https://github.com/goktug-turkdag)
-        """
-        
-        # Easter egg cevabını UI'a ve hafızaya ekle
-        with st.chat_message("assistant"):
-            st.markdown(response_text)
-        st.session_state.messages.append({"role": "assistant", "content": response_text})
-        st.session_state.chat_history.append(HumanMessage(content=user_question))
-        st.session_state.chat_history.append(AIMessage(content=response_text))
-
+    # Aktif bilgi tabanını (retriever) seç
+    if st.session_state.file_retriever is not None:
+        active_retriever = st.session_state.file_retriever
+        file_names_str = ", ".join(st.session_state.processed_files)
+        st.caption(f"ℹ️ *Querying document(s): {file_names_str}*")
     else:
-        # --- YENİ ÖZELLİK 3: STREAMING (YAZIYOR...) EFEKTİ ---
-        
-        # Spinner (dönme) metnini ayarla
-        spinner_text = "Searching for the answer... (Chumcha!)" if st.session_state.simlish_mode else "Searching for the answer..."
-        
-        with st.spinner(spinner_text):
-            # Cevabı UI'da yazmak için bir "boş kutu" oluştur
-            with st.chat_message("assistant"):
+        active_retriever = default_retriever
+
+    # --- Dinamik RAG Zinciri Oluşturma ---
+    if st.session_state.simlish_mode:
+        PROMPT_TEMPLATE = simlish_prompt_template
+        st.caption("✨ *Simlish mode active! Za woka?*")
+    else:
+        PROMPT_TEMPLATE = default_prompt_template
+
+    COMBINE_DOCS_PROMPT = PromptTemplate.from_template(PROMPT_TEMPLATE)
+
+    # Hafızalı Sohbet Zinciri
+    rag_chain = ConversationalRetrievalChain.from_llm(
+        llm=llm,
+        retriever=active_retriever,
+        combine_docs_chain_kwargs={"prompt": COMBINE_DOCS_PROMPT},
+        return_source_documents=True
+    )
+
+    # --- Sohbet Arayüzü (Chat UI) ---
+    
+    # YENİ ÖZELLİK: Avatarlar
+    avatars = {"human": "👤", "assistant": "👽" if st.session_state.simlish_mode else "🤖"}
+
+    # Geçmiş mesajları göster
+    for message in st.session_state.messages:
+        with st.chat_message(message["role"], avatar=avatars.get(message["role"])):
+            st.markdown(message["content"])
+            # Kaynakları göster
+            if "sources" in message:
+                with st.expander("Sources considered:"):
+                    for src in message["sources"]:
+                        st.markdown(f"*{src.page_content[:200]}...*")
+
+    # Yeni kullanıcı sorusu al
+    if user_question := st.chat_input("Ask a question..."):
+        # Kullanıcı mesajını ekle
+        st.chat_message("human", avatar=avatars["human"]).markdown(user_question)
+        st.session_state.messages.append({"role": "human", "content": user_question})
+
+        # --- Easter Egg ---
+        lower_question = user_question.lower()
+        creator_keywords = ["göktuğ", "türkdağ", "geliştirici", "developer", "who made you", "who created you"]
+
+        if any(keyword in lower_question for keyword in creator_keywords):
+            response_text = f"""
+            Ah, a great question! I was developed by **Göktuğ Türkdağ**. 🤖
+            He's a developer specializing in RAG architectures, LLMs, and Python. 
+            You can find him here:
+            🔗 **LinkedIn:** [linkedin.com/in/goktugturkdag](https://www.linkedin.com/in/goktugturkdag)
+            🐙 **GitHub:** [github.com/goktug-turkdag](https://github.com/goktug-turkdag)
+            """
+            
+            with st.chat_message("assistant", avatar=avatars["assistant"]):
+                st.markdown(response_text)
+            st.session_state.messages.append({"role": "assistant", "content": response_text})
+            # Hafızaya ekle
+            st.session_state.chat_history.append(HumanMessage(content=user_question))
+            st.session_state.chat_history.append(AIMessage(content=response_text))
+
+        else:
+            # --- "Yazıyor..." (Streaming) Efekti ---
+            spinner_text = "Searching for the answer... (Chumcha!)" if st.session_state.simlish_mode else "Searching for the answer..."
+            
+            with st.chat_message("assistant", avatar=avatars["assistant"]):
                 response_container = st.empty()
                 
-                # Zinciri .stream() ile çağır (Hafızalı sohbet için chat_history'i gönder)
+                # Zinciri .stream() ile çağır (Hafızalı sohbet için)
                 stream = rag_chain.stream({
                     "question": user_question,
                     "chat_history": st.session_state.chat_history
@@ -326,22 +319,88 @@ if user_question := st.chat_input("Ask a question..."):
                 full_response = ""
                 sources = []
                 
-                # Gelen cevabı kelime kelime yakala
-                for chunk in stream:
-                    # 'answer' anahtarı cevap metnini içerir
-                    if "answer" in chunk:
-                        full_response += chunk["answer"]
-                        response_container.markdown(full_response + "▌") # "Yazıyor" imleci
+                async def stream_response():
+                    nonlocal full_response, sources
+                    for chunk in stream:
+                        if "answer" in chunk:
+                            full_response += chunk["answer"]
+                            response_container.markdown(full_response + "▌")
+                        if "source_documents" in chunk:
+                            sources = chunk["source_documents"]
+                    response_container.markdown(full_response)
                 
-                # 'source_documents' anahtarı kaynakları içerir (genellikle en sonda gelir)
-                    if "source_documents" in chunk:
-                        sources = chunk["source_documents"]
-                
-                # Yazma bittiğinde, imleci kaldır
-                response_container.markdown(full_response)
+                # Stream'i çalıştırmak için st.write_stream kullan
+                st.write_stream(stream_response())
 
-        # Cevabı ve kaynakları UI mesaj listesine ekle
-        st.session_state.messages.append({"role": "assistant", "content": full_response, "sources": sources})
-        # Cevabı zincirin hafızasına ekle
-        st.session_state.chat_history.append(HumanMessage(content=user_question))
-        st.session_state.chat_history.append(AIMessage(content=full_response))
+            # Cevabı ve kaynakları UI mesaj listesine ekle
+            st.session_state.messages.append({"role": "assistant", "content": full_response, "sources": sources})
+            # Cevabı zincirin hafızasına ekle
+            st.session_state.chat_history.append(HumanMessage(content=user_question))
+            st.session_state.chat_history.append(AIMessage(content=full_response))
+
+# --- SEKME 2: DOKÜMAN ÖZETLEYİCİ ---
+with tab_summarize:
+    st.header("✍️ Document Summarizer")
+    st.markdown("Upload a document (PDF, DOCX, TXT) and get a quick summary.")
+    
+    # Özetleyici için ayrı bir dosya yükleyici
+    summary_file = st.file_uploader(
+        "Upload a document for summary:", 
+        type=["pdf", "docx", "txt"], 
+        key="summarizer_file"
+    )
+    
+    summary_type = st.selectbox(
+        "Select summary type:",
+        ["Brief Paragraph", "Bullet Points (Top 5)", "One-sentence Headline"],
+        key="summary_type"
+    )
+    
+    if st.button("Generate Summary", key="summarize_button"):
+        if summary_file:
+            with st.spinner(f"Summarizing '{summary_file.name}'..."):
+                try:
+                    # Dosyayı geçici olarak işle
+                    with tempfile.NamedTemporaryFile(delete=False, suffix=f".{summary_file.name.split('.')[-1]}") as temp_file:
+                        temp_file.write(summary_file.getvalue())
+                        temp_path = temp_file.name
+
+                    if summary_file.name.endswith(".pdf"):
+                        loader = PyPDFLoader(temp_path)
+                    elif summary_file.name.endswith(".docx"):
+                        loader = Docx2txtLoader(temp_path)
+                    else:
+                        loader = TextLoader(temp_path, encoding="utf-8")
+                    
+                    docs = loader.load()
+                    
+                    # Özetleme zincirini yükle
+                    # Not: "map_reduce" uzun dokümanlar için en iyisidir
+                    summarize_chain = create_summarization_chain(llm, chain_type="map_reduce")
+                    
+                    # Özetleme için özel talimat (prompt)
+                    if summary_type == "Bullet Points (Top 5)":
+                        prompt_instruction = "Generate a concise summary of the key findings in 5 bullet points."
+                    elif summary_type == "One-sentence Headline":
+                        prompt_instruction = "Generate a single, descriptive headline for this document."
+                    else:
+                        prompt_instruction = "Generate a brief, one-paragraph summary of this document."
+                    
+                    # Zinciri çalıştır
+                    summary_output = summarize_chain.invoke({
+                        "input_documents": docs, 
+                        "question": prompt_instruction # 'map_reduce' zinciri 'question' bekler
+                    })
+                    
+                    st.success("Summary Generated!")
+                    st.markdown(f"### {summary_type}")
+                    st.markdown(summary_output.get("output_text", "Could not generate summary."))
+                
+                except Exception as e:
+                    st.error(f"An error occurred during summarization: {e}")
+                finally:
+                    # Geçici dosyayı sil
+                    if 'temp_path' in locals() and os.path.exists(temp_path):
+                        os.remove(temp_path)
+        else:
+            st.warning("Please upload a document to summarize.")
