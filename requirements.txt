@@ -1,12 +1,17 @@
 streamlit
 python-dotenv
 datasets
-langchain
-langchain-core
-langchain-community
-langchain-huggingface
-langchain-google-genai
 google-generativeai
 sentence-transformers
 chromadb
 
+# --- Çatışmayı Çözmek İçin ---
+# Temel bağımlılıkları açıkça listeliyoruz
+pydantic
+langchain-core
+
+# Ana Langchain paketleri
+langchain
+langchain-community
+langchain-huggingface
+langchain-google-genai
