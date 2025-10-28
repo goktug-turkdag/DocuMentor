@@ -119,7 +119,7 @@ Helpful Answer:
 # Simlish Prompt
 simlish_prompt_template = """
 Sul sul! You are a Sim from The Sims game... 
-(Simlish prompt'unuzun geri kalanı) ...
+(Simlish prompt metni değişmedi) ...
 Context: {context}
 Chat History: {chat_history}
 Question: {question}
@@ -143,8 +143,8 @@ with st.sidebar:
     st.header("About DocuMentor")
     st.markdown(
         """
-        **DocuMentor** is a multi-functional application showcasing:
-        1.  An **intelligent Q&A chatbot** using advanced AI techniques.
+        **DocuMentor** demonstrates advanced application development, combining:
+        1.  An **intelligent Q&A chatbot** leveraging cutting-edge AI.
         2.  Several **interactive features & games of chance** demonstrating Python logic and state handling.
 
         **Technical Architecture & Features:**
@@ -153,7 +153,7 @@ with st.sidebar:
         * **Chatbot Engine:** RAG architecture, Google Gemini Pro LLM (via LangChain), HuggingFace multilingual embeddings, ChromaDB vector store, Dolly 15k dataset baseline, multi-document upload (.pdf, .docx, .txt), conversational memory, streaming responses, and Simlish mode easter egg.
         * **Interactive Features (Games):** Blackjack (with side bets, dynamic cashout, 5-Card Charlie), Coin Flip, and Roulette implemented using pure Python logic and Streamlit Session State for complex state management (balance, bets, game flow).
         
-        **Developed by Göktuğ Türkdağ.** This project demonstrates proficiency in building complex, interactive AI applications and sophisticated state management. 
+        **Developed by Göktuğ Türkdağ.** This project highlights proficiency in building complex, interactive AI applications and sophisticated state management. 
         
         The codebase exceeds **1000+ lines** and is **open-source** on GitHub.
         """
@@ -178,8 +178,8 @@ with st.sidebar:
         if "coin_flip_result" in st.session_state:
             st.session_state.coin_flip_result = ""
             st.session_state.coin_flip_message = ""
-            st.session_state.last_coin_flip_bet = 0
-            st.session_state.last_coin_flip_choice = ""
+            st.session_state.last_coin_flip_bet = 10 # Reset to default
+            st.session_state.last_coin_flip_choice = "Heads" # Reset to default
         if "roulette_bets" in st.session_state:
             st.session_state.roulette_bets = {}
             st.session_state.roulette_result = ""
@@ -395,7 +395,7 @@ with tab_blackjack:
         - 5-Card Charlie: Draw 5 cards without busting - win 1:1.
         """)
 
-    # Blackjack Oyun Fonksiyonları
+    # --- Blackjack Oyun Fonksiyonları ---
     def reset_blackjack_state(reset_balance=False): 
         st.session_state.game_state = "betting" 
         st.session_state.deck = []
@@ -551,7 +551,7 @@ with tab_blackjack:
         st.session_state.side_bet_message = "" 
         
         if st.session_state.player_balance <= 0:
-            st.error("You are out of money! Reset games from the sidebar.")
+            st.error("You are out of money! Reset features from the sidebar.")
         else:
             with st.form(key="bet_form"):
                 st.subheader("Place Your Bets")
@@ -694,7 +694,7 @@ with tab_blackjack:
                     st.session_state.side_bet_message += "\n" + l7_msg
                 st.rerun()
             
-            if cashout_offer > 0: # Sadece teklif varsa göster
+            if cashout_offer > 0: 
                 if col3.button(f"Cash Out for 💰 {cashout_offer}", key="cashout"):
                     st.session_state.player_balance += cashout_offer
                     st.session_state.game_state = "game_over"
@@ -741,6 +741,7 @@ with tab_coinflip:
     st.header("🪙 Coin Flip")
     st.markdown("A simple Heads or Tails betting game.")
 
+    # State başlatma
     if "coin_flip_result" not in st.session_state:
         st.session_state.coin_flip_result = ""
         st.session_state.coin_flip_message = ""
@@ -750,7 +751,7 @@ with tab_coinflip:
     st.metric(label="Your Balance", value=f"💰 {st.session_state.player_balance}")
 
     if st.session_state.player_balance <= 0:
-        st.error("You are out of money! Reset games from the sidebar.")
+        st.error("You are out of money! Reset features from the sidebar.")
     else:
         st.caption(f"Last bet: {st.session_state.last_coin_flip_bet} on {st.session_state.last_coin_flip_choice}")
 
@@ -789,6 +790,7 @@ with tab_roulette:
     st.header("🎡 Roulette (European)")
     st.markdown("Place your bets on the table and spin the wheel!")
 
+    # State başlatma
     if "roulette_bets" not in st.session_state:
         st.session_state.roulette_bets = {} 
         st.session_state.roulette_result = ""
@@ -816,7 +818,7 @@ with tab_roulette:
     st.metric(label="Your Balance", value=f"💰 {st.session_state.player_balance}")
 
     if st.session_state.player_balance <= 0:
-        st.error("You are out of money! Reset games from the sidebar.")
+        st.error("You are out of money! Reset features from the sidebar.")
     else:
         st.subheader("Place Your Bets:")
         
@@ -824,7 +826,6 @@ with tab_roulette:
             with st.expander("Show/Repeat Last Bets"):
                 last_bets_str = "\n".join([f"- {k.replace('_', ' ').title()}: {v}" for k, v in st.session_state.last_roulette_bets.items()])
                 st.markdown(last_bets_str)
-                # (İsterseniz buraya bir "Repeat Bets" butonu da ekleyebilirsiniz)
         
         current_bets = {} 
         total_current_bet = 0
@@ -913,13 +914,11 @@ with tab_roulette:
         st.button("Place New Bets", on_click=lambda: st.session_state.update({"roulette_result":"", "roulette_message":"", "roulette_bets":{}}))
 
 
-# --- YENİ ÖZELLİK: SEKME 5 - MUSIC PLAYER ---
+# --- SEKME 5: MUSIC PLAYER ---
 with tab_music:
     st.header("🎶 Music Player")
-    # --- YENİ: GÜNCELLENMİŞ TANITIM METNİ ---
     st.markdown("How about a nice blues session? Maybe it will relax you.") 
     
-    # --- YENİ: SİZİN İSTEDİĞİNİZ VİDEO LİNKİ ---
     youtube_url = "https://www.youtube.com/watch?v=1eNSWZ4x2ZU&list=PLoPLEt1InO1x_fhNUCZW2HgRI3uTUn5NY" 
     
     st.video(youtube_url)
