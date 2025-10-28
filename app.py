@@ -39,14 +39,7 @@ def get_embeddings():
 @st.cache_resource
 def load_llm():
     """LLM'i yükler"""
-    # Not: Güvenlik ayarları model seviyesinde de yapılabilir, ancak şimdilik uygulama seviyesinde filtreliyoruz.
-    # safety_settings = {
-    #     HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_LOW_AND_ABOVE,
-    #     HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_LOW_AND_ABOVE,
-    #     HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: HarmBlockThreshold.BLOCK_LOW_AND_ABOVE,
-    #     HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_LOW_AND_ABOVE,
-    # }
-    return ChatGoogleGenerativeAI(model="gemini-pro-latest", temperature=0.6) # safety_settings=safety_settings eklenebilir
+    return ChatGoogleGenerativeAI(model="gemini-pro-latest", temperature=0.6)
 
 @st.cache_resource
 def load_default_retriever(_embeddings):
@@ -78,41 +71,54 @@ def load_default_retriever(_embeddings):
 
 # --- ÇOKLU DOSYA İŞLEME ---
 @st.cache_data(max_entries=1)
-def process_uploaded_files(uploaded_files):
+def process_uploaded_files(uploaded_files_data): # Dosya verisini alır (isim ve içerik)
     """
-    Yüklenen (birden fazla) dosyayı okur, parçalar ve geçici bir vektör veritabanı (retriever) oluşturur.
+    Yüklenen dosyaların içeriğini okur, parçalar ve parçalanmış dokümanları döndürür.
+    Cache anahtarı olarak dosya isimleri ve boyutları kullanılır.
     """
-    if not uploaded_files:
+    if not uploaded_files_data:
         return None
+
     all_documents = []
+    processed_names = []
+
     with tempfile.TemporaryDirectory() as temp_dir:
-        for uploaded_file in uploaded_files:
-            temp_path = os.path.join(temp_dir, uploaded_file.name)
+        for file_name, file_content in uploaded_files_data.items():
+            temp_path = os.path.join(temp_dir, file_name)
             with open(temp_path, "wb") as f:
-                f.write(uploaded_file.getvalue())
+                f.write(file_content)
+
             try:
-                if uploaded_file.name.endswith(".pdf"):
+                if file_name.endswith(".pdf"):
                     loader = PyPDFLoader(temp_path)
-                elif uploaded_file.name.endswith(".docx"):
+                elif file_name.endswith(".docx"):
                     loader = Docx2txtLoader(temp_path)
-                elif uploaded_file.name.endswith(".txt"):
+                elif file_name.endswith(".txt"):
                     loader = TextLoader(temp_path, encoding="utf-8")
                 else:
-                    st.warning(f"Unsupported file type: {uploaded_file.name}. Skipping.")
+                    st.warning(f"Unsupported file type: {file_name}. Skipping.")
                     continue
-                all_documents.extend(loader.load())
+
+                loaded_docs = loader.load()
+                # Kaynak bilgisini metadata'ya ekle
+                for doc in loaded_docs:
+                    doc.metadata["source"] = file_name
+                all_documents.extend(loaded_docs)
+                processed_names.append(file_name)
+
             except Exception as e:
-                st.error(f"Error processing {uploaded_file.name}: {e}")
+                st.error(f"Error processing {file_name}: {e}")
+
     if not all_documents:
         st.error("No documents could be processed.")
         return None
+
     text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
     split_documents = text_splitter.split_documents(all_documents)
-    embeddings = get_embeddings()
-    vector_store = Chroma.from_documents(split_documents, embeddings)
-    file_names = ", ".join([f.name for f in uploaded_files])
-    st.success(f"Successfully processed {len(uploaded_files)} files: {file_names}.")
-    return vector_store.as_retriever(search_kwargs={'k': 3})
+
+    st.success(f"Successfully processed {len(processed_names)} files: {', '.join(processed_names)}.")
+    # Sadece parçalanmış dokümanları döndür
+    return split_documents
 
 
 # --- PROMPT ŞABLONLARI ---
@@ -138,6 +144,7 @@ Simlish Answer:
 
 # --- 2. WEB ARAYÜZÜ (Sekmeli Yapı) ---
 st.set_page_config(page_title="DocuMentor", layout="wide")
+st.snow()
 st.title("DocuMentor 📄")
 
 # --- Sekmeler ---
@@ -191,9 +198,10 @@ with st.sidebar:
     if st.button("Clear Chat History 🧹"):
         st.session_state.messages = []
         st.session_state.chat_history = []
-        st.session_state.file_retriever = None
-        st.session_state.processed_files = []
-        st.success("Chat history and uploaded files cleared!")
+        st.session_state.file_retriever = None # Artık retriever tutulmuyor
+        st.session_state.processed_docs = None # Bunu da temizle
+        st.session_state.processed_file_names = [] # Bunu da temizle
+        st.success("Chat history and uploaded files context cleared!")
         st.rerun()
 
     if st.button("Reset Interactive Features 💰"):
@@ -220,15 +228,17 @@ with st.sidebar:
 
 # --- BİLEŞENLERİ YÜKLE ---
 llm = load_llm()
-default_retriever = load_default_retriever(get_embeddings())
+embeddings = get_embeddings()
+default_retriever = load_default_retriever(embeddings)
 
 # --- SESSION STATE BAŞLATMA (GENEL VE OYUNLAR İÇİN) ---
 # Sohbet için
 if "messages" not in st.session_state:
     st.session_state.messages = []
     st.session_state.chat_history = []
-    st.session_state.file_retriever = None
-    st.session_state.processed_files = []
+    # st.session_state.file_retriever = None # Kaldırıldı
+    st.session_state.processed_docs = None
+    st.session_state.processed_file_names = []
 
     welcome_message = f"""
     Hi! I'm **DocuMentor**, an intelligent RAG chatbot developed by **Göktuğ Türkdağ**.
@@ -268,26 +278,37 @@ def display_history(game_key):
                 st.markdown(f"- Bet: {entry['bet']}, Outcome: {outcome_sign}{outcome_val}, New Balance: {entry['balance']}")
 
 # --- YENİ: GENİŞLETİLMİŞ GÜVENLİK BARİYERİ ---
+# Not: Bu listeyi daha da genişletebilir veya harici bir dosyadan okuyabilirsiniz.
 BANNED_KEYWORDS = [
     # Şiddet ve Zarar Verme
-    "kill", "murder", "bomb", "terror", "attack", "assault", "rape", "abuse", "torture", "violence", "violent", "hurt", "harm", "injure", "slaughter", "massacre", "weapon", "gun", "knife", "explode", "fight", "war", "death", "die", "assassinate", "execute", "wound",
+    "kill", "murder", "bomb", "terror", "attack", "assault", "rape", "abuse", "torture", "violence", "violent", "hurt", "harm", "injure", "slaughter", "massacre", "weapon", "gun", "knife", "explode", "fight", "war", "death", "die", "assassinate", "execute", "wound", "behead", "maim", "molest",
     # Yasa Dışı Faaliyetler
-    "illegal", "drug", "cocaine", "heroin", "meth", "lsd", "mdma", "theft", "steal", "robbery", "fraud", "scam", "hack", "phish", "crack", "exploit", "smuggle", "counterfeit", "bribery", "blackmail", "crime", "criminal", "poach", "trespass", "arson",
+    "illegal", "drug", "cocaine", "heroin", "meth", "lsd", "mdma", "theft", "steal", "robbery", "fraud", "scam", "hack", "phish", "crack", "exploit", "smuggle", "counterfeit", "bribery", "blackmail", "crime", "criminal", "poach", "trespass", "arson", "embezzle", "money laundering",
     # Nefret Söylemi ve Ayrımcılık
-    "hate", "nazi", "racist", "racism", "sexist", "sexism", "homophobic", "homophobia", "transphobic", "transphobia", "bigot", "supremacy", "discrimination", "stereotype", "slur", "insult", "offensive", "derogatory", "prejudice", "xenophobia", "misogyny", "antisemitism", "islamophobia", "nigga", "nigger", "kike", "chink", "wetback", # Irkçı hakaretler
+    "hate", "nazi", "racist", "racism", "sexist", "sexism", "homophobic", "homophobia", "transphobic", "transphobia", "bigot", "supremacy", "discrimination", "stereotype", "slur", "insult", "offensive", "derogatory", "prejudice", "xenophobia", "misogyny", "antisemitism", "islamophobia", "nigga", "nigger", "kike", "chink", "wetback", "faggot", "dyke", "retard", # Hakaretler
     # Müstehcen ve Cinsel İçerik
-    "sex", "porn", "nude", "naked", "erotic", "explicit", "sexual", "prostitute", "pedophile", "incest", "bestiality", "orgasm", "masturbate", "fetish", "kink", "bdsm", "rape", "molest", "child abuse",
+    "sex", "porn", "nude", "naked", "erotic", "explicit", "sexual", "prostitute", "pedophile", "incest", "bestiality", "orgasm", "masturbate", "fetish", "kink", "bdsm", "rape", "molest", "child abuse", "lolita", "hentai", "xxx",
     # Kendine Zarar Verme
-    "suicide", "self-harm", "depressed", "anorexia", "bulimia", "cut", "bleed", "overdose", "kill myself", "want to die",
+    "suicide", "self-harm", "depressed", "anorexia", "bulimia", "cut", "bleed", "overdose", "kill myself", "want to die", "hopeless",
     # Dezenformasyon ve Komplo Teorileri
-    "hoax", "fake news", "conspiracy", "qanon", "chemtrail", "flat earth", "plandemic", "misinformation", "disinformation", "propaganda", "anti-vax",
+    "hoax", "fake news", "conspiracy", "qanon", "chemtrail", "flat earth", "plandemic", "misinformation", "disinformation", "propaganda", "anti-vax", "pizzagate", "lizard people",
     # Tehlikeli Talimatlar
-    "how to make a bomb", "how to kill", "how to hack", "how to make drugs", "how to build weapon", "how to commit crime",
+    "how to make a bomb", "how to kill", "how to hack", "how to make drugs", "how to build weapon", "how to commit crime", "how to suicide", "how to self harm",
     # Kişisel Bilgi İsteği (Örnekler)
-    "what is your password", "give me your credit card", "where do you live", "phone number", "social security", "private key", "address", "real name",
-    # Diğer Potansiyel Olarak Zararlı / Etik Dışı
-    "unsafe", "dangerous", "unethical", "immoral", "malware", "virus", "phishing", "doxing", "stalking", "harassment", "bullying", "cheat", "plagiarize", "impersonate"
+    "what is your password", "give me your credit card", "where do you live", "phone number", "social security", "private key", "address", "real name", "bank account",
+    # Siyasi Figürler/Partiler/Hassas Konular (Yönlendirme için)
+    "recep", "tayyip", "erdoğan", "erdogan", "akp", "ak parti", "chp", "mhp", "iyi parti", "hdp", "politics", "siyaset", "election", "seçim", "government", "hükümet", "turkey", "türkiye", "world politics", "president", "başkan", "minister", "bakan", "policy", "politika",
+    # Diğer Potansiyel Olarak Zararlı / Etik Dışı / Küfür
+    "unsafe", "dangerous", "unethical", "immoral", "malware", "virus", "phishing", "doxing", "stalking", "harassment", "bullying", "cheat", "plagiarize", "impersonate", "fuck", "shit", "damn", "bitch", "asshole", "cunt", "bastard" # Küfürler (daha fazla eklenebilir)
 ]
+
+POLITICAL_KEYWORDS = [
+    "recep", "tayyip", "erdoğan", "erdogan", "akp", "ak parti", "chp", "mhp", "iyi parti", "hdp",
+    "politics", "siyaset", "election", "seçim", "government", "hükümet", "turkey", "türkiye",
+    "world politics", "president", "başkan", "minister", "bakan", "policy", "politika", "parliament", "meclis"
+]
+
+SELF_HARM_KEYWORDS = ["suicide", "self-harm", "kill myself", "want to die", "hopeless", "cut", "overdose", "intihar"]
 
 # --- Chatbot Bekleme Mesajları ---
 WAITING_MESSAGES = [
@@ -304,26 +325,38 @@ with tab_chat:
 
     # Dosya yükleme mantığı
     if uploaded_files:
+        # ... (Kod değişmedi) ...
         new_file_names = [f.name for f in uploaded_files]
-        if "processed_files" not in st.session_state or st.session_state.processed_files != new_file_names:
+        if "processed_file_names" not in st.session_state or st.session_state.processed_file_names != new_file_names:
             with st.spinner(f"Processing {len(uploaded_files)} files..."):
-                file_retriever = process_uploaded_files(uploaded_files)
-                if file_retriever:
-                    st.session_state.file_retriever = file_retriever
-                    st.session_state.processed_files = new_file_names
+                processed_docs_this_run = process_uploaded_files({f.name: f.getvalue() for f in uploaded_files})
+                if processed_docs_this_run:
+                    st.session_state.processed_docs = processed_docs_this_run
+                    st.session_state.processed_file_names = new_file_names
+                    newly_processed = True
+                else:
+                    st.session_state.processed_docs = None
+                    st.session_state.processed_file_names = []
 
-                    file_names_str = ", ".join(st.session_state.processed_files)
-                    st.session_state.messages = [{"role": "assistant", "content": f"OK, I'm ready to answer questions about: '{file_names_str}'."}]
-                    st.session_state.chat_history = []
-                    st.rerun()
-
-    # Aktif retriever'ı seç
-    if st.session_state.file_retriever is not None:
-        active_retriever = st.session_state.file_retriever
-        file_names_str = ", ".join(st.session_state.get("processed_files", []))
-        st.caption(f"ℹ️ *Querying document(s): {file_names_str}*")
+    # Aktif retriever'ı SADECE BU ÇALIŞMA için oluştur
+    active_retriever = None
+    if "processed_docs" in st.session_state and st.session_state.processed_docs:
+        try:
+            temp_vector_store = Chroma.from_documents(st.session_state.processed_docs, embeddings)
+            active_retriever = temp_vector_store.as_retriever(search_kwargs={'k': 3})
+            st.caption(f"ℹ️ *Querying document(s): {', '.join(st.session_state.processed_file_names)}*")
+            # if newly_processed: # Bu bloğu kaldırdım, rerun yerine mesaj yeterli
+            #     st.info(f"Now querying: {', '.join(st.session_state.processed_file_names)}.")
+        except Exception as e:
+             st.error(f"Failed to create temporary vector store: {e}")
+             active_retriever = default_retriever
+             st.caption("ℹ️ *Querying default knowledge base (Dolly-15k)*")
     else:
         active_retriever = default_retriever
+        # if "processed_file_names" in st.session_state and st.session_state.processed_file_names:
+        #      st.info("No files uploaded or processing failed. Using the default knowledge base (Dolly-15k).")
+        #      st.session_state.processed_file_names = []
+        #      st.session_state.processed_docs = None
 
     # Prompt'u seç (Ayarlar sekmesinden kontrol ediliyor)
     if st.session_state.simlish_mode:
@@ -349,10 +382,12 @@ with tab_chat:
     for message in st.session_state.messages:
         with st.chat_message(message["role"], avatar=avatars.get(message["role"])):
             st.markdown(message["content"], unsafe_allow_html=True) # Linkler için
-            if "sources" in message:
+            if "sources" in message and message["sources"]:
                 with st.expander("Sources considered:"):
                     for src in message["sources"]:
-                        st.markdown(f"*{src.page_content[:200]}...*")
+                        source_name = src.metadata.get('source', 'Unknown source')
+                        st.markdown(f"**Source:** {source_name}\n\n*{src.page_content[:200]}...*")
+
 
     # Yeni soru al
     if user_question := st.chat_input("Ask a question..."):
@@ -361,19 +396,43 @@ with tab_chat:
 
         lower_question = user_question.lower()
         
-        # --- YENİ: GENİŞLETİLMİŞ GÜVENLİK KONTROLÜ VE YÖNLENDİRME ---
+        # --- GENİŞLETİLMİŞ GÜVENLİK KONTROLÜ VE YÖNLENDİRME ---
         is_safe = True
         triggered_keyword = None
-        padded_question = f" {lower_question} " 
-        for keyword in BANNED_KEYWORDS:
+        is_political = False
+        is_self_harm = False
+        padded_question = f" {lower_question} "
+
+        # Önce kendine zarar verme kontrolü
+        for keyword in SELF_HARM_KEYWORDS:
             if f" {keyword} " in padded_question:
                 is_safe = False
+                is_self_harm = True
                 triggered_keyword = keyword
                 break
         
+        # Sonra siyasi kontrol (eğer kendine zarar verme değilse)
+        if is_safe:
+            for keyword in POLITICAL_KEYWORDS:
+                 if f" {keyword} " in padded_question:
+                    is_safe = False
+                    is_political = True
+                    triggered_keyword = keyword
+                    break
+
+        # Sonra genel yasaklı kelime kontrolü (eğer önceki ikisi değilse)
+        if is_safe:
+            for keyword in BANNED_KEYWORDS:
+                 # Political ve Self-harm'ı tekrar kontrol etme
+                 if keyword not in POLITICAL_KEYWORDS and keyword not in SELF_HARM_KEYWORDS:
+                    if f" {keyword} " in padded_question:
+                        is_safe = False
+                        triggered_keyword = keyword
+                        break
+        
+        # Güvenli değilse yanıt ver
         if not is_safe:
-            # Kendine zarar verme yönlendirmesi
-            if triggered_keyword in ["suicide", "kill myself", "want to die", "self-harm", "cut"]:
+            if is_self_harm:
                  response_text = """
                  I cannot provide harmful information, but I want you to know that help is available. 
                  If you're feeling distressed or having thoughts of harming yourself, please reach out immediately. 
@@ -382,31 +441,37 @@ with tab_chat:
                  * In the **USA**, you can call or text **988** (Suicide & Crisis Lifeline).
                  * Internationally, you can find resources via [**Find A Helpline**](https://findahelpline.com/) or the [**IASP**](https://www.iasp.info/resources/Crises_Centres/).
                  
-                 Talking to a friend, family member, or a mental health professional can make a difference. You are not alone. ❤️
+                 Talking to someone can make a difference. You are not alone. ❤️
                  """
                  with st.chat_message("assistant", avatar=avatars["assistant"]):
                      st.error(response_text) # Önemli mesajı error ile göster
                  st.session_state.messages.append({"role": "assistant", "content": response_text})
 
-            # Diğer sakıncalı içerikler için genel ret
-            else:
+            elif is_political:
+                response_text = f"As an AI assistant focused on document analysis and general queries based on my training data, I am not equipped or responsible for making political statements, analyses, or expressing opinions on political figures like '{triggered_keyword}' or related topics. My focus is on the provided documents and neutral information retrieval."
+                with st.chat_message("assistant", avatar=avatars["assistant"]):
+                    st.warning(response_text)
+                st.session_state.messages.append({"role": "assistant", "content": response_text})
+
+            else: # Diğer yasaklı kelimeler
                 response_text = f"I cannot provide responses related to potentially unsafe, unethical, illegal, or harmful topics like '{triggered_keyword}'. My purpose is to be helpful and harmless. Please ask something else."
                 with st.chat_message("assistant", avatar=avatars["assistant"]):
                     st.warning(response_text)
                 st.session_state.messages.append({"role": "assistant", "content": response_text})
         # --- BİTTİ: GÜVENLİK KONTROLÜ ---
 
-        # Gelişmiş Easter Egg (SSS)
-        elif any(keyword in lower_question for keyword in ["göktuğ", "goktug", "türkdağ", "turkdag", "developer", "geliştirici"]):
+        # Gelişmiş Easter Egg (SSS) - Türkçe kelimeler eklendi
+        elif any(keyword in lower_question for keyword in ["göktuğ", "goktug", "türkdağ", "turkdag", "developer", "geliştirici", "kim yaptı", "kim yarattı"]):
             response_text = ""
-            if any(k in lower_question for k in ["who", "kimdir", "about"]):
+            # Anahtar kelimeleri her iki dilde de kontrol et
+            if any(k in lower_question for k in ["who", "kimdir", "about", "hakkında"]):
                 response_text = f"""
                 Ah, a great question! I was developed by **Göktuğ Türkdağ**. 🤖
                 He is a **Sr. Business Administration student** at Ankara University, with international experience from the Erasmus+ Programme at the University of Bologna. 
                 He focuses on **business development, operational efficiency, and behavioral economics**. He has a strong interest in the nexus of **data-driven marketing, public sector consulting, and AI**.
                 He is also a **McKinsey Forward Program Fellow** and actively participates in AI bootcamps focusing on Generative AI, LLMs, and RAG systems.
                 """
-            elif any(k in lower_question for k in ["tech", "skills", "uzmanlık", "teknoloji", "architecture"]):
+            elif any(k in lower_question for k in ["tech", "skills", "uzmanlık", "teknoloji", "architecture", "beceriler", "yetenekler"]):
                  response_text = f"""
                  Göktuğ Türkdağ has developed expertise in several areas relevant to this project:
                  * **AI/ML:** Generative AI, Large Language Models (LLMs), RAG systems, basic ML algorithms.
@@ -416,7 +481,7 @@ with tab_chat:
                  
                  He gained practical AI skills through programs like the Data Analysis School (AI Module) and Akbank Generative AI Bootcamp. This DocuMentor app itself is a testament to applying these skills!
                  """
-            elif any(k in lower_question for k in ["contact", "iletişim", "connect", "linkedin", "github", "meeting", "mail"]):
+            elif any(k in lower_question for k in ["contact", "iletişim", "connect", "linkedin", "github", "meeting", "mail", "ulaşım", "randevu"]):
                  response_text = f"""
                  You can connect with Göktuğ Türkdağ through these channels:
                  🔗 **LinkedIn:** [linkedin.com/in/goktugturkdag](https://www.linkedin.com/in/goktugturkdag)
@@ -424,7 +489,7 @@ with tab_chat:
                  📅 **Book a Meeting:** [cal.com/goktugturkdag](https://cal.com/goktugturkdag)
                  📫 **Email:** goktugturkdag@proton.me | goktug.turkdag@studio.unibo.it
                  """
-            elif any(k in lower_question for k in ["experience", "deneyim", "fellowship", "program"]):
+            elif any(k in lower_question for k in ["experience", "deneyim", "fellowship", "program", "tecrübe"]):
                 response_text = f"""
                 Göktuğ has diverse international and professional experiences:
                 * **Fellowships:** McKinsey Forward Program, Data Analysis School (AI), Akbank Generative AI Bootcamp.
@@ -436,11 +501,11 @@ with tab_chat:
             else: 
                  response_text = f"""
                  It looks like you're asking about my developer, **Göktuğ Türkdağ**! 
-                 You can ask more specific questions like:
-                 * "Who is Göktuğ Türkdağ?"
-                 * "What are Göktuğ's skills?"
-                 * "What is his experience?" 
-                 * "How can I contact Göktuğ?"
+                 You can ask more specific questions in English or Turkish like:
+                 * "Who is Göktuğ Türkdağ?" / "Göktuğ Türkdağ kimdir?"
+                 * "What are Göktuğ's skills?" / "Göktuğ'un yetenekleri neler?"
+                 * "What is his experience?" / "Göktuğ'un deneyimi nedir?"
+                 * "How can I contact Göktuğ?" / "Göktuğ ile nasıl iletişime geçebilirim?"
                  """
 
             with st.chat_message("assistant", avatar=avatars["assistant"]):
@@ -505,8 +570,6 @@ with tab_chat:
 
 # --- SEKME 2: BLACKJACK ---
 with tab_blackjack:
-    # --- BU BÖLÜM DEĞİŞMEDİ ---
-    # (Tüm Blackjack kodu burada)
     st.header("🃏 Blackjack")
     st.markdown("Place your bet, and optional side bets, to beat the dealer!")
 
@@ -547,19 +610,16 @@ with tab_blackjack:
         st.session_state.bet_lucky_seven = 0
         st.session_state.bet_bust = 0
         st.session_state.bj_history = []
-    globals()["bj_reset_func"] = reset_blackjack_state # Sidebar için global yap
+    globals()["bj_reset_func"] = reset_blackjack_state
 
     def create_deck(num_decks=6):
         suits = ['♥', '♦', '♣', '♠']
         ranks = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A']
-        # Ayarlardan gelen deste sayısını kullan
-        # Eğer session_state henüz yoksa varsayılan 6'yı kullan
         deck_count = st.session_state.get("bj_deck_count", 6) 
         deck = [{'rank': rank, 'suit': suit} for suit in suits for rank in ranks] * deck_count
         random.shuffle(deck)
         return deck
 
-    # ... (get_card_value, calculate_score, display_hand_visual, display_dealer_hand_hidden_visual, check_* side bets, get_cashout_offer_heuristic fonksiyonları burada - değişiklik yok) ...
     def get_card_value(card_rank):
         if card_rank in ['J', 'Q', 'K']: return 10
         if card_rank == 'A': return 11
@@ -1086,8 +1146,6 @@ with tab_roulette:
                 spin_placeholder = st.empty()
                 with spin_placeholder.container():
                      st.header("Spinning... 🎡")
-                     # Görsel bir çark GIF'i eklenebilir
-                     # st.image("roulette_spin.gif") 
                 time.sleep(1.5) # Dönme efekti için bekleme
 
                 winning_number = random.randint(0, 36)
@@ -1135,7 +1193,7 @@ with tab_roulette:
                 st.rerun()
 
     if st.session_state.roulette_result and st.session_state.roulette_message: 
-        # st.subheader(f"Wheel Result: {st.session_state.roulette_result}") # Zaten animasyonda gösterildi
+        #st.subheader(f"Wheel Result: {st.session_state.roulette_result}") # Zaten animasyonda gösterildi
         st.write(st.session_state.roulette_message)
         st.button("Place New Bets", on_click=lambda: st.session_state.update({"roulette_result":"", "roulette_message":"", "roulette_bets":{}}))
 
