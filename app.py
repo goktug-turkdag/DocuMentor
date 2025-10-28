@@ -167,7 +167,7 @@ tab_chat, tab_blackjack, tab_coinflip, tab_roulette, tab_slots, tab_vpoker, tab_
     "🃏 Video Poker", # Emoji güncellendi
     "📊 Stats",
     "🎶 Music Player",
-    "🎨 Creative Corner", 
+    "🎨 Creative Corner",
     "⚙️ Settings"
 ])
 
@@ -302,18 +302,25 @@ def add_history(game_key, bet, outcome, balance):
         
         # Toplam bahis miktarını al (bu el için yatırılan toplam para)
         if game_key == "bj": 
-            total_bet_this_round = st.session_state.current_bet + st.session_state.bet_21_3 + st.session_state.bet_perfect_pairs + st.session_state.bet_lucky_seven + st.session_state.bet_bust + st.session_state.bet_insurance
-        elif game_key == "cf": total_bet_this_round = st.session_state.last_coin_flip_bet
-        elif game_key == "rl": total_bet_this_round = sum(st.session_state.last_roulette_bets.values()) if st.session_state.last_roulette_bets else 0
-        elif game_key == "slot": total_bet_this_round = st.session_state.last_slot_bet
-        elif game_key == "vp": total_bet_this_round = st.session_state.vp_current_bet
+            # BJ'de ana bahis ve sigorta dışındaki yan bahisler ana bet'e dahil değil
+            total_bet_this_round = bet 
+        elif game_key == "cf": total_bet_this_round = bet
+        elif game_key == "rl": total_bet_this_round = bet
+        elif game_key == "slot": total_bet_this_round = bet
+        elif game_key == "vp": total_bet_this_round = bet
         else: total_bet_this_round = bet # Fallback
 
-        # Not: Blackjack'te add_history birden çok kez çağrılır (yan bahisler için), bu mantık total_bets'i şişirebilir.
-        # Daha basit bir yaklaşım: Sadece ana bahis sonucunu add_history'ye göndermek.
-        # Şimdilik bu haliyle bırakıyorum, ancak total_bets'in doğruluğu için refactor gerekebilir.
-        # stats["total_bets"] += total_bet_this_round # Bu satır yerine oyun mantığındaki bet'i kullanalım
-
+        # Sadece ana bahisleri (veya tek seferlik bahisleri) topla
+        if game_key in ["bj", "cf", "rl", "slot", "vp"]:
+            # BJ'de, "bet" main bet, cashout profit, veya side bet olabilir. 
+            # İstatistikleri sadece ana bahis bittiğinde güncellemek daha doğru olur.
+            # Şimdilik basitleştirilmiş bir toplama yapalım (her history kaydı için)
+            # Bu, total_bets'i şişirebilir. Düzeltme: Sadece outcome < 0 (kayıp) veya outcome == 0 (push) ise bet'i ekle
+            # Kazanma durumunda outcome zaten net kazancı içerir.
+            if outcome <= 0: # Kayıp veya Push
+                stats["total_bets"] += bet
+            # Not: Bu hala mükemmel değil ama daha yakın bir tahmin.
+        
         if outcome > 0:
             stats["total_won_amount"] += outcome
             if game_key in stats: stats[game_key]["won"] += 1
@@ -326,9 +333,6 @@ def add_history(game_key, bet, outcome, balance):
             stats["bj"]["push"] += 1
         
         if game_key in stats: 
-             # Bir oyunun "played" sayısını sadece ana bahis bittiğinde artıralım (örn. BJ'de)
-             # Veya her bahis için artıralım (örn. side betler)? 
-             # Şimdilik her history kaydında artıralım:
              stats[game_key]["played"] += 1
         st.session_state.player_stats = stats
     except Exception as e:
@@ -393,6 +397,11 @@ POLITICAL_KEYWORDS = [
 
 SELF_HARM_KEYWORDS = ["suicide", "self-harm", "kill myself", "want to die", "hopeless", "cut", "overdose", "intihar"]
 
+# --- YENİ: Günlük Konuşma Anahtar Kelimeleri ---
+GREETING_KEYWORDS = ["selam", "merhaba", "hi", "hello", "hey", "greetings", "günaydın", "iyi günler", "iyi akşamlar", "good morning", "good afternoon", "good evening"]
+WELLBEING_KEYWORDS = ["naber", "ne haber", "nasılsın", "nassın", "naptın", "iyi misin", "how are you", "what's up", "how's it going", "how goes it", "are you okay", "what are you doing"]
+LOCATION_KEYWORDS = ["ankara", "how is ankara", "neredesin", "where are you"] # Türkiye/Turkey siyasi listede
+
 # --- Chatbot Bekleme Mesajları ---
 WAITING_MESSAGES = [
     "Searching for the answer... Hang tight! Maybe listen to some blues on the Music tab? 🎶",
@@ -408,7 +417,6 @@ WAITING_MESSAGES = [
 
 # --- SEKME 1: CHATBOT ---
 with tab_chat:
-    # --- CHATBOT KODUNUN TAMAMI BURADA ---
     
     # Dosya yükleme mantığı
     newly_processed = False 
@@ -580,7 +588,7 @@ with tab_chat:
             elif any(k in lower_question for k in ["contact", "iletişim", "connect", "linkedin", "github", "meeting", "mail", "ulaşım", "randevu"]):
                  response_text = f"""
                  You can connect with Göktuğ Türkdağ through these channels:
-                 🔗 **LinkedIn:** [linkedin.com/in/goktugturkdag](https://www.linkedin.com/in/goktugturkdag)
+                 🔗 **LinkedIn:** [linkedin.com/in/goktugturkdag](https.www.linkedin.com/in/goktugturkdag)
                  🐙 **GitHub:** [github.com/goktug-turkdag](https://github.com/goktug-turkdag)
                  📅 **Book a Meeting:** [cal.com/goktugturkdag](https://cal.com/goktugturkdag)
                  📫 **Email:** goktugturkdag@proton.me | goktug.turkdag@studio.unibo.it
@@ -631,8 +639,6 @@ with tab_chat:
         elif any(keyword in padded_question for keyword in LOCATION_KEYWORDS):
              if "ankara" in padded_question:
                  response_text = "Ankara is the capital of Türkiye, known for its historical sites like Anıtkabir and Ankara Castle, as well as its modern administrative role. How can I help you with your documents or other questions today?"
-             # Not: "türkiye" siyasi anahtar kelime listesinde olduğu için buraya gelmeden yakalanacak.
-             # "ankara"yı da oraya ekleyebilir veya burada bırakabiliriz. Şimdilik burada.
              else: # Genel "where are you?"
                   response_text = "I exist as code running on a server! But I can help you analyze documents or answer general questions based on my training data."
              if st.session_state.simlish_mode: response_text = "Za woka? I'm right here! Ready to neep?"
@@ -747,7 +753,8 @@ with tab_blackjack:
         st.session_state.dealer_hand = []
         st.session_state.game_message = ""
         st.session_state.side_bet_message = ""
-        if reset_balance: st.session_state.player_balance = 1000
+        if reset_balance: 
+            st.session_state.player_balance = 1000
         st.session_state.current_bet = 0
         st.session_state.bet_21_3 = 0
         st.session_state.bet_perfect_pairs = 0
@@ -1399,8 +1406,7 @@ with tab_roulette:
         st.markdown("**Outside Bets (1:1 Payout)**")
         ext_cols = st.columns(3)
 
-        # Değerleri bakiye ile sınırla
-        max_outside_bet = st.session_state.player_balance 
+        max_outside_bet = st.session_state.player_balance
         red_bet = ext_cols[0].number_input("Bet on Red:", min_value=0, max_value=max_outside_bet, value=min(st.session_state.last_roulette_bets.get("Red", 0), max_outside_bet), step=1, key="r_red_bet")
         if red_bet > 0: current_bets["Red"] = red_bet; total_current_bet += red_bet
         black_bet = ext_cols[0].number_input("Bet on Black:", min_value=0, max_value=max_outside_bet, value=min(st.session_state.last_roulette_bets.get("Black", 0), max_outside_bet), step=1, key="r_black_bet")
@@ -1428,11 +1434,10 @@ with tab_roulette:
                 st.session_state.roulette_bets = current_bets
                 st.session_state.last_roulette_bets = current_bets
 
-                # Basit animasyon
                 spin_placeholder = st.empty()
                 with spin_placeholder.container():
                      st.header("Spinning... 🎡")
-                time.sleep(1.5) # Dönme efekti için bekleme
+                time.sleep(1.5) 
 
                 winning_number = random.randint(0, 36)
                 winning_color = get_color(winning_number)
@@ -1857,7 +1862,10 @@ with tab_creative:
             # Creative Corner için basit bir güvenlik kontrolü
             is_safe = True
             padded_prompt = f" {creative_prompt.lower()} "
-            for keyword in BANNED_KEYWORDS:
+            # Daha basit bir liste kullanalım, siyasi olmasın
+            creative_banned_list = [k for k in BANNED_KEYWORDS if k not in POLITICAL_KEYWORDS] 
+            
+            for keyword in creative_banned_list:
                  if f" {keyword} " in padded_prompt:
                      is_safe = False
                      break
