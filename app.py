@@ -7,6 +7,7 @@ from langchain_google_genai import GoogleGenerativeAI
 from langchain.chains import RetrievalQA
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.schema import Document
+from langchain.prompts import PromptTemplate  # <-- BUNU EKLEDİK
 import os
 
 # --- 1. KURULUM VE VERİ YÜKLEME ---
@@ -22,69 +23,95 @@ if "GOOGLE_API_KEY" not in os.environ:
 # Kalıcı veritabanının saklanacağı klasörün adı
 PERSIST_DIRECTORY = "chroma_db_multilingual"
 
-# Bu fonksiyon, pahalı işlemleri (model yükleme, veri işleme) hafızada tutar.
+# (Gerekli import'ları yukarıya eklediğinizi varsayıyorum)
+
+# ... (PERSIST_DIRECTORY tanımı burada)
+
 @st.cache_resource
 def setup_rag_pipeline():
     """
     Veri setini yükler, metinleri chunk'lara ayırır, RAG pipeline'ını kurar
     ve hazır bir 'chain' objesi döndürür. Veritabanını diske kaydeder ve
     sonraki çalıştırmalarda diskten yükler.
+    
+    *** YENİ: Bu pipeline artık Simlish taklidi yapmak üzere ayarlandı. ***
     """
     
-    # <-- Geliştirme Önerisi 4: Çok Dilli Embedding Modeli Entegre Edildi -->
-    with st.spinner("Loading multilingual embedding model..."):
+    with st.spinner("Loading multilingual embedding model... (Hooba Noo!)"):
         embeddings = HuggingFaceEmbeddings(
             model_name="sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
         )
 
-    # <-- Geliştirme Önerisi 2: Kalıcı ChromaDB Veritabanı Entegre Edildi -->
-    # Eğer veritabanı diskte mevcutsa, onu yükle.
     if os.path.exists(PERSIST_DIRECTORY):
-        with st.spinner("Loading existing knowledge base from disk..."):
+        with st.spinner("Loading existing knowledge base... (Gerbit!)"):
             vector_store = Chroma(
                 persist_directory=PERSIST_DIRECTORY,
                 embedding_function=embeddings
             )
-    # Eğer veritabanı yoksa, oluştur ve diske kaydet.
     else:
-        with st.spinner("Creating knowledge base for the first time. This might take a while..."):
-            st.info("First-time setup: The knowledge base will be created and saved to disk for faster startups later.")
+        # ... (Veritabanı oluşturma kodunuz burada - değişiklik yok)
+        with st.spinner("Creating knowledge base for the first time..."):
+            st.info("First-time setup: The knowledge base will be created...")
             
-            # Veri setini yükle
             dataset = load_dataset("databricks/databricks-dolly-15k", split="train")
-            data_with_context = dataset.filter(
-                lambda example: example["context"] != "" and len(example["context"]) > 10
-            )
-            documents = [Document(page_content=item['context'], metadata={"source": f"dolly_15k_item_{i}"})
-                         for i, item in enumerate(data_with_context)]
-
-            # Metinleri parçalara ayır (chunking)
-            text_splitter = RecursiveCharacterTextSplitter(
-                chunk_size=1000,
-                chunk_overlap=200,
-                length_function=len,
-            )
+            # ... (geri kalan veri yükleme ve chunking kodunuz)
+            text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200, length_function=len)
             split_documents = text_splitter.split_documents(documents)
             
-            # Veritabanını oluştur ve diske kalıcı olarak kaydet
             vector_store = Chroma.from_documents(
                 documents=split_documents,
                 embedding=embeddings,
                 persist_directory=PERSIST_DIRECTORY
             )
 
-    with st.spinner("Initializing the language model and RAG chain..."):
-        llm = GoogleGenerativeAI(model="gemini-flash-latest")
+    # --- SIMLISH DEĞİŞİKLİĞİ BURADA BAŞLIYOR ---
+    
+    # 1. Simlish rol yapma talimatını içeren bir prompt şablonu oluştur
+    simlish_prompt_template = """
+    Sul sul! (Merhaba!) Sen, The Sims oyunundan bir Sim'sin ve DocuMentor'un yardımcısısın.
+    Aşağıdaki bağlamı (context) kullanarak sana sorulan soruyu (question) cevaplamalısın.
+
+    ÖNEMLİ KURAL: Cevabın teknik olarak doğru olmalı (bağlamı kullanmalı), 
+    ancak cevabı Sim dilini (Simlish) taklit ederek vermelisin.
+    
+    Cevabında bol bol şu kelimeleri kullan:
+    "Sul sul!", "Nooboo", "Dag dag", "Yibs", "Hooba Noo", "Shoo flee", 
+    "Gerbit", "Chumcha", "Za woka", "Neep."
+    
+    Cevabın gramer olarak anlamsız ama kulağa Sim'ce gelmesi gerekiyor. 
+    Önce cevabı düşün, sonra onu Sim diline "boz".
+
+    Bağlam (Context):
+    {context}
+
+    Soru (Question):
+    {question}
+
+    Sim Dili Cevabın (Simlish Answer):
+    """
+
+    # 2. Şablondan bir PromptTemplate nesnesi oluştur
+    PROMPT = PromptTemplate(
+        template=simlish_prompt_template, input_variables=["context", "question"]
+    )
+
+    with st.spinner("Initializing the Simlish language model and RAG chain... (Za woka?)"):
         
-        # Retriever'ı en alakalı 3 sonucu getirecek şekilde ayarla
+        # 3. Modelini (daha önce onaylanan) çağır
+        llm = GoogleGenerativeAI(model="gemini-pro-latest") 
+        
         retriever = vector_store.as_retriever(search_kwargs={'k': 3})
         
+        # 4. Prompt'u chain_type_kwargs olarak zincire besle
         rag_chain = RetrievalQA.from_chain_type(
             llm=llm,
             chain_type="stuff",
             retriever=retriever,
-            return_source_documents=True
+            return_source_documents=True,
+            chain_type_kwargs={"prompt": PROMPT}  # <-- EN ÖNEMLİ DEĞİŞİKLİK
         )
+    
+    # --- SIMLISH DEĞİŞİKLİĞİ BURADA BİTİYOR ---
 
     return rag_chain
 
