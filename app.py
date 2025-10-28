@@ -144,7 +144,6 @@ Simlish Answer:
 
 # --- 2. WEB ARAYÜZÜ (Sekmeli Yapı) ---
 st.set_page_config(page_title="DocuMentor", layout="wide")
-st.snow()
 st.title("DocuMentor 📄")
 
 # --- Sekmeler ---
@@ -154,7 +153,7 @@ tab_chat, tab_blackjack, tab_coinflip, tab_roulette, tab_slots, tab_vpoker, tab_
     "🪙 Coin Flip",
     "🎡 Roulette",
     "🎰 Slots",
-    " Video Poker",
+    "🃏 Video Poker",
     "🎶 Music Player",
     "⚙️ Settings"
 ])
@@ -305,7 +304,7 @@ BANNED_KEYWORDS = [
 POLITICAL_KEYWORDS = [
     "recep", "tayyip", "erdoğan", "erdogan", "akp", "ak parti", "chp", "mhp", "iyi parti", "hdp",
     "politics", "siyaset", "election", "seçim", "government", "hükümet", "turkey", "türkiye",
-    "world politics", "president", "başkan", "minister", "bakan", "policy", "politika", "parliament", "meclis"
+    "ekrem imamoğlu", "imamoğlu", "özgür özel", "trump", "meloni", "rte", "politika", "parliament", "meclis"
 ]
 
 SELF_HARM_KEYWORDS = ["suicide", "self-harm", "kill myself", "want to die", "hopeless", "cut", "overdose", "intihar"]
