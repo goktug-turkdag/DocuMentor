@@ -2,20 +2,18 @@ import streamlit as st
 from dotenv import load_dotenv
 from datasets import load_dataset
 import os
-import tempfile # Dosyaları geçici işlemek için
+import tempfile
+import random # --- YENİ: Blackjack için eklendi ---
 
 # --- GEREKLİ LANGCHAIN IMPORTLARI ---
 from langchain_community.vectorstores import Chroma
 from langchain_huggingface import HuggingFaceEmbeddings
-from langchain_google_genai import ChatGoogleGenerativeAI # Chat modeli
-from langchain.chains import ConversationalRetrievalChain # Hafızalı zincir
-# --- ÖZETLEYİCİ IMPORT'U ÇIKARILDI ---
+from langchain_google_genai import ChatGoogleGenerativeAI 
+from langchain.chains import ConversationalRetrievalChain
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.schema import Document
 from langchain.prompts import PromptTemplate
 from langchain_core.messages import HumanMessage, AIMessage
-
-# --- DOSYA OKUYUCULAR ---
 from langchain_community.document_loaders import PyPDFLoader, Docx2txtLoader, TextLoader 
 
 # --- 1. SETUP, CACHING VE API ANAHTARLARI ---
@@ -113,22 +111,15 @@ def process_uploaded_files(uploaded_files):
     
     return vector_store.as_retriever(search_kwargs={'k': 3})
 
-# --- PROMPT ŞABLONLARI (Hafızalı sohbet için güncellendi) ---
+# --- PROMPT ŞABLONLARI ---
 
 # Normal Prompt
 default_prompt_template = """
 You are a helpful assistant. Use the following context to answer the question.
 If you don't know the answer, just say you don't know. Stick to the context.
-
-Context:
-{context}
-
-Chat History:
-{chat_history}
-
-Question:
-{question}
-
+Context: {context}
+Chat History: {chat_history}
+Question: {question}
 Helpful Answer:
 """
 
@@ -139,23 +130,17 @@ Use the following context to answer the question, but you must answer by imitati
 Be technically correct, but sound like a Sim.
 Use these words: "Sul sul!", "Nooboo", "Dag dag", "Yibs", "Hooba Noo", 
 "Shoo flee", "Gerbit", "Chumcha", "Za woka", "Neep."
-
-Context:
-{context}
-
-Chat History:
-{chat_history}
-
-Question:
-{question}
-
+Context: {context}
+Chat History: {chat_history}
+Question: {question}
 Simlish Answer:
 """
 
-# --- 2. WEB ARAYÜZÜ (Sekmeler kaldırıldı) ---
+# --- 2. WEB ARAYÜZÜ (Sekmeli Yapı) ---
 st.title("DocuMentor 📄")
-st.markdown("An intelligent Q&A chatbot built with RAG. Chat with the default knowledge base (Dolly-15k) or upload your own documents in the sidebar.")
 
+# --- YENİ ÖZELLİK: SEKMELER (CHAT vs. BLACKJACK) ---
+tab_chat, tab_blackjack = st.tabs(["💬 Chatbot", "🃏 Blackjack"])
 
 # --- Sidebar ---
 with st.sidebar:
@@ -171,7 +156,11 @@ with st.sidebar:
     st.markdown("---")
     
     if st.button("Clear Chat History 🧹"):
-        st.session_state.clear()
+        # Sohbet geçmişini temizle, ancak oyun durumunu temizleme
+        st.session_state.messages = []
+        st.session_state.chat_history = []
+        st.session_state.file_retriever = None
+        st.session_state.processed_files = []
         st.success("Chat history and uploaded files cleared!")
         st.rerun()
 
@@ -207,110 +196,252 @@ if "messages" not in st.session_state:
     """
     st.session_state.messages.append({"role": "assistant", "content": welcome_message})
 
-# --- SEKME 1: CHATBOT (Artık tek ana sayfa) ---
+# --- SEKME 1: CHATBOT ---
+with tab_chat:
     
-if uploaded_files:
-    new_file_names = [f.name for f in uploaded_files]
-    if "processed_files" not in st.session_state or st.session_state.processed_files != new_file_names:
-        with st.spinner(f"Processing {len(uploaded_files)} files..."):
-            file_retriever = process_uploaded_files(uploaded_files)
-            if file_retriever:
-                st.session_state.file_retriever = file_retriever
-                st.session_state.processed_files = new_file_names
+    if uploaded_files:
+        new_file_names = [f.name for f in uploaded_files]
+        if "processed_files" not in st.session_state or st.session_state.processed_files != new_file_names:
+            with st.spinner(f"Processing {len(uploaded_files)} files..."):
+                file_retriever = process_uploaded_files(uploaded_files)
+                if file_retriever:
+                    st.session_state.file_retriever = file_retriever
+                    st.session_state.processed_files = new_file_names
+                    
+                    file_names_str = ", ".join(st.session_state.processed_files)
+                    st.session_state.messages = [{"role": "assistant", "content": f"OK, I'm ready to answer questions about: '{file_names_str}'."}]
+                    st.session_state.chat_history = []
+                    st.rerun()
+
+    if st.session_state.file_retriever is not None:
+        active_retriever = st.session_state.file_retriever
+        file_names_str = ", ".join(st.session_state.get("processed_files", []))
+        st.caption(f"ℹ️ *Querying document(s): {file_names_str}*")
+    else:
+        active_retriever = default_retriever
+
+    if st.session_state.simlish_mode:
+        PROMPT_TEMPLATE = simlish_prompt_template
+        st.caption("✨ *Simlish mode active! Za woka?*")
+    else:
+        PROMPT_TEMPLATE = default_prompt_template
+
+    COMBINE_DOCS_PROMPT = PromptTemplate.from_template(PROMPT_TEMPLATE)
+
+    rag_chain = ConversationalRetrievalChain.from_llm(
+        llm=llm,
+        retriever=active_retriever,
+        combine_docs_chain_kwargs={"prompt": COMBINE_DOCS_PROMPT},
+        return_source_documents=True
+    )
+
+    avatars = {"human": "👤", "assistant": "👽" if st.session_state.simlish_mode else "🤖"}
+
+    for message in st.session_state.messages:
+        with st.chat_message(message["role"], avatar=avatars.get(message["role"])):
+            st.markdown(message["content"])
+            if "sources" in message:
+                with st.expander("Sources considered:"):
+                    for src in message["sources"]:
+                        st.markdown(f"*{src.page_content[:200]}...*")
+
+    if user_question := st.chat_input("Ask a question..."):
+        st.chat_message("human", avatar=avatars["human"]).markdown(user_question)
+        st.session_state.messages.append({"role": "human", "content": user_question})
+
+        lower_question = user_question.lower()
+        creator_keywords = ["göktuğ", "türkdağ", "geliştirici", "developer", "who made you", "who created you"]
+
+        if any(keyword in lower_question for keyword in creator_keywords):
+            response_text = f"""
+            Ah, a great question! I was developed by **Göktuğ Türkdağ**. 🤖
+            He's a developer specializing in RAG architectures, LLMs, and Python. 
+            You can find him here:
+            🔗 **LinkedIn:** [linkedin.com/in/goktugturkdag](https://www.linkedin.com/in/goktugturkdag)
+            🐙 **GitHub:** [github.com/goktug-turkdag](https://github.com/goktug-turkdag)
+            """
+            
+            with st.chat_message("assistant", avatar=avatars["assistant"]):
+                st.markdown(response_text)
+            st.session_state.messages.append({"role": "assistant", "content": response_text})
+            st.session_state.chat_history.append(HumanMessage(content=user_question))
+            st.session_state.chat_history.append(AIMessage(content=response_text))
+
+        else:
+            spinner_text = "Searching for the answer... (Chumcha!)" if st.session_state.simlish_mode else "Searching for the answer..."
+            
+            with st.chat_message("assistant", avatar=avatars["assistant"]):
+                response_container = st.empty()
+
+                def stream_generator():
+                    full_response = ""
+                    sources = []
+                    
+                    stream = rag_chain.stream({
+                        "question": user_question,
+                        "chat_history": st.session_state.chat_history
+                    })
+                    
+                    for chunk in stream:
+                        if "answer" in chunk:
+                            full_response += chunk["answer"]
+                            yield full_response + "▌" 
+                        if "source_documents" in chunk:
+                            sources = chunk["source_documents"]
+                    
+                    yield full_response
+                    return full_response, sources
+
+                returned_values = st.write_stream(stream_generator())
+
+                if returned_values:
+                    full_response, sources = returned_values
+                else:
+                    full_response = "Sorry, I couldn't generate a response."
+                    sources = []
                 
-                file_names_str = ", ".join(st.session_state.processed_files)
-                st.session_state.messages = [{"role": "assistant", "content": f"OK, I'm ready to answer questions about: '{file_names_str}'."}]
-                st.session_state.chat_history = []
+            st.session_state.messages.append({"role": "assistant", "content": full_response, "sources": sources})
+            st.session_state.chat_history.append(HumanMessage(content=user_question))
+            st.session_state.chat_history.append(AIMessage(content=full_response))
+
+
+# --- YENİ ÖZELLİK: SEKME 2 - BLACKJACK OYUNU ---
+with tab_blackjack:
+    st.header("🃏 Blackjack")
+    st.markdown("A simple Blackjack game to showcase Python state management in Streamlit.")
+
+    # --- Blackjack Oyun Fonksiyonları ---
+
+    def create_deck():
+        """Yeni bir karıştırılmış deste oluşturur."""
+        suits = ['♥', '♦', '♣', '♠']
+        ranks = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A']
+        deck = [{'rank': rank, 'suit': suit} for suit in suits for rank in ranks]
+        random.shuffle(deck)
+        return deck
+
+    def get_card_value(card):
+        """Bir kartın sayısal değerini döndürür."""
+        rank = card['rank']
+        if rank in ['J', 'Q', 'K']:
+            return 10
+        if rank == 'A':
+            return 11
+        return int(rank)
+
+    def calculate_score(hand):
+        """Bir elin toplam skorunu hesaplar (As'ları 1 veya 11 olarak ayarlar)."""
+        score = sum(get_card_value(card) for card in hand)
+        num_aces = sum(1 for card in hand if card['rank'] == 'A')
+        
+        # Skor 21'i geçerse As'ları 11 yerine 1 olarak say
+        while score > 21 and num_aces > 0:
+            score -= 10
+            num_aces -= 1
+        return score
+
+    def display_hand(hand, title):
+        """Bir eli ve skorunu gösterir."""
+        st.subheader(title)
+        
+        # Kartları yatay olarak göstermek için sütunları kullan
+        cols = st.columns(len(hand))
+        for i, card in enumerate(hand):
+            # Basit bir kart görünümü
+            cols[i].container(border=True).markdown(f"## {card['rank']}{card['suit']}")
+            
+        score = calculate_score(hand)
+        st.markdown(f"**Score: {score}**")
+        return score
+
+    def display_dealer_hand_hidden(hand):
+        """Dağıtıcının elini bir kartı gizli gösterecek."""
+        st.subheader("Dealer's Hand")
+        
+        cols = st.columns(len(hand))
+        # İlk kartı göster
+        cols[0].container(border=True).markdown(f"## {hand[0]['rank']}{hand[0]['suit']}")
+        # İkinci kartı gizle
+        cols[1].container(border=True).markdown("## ❔")
+        
+        st.markdown("**Score: ?**")
+
+    # --- Oyun Durumu Yönetimi (State Management) ---
+
+    # Oyun durumunu session_state'te başlat
+    if "game_state" not in st.session_state:
+        st.session_state.game_state = "new_game" # 'player_turn', 'dealer_turn', 'game_over'
+        st.session_state.deck = []
+        st.session_state.player_hand = []
+        st.session_state.dealer_hand = []
+        st.session_state.game_message = ""
+
+    # "Yeni Oyun" butonu
+    if st.button("New Game", key="new_game"):
+        st.session_state.game_state = "player_turn"
+        st.session_state.deck = create_deck()
+        st.session_state.player_hand = [st.session_state.deck.pop(), st.session_state.deck.pop()]
+        st.session_state.dealer_hand = [st.session_state.deck.pop(), st.session_state.deck.pop()]
+        st.session_state.game_message = "Your turn! Hit or Stand?"
+        st.rerun() # Arayüzü güncelle
+
+    # --- Oyun Arayüzü ---
+
+    if st.session_state.game_state in ["player_turn", "dealer_turn", "game_over"]:
+        
+        # Dağıtıcının elini göster
+        if st.session_state.game_state == "player_turn":
+            display_dealer_hand_hidden(st.session_state.dealer_hand)
+        else:
+            # Oyun bittiyse veya sıra dağıtıcıdaysa tüm kartları göster
+            display_hand(st.session_state.dealer_hand, "Dealer's Hand")
+            
+        st.markdown("---")
+        
+        # Oyuncunun elini göster
+        player_score = display_hand(st.session_state.player_hand, "Your Hand")
+
+        # Oyun bittiyse kazananı göster
+        if st.session_state.game_state == "game_over":
+            st.header(st.session_state.game_message)
+        
+        # Sıra oyuncudaysa butonları göster
+        if st.session_state.game_state == "player_turn":
+            col1, col2 = st.columns(2)
+            
+            # "Hit" (Kart Çek) butonu
+            if col1.button("Hit (Kart Çek)", key="hit"):
+                st.session_state.player_hand.append(st.session_state.deck.pop())
+                player_score = calculate_score(st.session_state.player_hand)
+                if player_score > 21:
+                    st.session_state.game_state = "game_over"
+                    st.session_state.game_message = "Bust! 💥 You lose."
                 st.rerun()
 
-if st.session_state.file_retriever is not None:
-    active_retriever = st.session_state.file_retriever
-    file_names_str = ", ".join(st.session_state.processed_files)
-    st.caption(f"ℹ️ *Querying document(s): {file_names_str}*")
-else:
-    active_retriever = default_retriever
+            # "Stand" (Dur) butonu
+            if col2.button("Stand (Dur)", key="stand"):
+                st.session_state.game_state = "dealer_turn"
+                st.rerun()
 
-if st.session_state.simlish_mode:
-    PROMPT_TEMPLATE = simlish_prompt_template
-    st.caption("✨ *Simlish mode active! Za woka?*")
-else:
-    PROMPT_TEMPLATE = default_prompt_template
-
-COMBINE_DOCS_PROMPT = PromptTemplate.from_template(PROMPT_TEMPLATE)
-
-rag_chain = ConversationalRetrievalChain.from_llm(
-    llm=llm,
-    retriever=active_retriever,
-    combine_docs_chain_kwargs={"prompt": COMBINE_DOCS_PROMPT},
-    return_source_documents=True
-)
-
-avatars = {"human": "👤", "assistant": "👽" if st.session_state.simlish_mode else "🤖"}
-
-for message in st.session_state.messages:
-    with st.chat_message(message["role"], avatar=avatars.get(message["role"])):
-        st.markdown(message["content"])
-        if "sources" in message:
-            with st.expander("Sources considered:"):
-                for src in message["sources"]:
-                    st.markdown(f"*{src.page_content[:200]}...*")
-
-if user_question := st.chat_input("Ask a question..."):
-    st.chat_message("human", avatar=avatars["human"]).markdown(user_question)
-    st.session_state.messages.append({"role": "human", "content": user_question})
-
-    lower_question = user_question.lower()
-    creator_keywords = ["göktuğ", "türkdağ", "geliştirici", "developer", "who made you", "who created you"]
-
-    if any(keyword in lower_question for keyword in creator_keywords):
-        response_text = f"""
-        Ah, a great question! I was developed by **Göktuğ Türkdağ**. 🤖
-        He's a developer specializing in RAG architectures, LLMs, and Python. 
-        You can find him here:
-        🔗 **LinkedIn:** [linkedin.com/in/goktugturkdag](https://www.linkedin.com/in/goktugturkdag)
-        🐙 **GitHub:** [github.com/goktug-turkdag](https://github.com/goktug-turkdag)
-        """
+    # Sıra dağıtıcıdaysa
+    if st.session_state.game_state == "dealer_turn":
+        dealer_score = calculate_score(st.session_state.dealer_hand)
         
-        with st.chat_message("assistant", avatar=avatars["assistant"]):
-            st.markdown(response_text)
-        st.session_state.messages.append({"role": "assistant", "content": response_text})
-        st.session_state.chat_history.append(HumanMessage(content=user_question))
-        st.session_state.chat_history.append(AIMessage(content=response_text))
-
-    else:
-        spinner_text = "Searching for the answer... (Chumcha!)" if st.session_state.simlish_mode else "Searching for the answer..."
+        # Dağıtıcı 17'den azsa kart çekmeye devam eder
+        while dealer_score < 17:
+            st.session_state.dealer_hand.append(st.session_state.deck.pop())
+            dealer_score = calculate_score(st.session_state.dealer_hand)
         
-        with st.chat_message("assistant", avatar=avatars["assistant"]):
-            response_container = st.empty()
-
-            # Stream generator fonksiyonu
-            def stream_generator():
-                full_response = ""
-                sources = []
-                
-                stream = rag_chain.stream({
-                    "question": user_question,
-                    "chat_history": st.session_state.chat_history
-                })
-                
-                for chunk in stream:
-                    if "answer" in chunk:
-                        full_response += chunk["answer"]
-                        yield full_response + "▌" 
-                    if "source_documents" in chunk:
-                        sources = chunk["source_documents"]
-                
-                yield full_response
-                return full_response, sources
-
-            returned_values = st.write_stream(stream_generator())
-
-            if returned_values:
-                full_response, sources = returned_values
-            else:
-                full_response = "Sorry, I couldn't generate a response."
-                sources = []
+        # Kazananı belirle
+        player_score = calculate_score(st.session_state.player_hand)
+        if dealer_score > 21:
+            st.session_state.game_message = "Dealer busts! 🎉 You win!"
+        elif dealer_score > player_score:
+            st.session_state.game_message = "Dealer wins. 😕"
+        elif player_score > dealer_score:
+            st.session_state.game_message = "🎉 You win!"
+        else:
+            st.session_state.game_message = "It's a tie! (Push) 😐"
             
-        st.session_state.messages.append({"role": "assistant", "content": full_response, "sources": sources})
-        st.session_state.chat_history.append(HumanMessage(content=user_question))
-        st.session_state.chat_history.append(AIMessage(content=full_response))
+        st.session_state.game_state = "game_over"
+        st.rerun() # Sonucu göstermek için arayüzü güncelle
