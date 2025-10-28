@@ -21,7 +21,7 @@ if "GOOGLE_API_KEY" not in os.environ:
 # Directory for the persistent database
 PERSIST_DIRECTORY = "chroma_db_multilingual"
 
-# --- NEW ARCHITECTURE: CACHE EXPENSIVE PARTS ---
+# --- CACHE EXPENSIVE PARTS ---
 
 @st.cache_resource
 def load_vector_store():
@@ -65,7 +65,6 @@ def load_llm():
     """
     Loads AND caches the language model (LLM).
     """
-    # Use the model confirmed from your model list
     return GoogleGenerativeAI(model="gemini-pro-latest")
 
 # --- DEFINE PROMPT TEMPLATES (IN ENGLISH) ---
@@ -106,9 +105,10 @@ Simlish Answer:
 # --- 2. WEB INTERFACE (UPDATED) ---
 
 st.title("DocuMentor 📄")
-st.markdown("An intelligent Q&A Chatbot. Ask a question about the knowledge base to get started.")
+# --- DEĞİŞİKLİK 1: Bilgi tabanı hakkında bilgi eklendi ---
+st.markdown("An intelligent Q&A Chatbot trained on the **Databricks Dolly 15k** dataset. Ask a question about the knowledge base to get started.")
 
-# --- BAŞLANGIÇ: REKLAM / GELİŞTİRİCİ BİLGİSİ (SIDEBAR) ---
+# --- START: DEVELOPER AD SIDEBAR ---
 
 with st.sidebar:
     st.header("About DocuMentor")
@@ -123,42 +123,35 @@ with st.sidebar:
     st.markdown(
         "Connect with the developer:"
     )
-    
-    # URL'niz eklendi
     st.markdown(
         "🔗 [LinkedIn](https://www.linkedin.com/in/goktugturkdag)"
     )
-    
     st.markdown(
         "🐙 [GitHub](https://github.com/goktug-turkdag)"
     )
 
-# --- BİTİŞ: REKLAM / GELİŞTİRİCİ BİLGİSİ (SIDEBAR) ---
+# --- END: DEVELOPER AD SIDEBAR ---
 
 
-# --- Simlish Mode Toggle (with English help text) ---
+# --- Simlish Mode Toggle ---
 st.toggle("Simlish Mode 👽", key="simlish_mode", help="Sul sul! Get your answers in Simlish.")
 
 
 # --- DYNAMIC RAG CHAIN CREATION ---
 try:
-    # 1. Load expensive components from cache
     vector_store = load_vector_store()
     llm = load_llm()
 
-    # 2. Select the correct prompt based on the toggle state
     if st.session_state.simlish_mode:
         PROMPT_TEMPLATE = simlish_prompt_template
         st.caption("✨ *Simlish mode active! Za woka?*")
     else:
         PROMPT_TEMPLATE = default_prompt_template
 
-    # 3. Create a PromptTemplate object
     PROMPT = PromptTemplate(
         template=PROMPT_TEMPLATE, input_variables=["context", "question"]
     )
 
-    # 4. Create the RAG chain (fast)
     retriever = vector_store.as_retriever(search_kwargs={'k': 3})
     rag_chain = RetrievalQA.from_chain_type(
         llm=llm,
@@ -168,7 +161,8 @@ try:
         chain_type_kwargs={"prompt": PROMPT}
     )
     
-    st.success("DocuMentor is ready! (And maybe a little Simlish!)")
+    # --- DEĞİŞİKLİK 2: Başarı mesajı güncellendi ---
+    st.success("DocuMentor is now ready in world languages! (And maybe a little Simlish!)")
     
 except Exception as e:
     st.error(f"An error occurred during setup: {e}")
@@ -180,8 +174,21 @@ except Exception as e:
 
 if 'messages' not in st.session_state:
     st.session_state.messages = []
+    
+    # --- START: WELCOME MESSAGE (FEATURE 1) ---
+    welcome_message = f"""
+    Hi! I'm **DocuMentor**, an intelligent RAG chatbot developed by **Göktuğ Türkdağ**.
+    
+    I'm trained on the **Databricks Dolly 15k** dataset and can answer questions about it.
+    
+    - You can check out the developer's profile in the sidebar.
+    - Try asking me: "Who is Göktuğ Türkdağ?" or a question about the documents!
+    - Oh, and feel free to toggle **Simlish Mode** 👽
+    """
+    st.session_state.messages.append({"role": "assistant", "content": welcome_message})
+    # --- END: WELCOME MESSAGE ---
 
-# Display past messages
+# Display all past messages
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         if isinstance(message["content"], dict):
@@ -195,36 +202,56 @@ for message in st.session_state.messages:
             st.markdown(message["content"])
 
 # Get new user question
-user_question = st.chat_input("Ask a question about the document...")
-
-if user_question:
+if user_question := st.chat_input("Ask a question about the document..."):
     st.chat_message("user").markdown(user_question)
     st.session_state.messages.append({"role": "user", "content": user_question})
 
-    # Conditional Spinner Text
-    if st.session_state.simlish_mode:
-        spinner_text = "Searching for the answer... (Chumcha!)"
+    # --- START: EASTER EGG (FEATURE 2) ---
+    lower_question = user_question.lower()
+    creator_keywords = ["göktuğ", "türkdağ", "geliştirici", "developer", "who made you", "who created you"]
+
+    if any(keyword in lower_question for keyword in creator_keywords):
+        
+        response_text = f"""
+        Ah, a great question! I was developed by **Göktuğ Türkdağ**. 🤖
+
+        He's a developer specializing in RAG architectures, LLMs, and Python. 
+        If you'd like to connect with him, you can find him here:
+        
+        🔗 **LinkedIn:** [linkedin.com/in/goktugturkdag](https://www.linkedin.com/in/goktugturkdag)
+        🐙 **GitHub:** [github.com/goktug-turkdag](https://github.com/goktug-turkdag)
+        """
+        
+        with st.chat_message("assistant"):
+            st.markdown(response_text)
+        st.session_state.messages.append({"role": "assistant", "content": response_text})
+
+    # --- END: EASTER EGG ---
+    
     else:
-        spinner_text = "Searching for the answer..."
+        # If it's NOT about the creator, proceed with the normal RAG pipeline
+        if st.session_state.simlish_mode:
+            spinner_text = "Searching for the answer... (Chumcha!)"
+        else:
+            spinner_text = "Searching for the answer..."
 
-    with st.spinner(spinner_text):
-        try:
-            response_dict = rag_chain.invoke(user_question)
-            answer = response_dict.get("result", "Sorry, I couldn't generate an answer.")
-            sources = response_dict.get("source_documents", [])
-            response_content = {"answer": answer, "sources": sources}
+        with st.spinner(spinner_text):
+            try:
+                response_dict = rag_chain.invoke(user_question)
+                answer = response_dict.get("result", "Sorry, I couldn't generate an answer.")
+                sources = response_dict.get("source_documents", [])
+                response_content = {"answer": answer, "sources": sources}
 
-        except Exception as e:
-            answer = f"An error occurred while generating the response: {e}"
-            response_content = {"answer": answer, "sources": []}
+            except Exception as e:
+                answer = f"An error occurred while generating the response: {e}"
+                response_content = {"answer": answer, "sources": []}
 
-    # Display assistant's response
-    with st.chat_message("assistant"):
-        st.markdown(response_content["answer"])
-        sources = response_content.get("sources", [])
-        if sources:
-            with st.expander("Sources considered:"):
-                for i, source in enumerate(sources):
-                    st.markdown(f"*{i+1}. {source.page_content[:200]}...*")
-                         
-    st.session_state.messages.append({"role": "assistant", "content": response_content})
+        # Display and save the RAG response
+        with st.chat_message("assistant"):
+            st.markdown(response_content["answer"])
+            if sources:
+                with st.expander("Sources considered:"):
+                    for i, source in enumerate(sources):
+                        st.markdown(f"*{i+1}. {source.page_content[:200]}...*")
+                             
+        st.session_state.messages.append({"role": "assistant", "content": response_content})
