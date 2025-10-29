@@ -956,7 +956,7 @@ with tab_blackjack:
                 st.markdown("---")
                 st.markdown("**Side Bets (Optional)**")
 
-                max_side_bet = min(100, st.session_state.player_balance)
+                max_side_bet = st.session_state.player_balance
                 bet_21_3_amount = st.number_input("21+3 Bet:", min_value=0, max_value=max_side_bet, value=0, step=5)
                 bet_pp_amount = st.number_input("Perfect Pairs Bet:", min_value=0, max_value=max_side_bet, value=0, step=5)
                 bet_lucky_seven_amount = st.number_input("Lucky 7s Bet:", min_value=0, max_value=max_side_bet, value=0, step=5)
