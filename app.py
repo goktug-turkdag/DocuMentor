@@ -142,8 +142,8 @@ Helpful Answer:
 
 # Simlish Prompt
 simlish_prompt_template = """
-Sul sul! You are a Sim from The Sims game...
-(Simlish prompt metni değişmedi) ...
+Sul sul! You are a Sim from The Sims game. You must answer in Simlish (e.g., "Sul sul! Yibs! Za woka?").
+Use Simlish words and phrases. Be playful and a bit chaotic, like a Sim.
 Context: {context}
 Chat History: {chat_history}
 Question: {question}
@@ -251,17 +251,7 @@ if "messages" not in st.session_state:
     st.session_state.chat_history = []
     st.session_state.processed_docs = None
     st.session_state.processed_file_names = []
-
-    welcome_message = f"""
-    Hi! I'm **DocuMentor**, an intelligent RAG chatbot developed by **Göktuğ Türkdağ**.
-    I can answer your questions about documents (use the sidebar to upload!) or engage in simple conversation.
-    Feel free to explore the other tabs for some **interactive features**, **creative tools**, and **easter eggs**!
-
-    - Try asking me: "Who is Göktuğ Türkdağ?", "What are Göktuğ's skills?" or "How can I contact Göktuğ?"
-    - Or ask: "How are you?" or "Tell me about Ankara."
-    - Or check the **Settings** tab to enable **Simlish Mode** 👽
-    """
-    st.session_state.messages.append({"role": "assistant", "content": welcome_message})
+    # Welcome message buradan kaldırıldı, tab_chat içine hardcode edildi.
 
 # Ortak Bakiye ve Genel Ayarlar
 if "player_balance" not in st.session_state:
@@ -315,30 +305,34 @@ def add_history(game_key, bet, outcome, balance):
             if game_key in stats and bet == st.session_state.get(f"{game_key}_main_bet", bet):
                 stats[game_key]["lost"] += 1
             stats["biggest_loss"] = max(stats["biggest_loss"], abs(outcome))
-        elif game_key == "bj" and "bj" in stats and bet == st.session_state.current_bet: # Sadece ana bahis push olur
+        elif game_key == "bj" and "bj" in stats and bet == st.session_state.get("current_bet", bet): # Sadece ana bahis push olur (veya o elin bahsi)
             stats["bj"]["push"] += 1
         
         # BJ'de split varsa, 'played' her el için artmalıdır.
         # 'bet' parametresi, o elin (veya yan bahsin) bahsidir.
         # Ana bahsi (veya split el bahsini) 'played' sayacı olarak ele almalıyız.
         # Yan bahisler (PP, 21+3) 'played' sayılmamalı.
-        # current_bet'i ana bahis/el bahsi olarak kullanıyoruz.
         
-        # 'bet' in yan bahis olup olmadığını kontrol et
         is_side_bet = False
         if game_key == "bj":
-             # Eğer bet, ana bahis veya split el bahsi değilse, muhtemelen yan bahistir.
-             # Bu mantık, add_history'nin SADECE el bahisleri (ana/split) ve yan bahisler için çağrıldığını varsayar.
-             # 'bet'in o anki elin bahsi (current_bet) veya yan bahislerden (bet_21_3 vb.) biri olup olmadığını kontrol etmeliyiz.
-             # 'current_bet' ana bahsi tutar. Split'te, her el 'current_bet' kadar değere sahip olur.
-             # Bu mantık biraz karmaşık. Şimdilik, 'played'ı sadece ana bahis/split el için artıralım.
-             # Yan bahisler 'played'ı artırmaz.
-             # `st.session_state.get(f"{game_key}_main_bet", bet)` yerine `st.session_state.current_bet` kullanalım
+             # 'bet' in yan bahis olup olmadığını kontrol et
+             side_bet_values = [
+                 st.session_state.get("bet_21_3", 0),
+                 st.session_state.get("bet_perfect_pairs", 0),
+                 st.session_state.get("bet_lucky_seven", 0),
+                 st.session_state.get("bet_bust", 0),
+                 st.session_state.get("bet_insurance", 0)
+             ]
+             # Eğer 'bet' bu değerlerden biriyse (ve 0 değilse) VE o anki 'current_bet' (ana el bahsi) değilse, yan bahistir.
+             if bet in side_bet_values and bet > 0 and bet != st.session_state.get("current_bet", -1):
+                 is_side_bet = True
              
-             # Eğer 'bet' değeri o anki ana/el bahsine eşitse, bunu 'played' say.
-             # Bu, yan bahislerin ana bahisten farklı olduğunu varsayar.
-             if bet == st.session_state.current_bet:
+             # Eğer yan bahis değilse, 'played'ı artır
+             if not is_side_bet:
                  stats[game_key]["played"] += 1
+                 # Ana bahsi (stats için) o anki elin bahsi olarak güncelle
+                 st.session_state.bj_main_bet = bet 
+                 
         elif game_key in stats:
              stats[game_key]["played"] += 1 # Diğer oyunlar için her zaman 1 artır
             
@@ -426,6 +420,19 @@ WAITING_MESSAGES = [
 # --- SEKME 1: CHATBOT ---
 with tab_chat:
     
+    # SABİT KARŞILAMA MESAJI
+    welcome_message = f"""
+    Hi! I'm **DocuMentor**, an intelligent RAG chatbot developed by **Göktuğ Türkdağ**.
+    I can answer your questions about documents (use the sidebar to upload!) or engage in simple conversation.
+    Feel free to explore the other tabs for some **interactive features**, **creative tools**, and **easter eggs**!
+
+    - Try asking me: "Who is Göktuğ Türkdağ?", "What are Göktuğ's skills?" or "How can I contact Göktuğ?"
+    - Or ask: "How are you?" or "Tell me about Ankara."
+    - Or check the **Settings** tab to enable **Simlish Mode** 👽
+    """
+    st.markdown(welcome_message)
+    st.markdown("---") # Ayıraç
+    
     # Dosya yükleme mantığı
     newly_processed = False 
     if uploaded_files:
@@ -451,6 +458,7 @@ with tab_chat:
             active_retriever = temp_vector_store.as_retriever(search_kwargs={'k': 3})
             st.caption(f"ℹ️ *Querying document(s): {', '.join(st.session_state.processed_file_names)}*")
             if newly_processed:
+                # Dosya işlendiğinde, SADECE BİR BİLGİ MESAJI EKLE, tarihi temizle.
                 st.info(f"Now querying: {', '.join(st.session_state.processed_file_names)}. Chat history cleared for new context.")
                 st.session_state.messages = [{"role": "assistant", "content": f"OK, I'm ready to answer questions about: '{', '.join(st.session_state.processed_file_names)}'."}]
                 st.session_state.chat_history = []
@@ -466,6 +474,7 @@ with tab_chat:
              st.info("No files uploaded or processing failed. Switched back to the default knowledge base (Dolly-15k). Chat history cleared.")
              st.session_state.processed_file_names = []
              st.session_state.processed_docs = None
+             # Varsayılan mesaja dön
              st.session_state.messages = [{"role": "assistant", "content": "Switched back to the default knowledge base."}]
              st.session_state.chat_history = []
              st.rerun()
@@ -476,6 +485,10 @@ with tab_chat:
         st.caption("✨ *Simlish mode active! Za woka?*")
     else:
         PROMPT_TEMPLATE = default_prompt_template
+        # Eğer dosya yüklü değilse varsayılan mesajı göster
+        if not st.session_state.processed_file_names:
+             st.caption("ℹ️ *Querying default knowledge base (Dolly-15k)*")
+
 
     COMBINE_DOCS_PROMPT = PromptTemplate.from_template(PROMPT_TEMPLATE)
 
@@ -490,7 +503,7 @@ with tab_chat:
     # Avatarları tanımla
     avatars = {"human": "👤", "assistant": "👽" if st.session_state.simlish_mode else "🤖"}
 
-    # Sohbet geçmişini göster
+    # Sohbet geçmişini göster (Karşılama mesajı hariç, o zaten sabit)
     for message in st.session_state.messages:
         with st.chat_message(message["role"], avatar=avatars.get(message["role"])):
             st.markdown(message["content"], unsafe_allow_html=True) # Linkler için
@@ -703,8 +716,11 @@ with tab_chat:
                         full_response = returned_values
                         sources = []
                     else: 
-                        if 'full_response' not in locals(): full_response = "Sorry, failed to generate a complete response."
-                        if 'sources' not in locals(): sources = []
+                        # Hata durumunda veya beklenmedik dönüşte
+                        if 'full_response' not in locals() or not full_response:
+                            full_response = "Sorry, failed to generate a complete response."
+                        if 'sources' not in locals():
+                            sources = []
                     
                     st.session_state.messages.append({"role": "assistant", "content": full_response, "sources": sources})
                     st.session_state.chat_history.append(HumanMessage(content=user_question))
@@ -743,7 +759,7 @@ with tab_blackjack:
         - Vs Dealer 2-6: Stand on 12-16.
         - Vs Dealer 7-A: Hit on 12-16.
         - **Double Down:** Typically on 10 or 11 (sometimes 9) vs weaker dealer cards (2-6). Only as first action.
-        - **Split:** If your first two cards have the same rank (e.g., 8-8, K-Q), you can split them into two separate hands. A second bet equal to the first is placed. **Aces** are often only allowed one card each after splitting.
+        - **Split:** If your first two cards have the same **value** (e.g., 8-8, K-Q, 10-J), you can split them into two separate hands. A second bet equal to the first is placed. **Aces** are often only allowed one card each after splitting.
         - **Insurance:** Offered when dealer shows Ace. Pays 2:1 if dealer has Blackjack. Generally not recommended by basic strategy.
         
         **Side Bet Payouts:**
@@ -1016,11 +1032,15 @@ with tab_blackjack:
                     # GÜNCELLENDİ: player_hands listesini başlat
                     card1 = st.session_state.deck.pop()
                     card2 = st.session_state.deck.pop()
+                    
+                    # SPLIT KONTROLÜ (DEĞER TEMELLİ)
+                    is_splittable = (get_card_value(card1['rank']) == get_card_value(card2['rank']))
+                    
                     st.session_state.player_hands = [{
                         'hand': [card1, card2],
                         'bet': bet_amount,
                         'state': 'active', # 'active', 'stood', 'bust', 'doubled', 'charlie'
-                        'splittable': (card1['rank'] == card2['rank']), # Split mümkün mü?
+                        'splittable': is_splittable, # Split mümkün mü?
                     }]
                     st.session_state.current_hand_index = 0
                     st.session_state.dealer_hand = [st.session_state.deck.pop(), st.session_state.deck.pop()]
@@ -1139,8 +1159,9 @@ with tab_blackjack:
                     st.session_state.player_balance += st.session_state.bet_insurance + insurance_win # Bahis + 2:1 kazanç
                     st.session_state.side_bet_message += f"\n**Insurance Win: +{insurance_win}!** (2:1)"
                     # History'yi düzelt (kayıptan kazanca)
-                    st.session_state.bj_history[0]["outcome"] = insurance_win 
-                    st.session_state.bj_history[0]["balance"] = st.session_state.player_balance
+                    if st.session_state.bj_history: # Listenin boş olmadığından emin ol
+                        st.session_state.bj_history[0]["outcome"] = insurance_win 
+                        st.session_state.bj_history[0]["balance"] = st.session_state.player_balance
                 
                 # Lucky 7s kaybeder
                 if st.session_state.bet_lucky_seven > 0: add_history("bj", st.session_state.bet_lucky_seven, -st.session_state.bet_lucky_seven, st.session_state.player_balance)
@@ -1172,23 +1193,23 @@ with tab_blackjack:
         st.subheader("Your Hand(s):")
         if not st.session_state.player_hands:
              st.warning("Error: No player hands found.")
-             reset_blackjack_state()
-             st.rerun()
-             
-        # O an oynanan eli (veya bitmiş elleri) göster
-        for i, hand_data in enumerate(st.session_state.player_hands):
-             hand_title = f"Hand {i+1}"
-             is_active_hand = (i == st.session_state.current_hand_index) and (st.session_state.game_state == "player_turn")
-             
-             if hand_data['state'] == 'stood': hand_title += " (Stood)"
-             elif hand_data['state'] == 'bust': hand_title += " (Bust)"
-             elif hand_data['state'] == 'doubled': hand_title += " (Doubled)"
-             elif hand_data['state'] == 'charlie': hand_title += " (5-Card Charlie)"
-             elif is_active_hand: hand_title += " (Active)"
-
-             display_hand_visual(hand_data['hand'], hand_title, is_active=is_active_hand)
-             if is_active_hand:
-                 st.caption(f"Bet on this hand: {hand_data['bet']}")
+             # reset_blackjack_state() # Hata durumunda sıfırlama
+             # st.rerun()
+        else: 
+            # O an oynanan eli (veya bitmiş elleri) göster
+            for i, hand_data in enumerate(st.session_state.player_hands):
+                hand_title = f"Hand {i+1}"
+                is_active_hand = (i == st.session_state.current_hand_index) and (st.session_state.game_state == "player_turn")
+                
+                if hand_data['state'] == 'stood': hand_title += " (Stood)"
+                elif hand_data['state'] == 'bust': hand_title += " (Bust)"
+                elif hand_data['state'] == 'doubled': hand_title += " (Doubled)"
+                elif hand_data['state'] == 'charlie': hand_title += " (5-Card Charlie)"
+                elif is_active_hand: hand_title += " (Active)"
+    
+                display_hand_visual(hand_data['hand'], hand_title, is_active=is_active_hand)
+                if is_active_hand:
+                    st.caption(f"Bet on this hand: {hand_data['bet']}")
 
 
         # AI Coach mesajını oyun bittiğinde göster
@@ -1203,158 +1224,171 @@ with tab_blackjack:
 
         if st.session_state.game_state == "player_turn":
              
-             # İşlem yapılacak aktif eli al
-             current_hand_data = st.session_state.player_hands[st.session_state.current_hand_index]
-             current_hand = current_hand_data['hand']
-             current_bet = current_hand_data['bet']
-             player_score = calculate_score(current_hand)
+            # İşlem yapılacak aktif eli al
+            if st.session_state.current_hand_index >= len(st.session_state.player_hands):
+                 # Bu durum olmamalı, ama olursa diye
+                 st.session_state.game_state = "dealer_turn"
+                 st.rerun()
+            
+            current_hand_data = st.session_state.player_hands[st.session_state.current_hand_index]
+            current_hand = current_hand_data['hand']
+            current_bet = current_hand_data['bet']
+            player_score = calculate_score(current_hand)
 
-             cashout_offer = get_cashout_offer_heuristic(
-                 current_hand,
-                 st.session_state.dealer_hand[0],
-                 current_bet
-             )
+            cashout_offer = get_cashout_offer_heuristic(
+                current_hand,
+                st.session_state.dealer_hand[0],
+                current_bet
+            )
 
-             # Butonlar
-             num_buttons = 2 # Hit, Stand
-             can_double = len(current_hand) == 2 and st.session_state.player_balance >= current_bet and current_hand_data['state'] == 'active'
-             if can_double: num_buttons += 1
-             
-             # SPLIT KONTROLÜ
-             can_split = current_hand_data['splittable'] and len(current_hand) == 2 and st.session_state.player_balance >= current_bet
-             if can_split: num_buttons += 1
-             
-             if cashout_offer > 0: num_buttons += 1
-             
-             cols = st.columns(num_buttons)
-             button_index = 0
+            # Butonlar
+            num_buttons = 2 # Hit, Stand
+            can_double = len(current_hand) == 2 and st.session_state.player_balance >= current_bet and current_hand_data['state'] == 'active'
+            if can_double: num_buttons += 1
+            
+            # SPLIT KONTROLÜ
+            can_split = current_hand_data['splittable'] and len(current_hand) == 2 and st.session_state.player_balance >= current_bet
+            if can_split: num_buttons += 1
+            
+            if cashout_offer > 0: num_buttons += 1
+            
+            cols = st.columns(num_buttons)
+            button_index = 0
 
-             # --- El bitirme fonksiyonu (bir sonraki ele geçiş) ---
-             def move_to_next_hand_or_dealer():
-                 st.session_state.current_hand_index += 1
-                 # Aktif olan bir sonraki eli bul (split aces durumu için)
-                 while st.session_state.current_hand_index < len(st.session_state.player_hands):
-                      if st.session_state.player_hands[st.session_state.current_hand_index]['state'] == 'active':
-                           st.rerun() # Bir sonraki aktif eli oyna
-                           return
-                      st.session_state.current_hand_index += 1
-                 
-                 # Eğer oynanacak başka aktif el kalmadıysa
-                 if st.session_state.current_hand_index >= len(st.session_state.player_hands):
-                      st.session_state.game_state = "dealer_turn"
-                      st.rerun()
+            # --- El bitirme fonksiyonu (bir sonraki ele geçiş) ---
+            def move_to_next_hand_or_dealer():
+                st.session_state.current_hand_index += 1
+                # Aktif olan bir sonraki eli bul (split aces durumu için)
+                while st.session_state.current_hand_index < len(st.session_state.player_hands):
+                    if st.session_state.player_hands[st.session_state.current_hand_index]['state'] == 'active':
+                        st.rerun() # Bir sonraki aktif eli oyna
+                        return
+                    st.session_state.current_hand_index += 1
+                
+                # Eğer oynanacak başka aktif el kalmadıysa
+                if st.session_state.current_hand_index >= len(st.session_state.player_hands):
+                    st.session_state.game_state = "dealer_turn"
+                    st.rerun()
 
-             if cols[button_index].button("Hit", key=f"hit_{st.session_state.current_hand_index}"):
-                 # AI Coach'a sormak için mevcut durumu kaydet
-                 st.session_state.bj_ai_coach_message = get_ai_coach_advice(current_hand, st.session_state.dealer_hand[0]['rank'], "Hit")
+            if cols[button_index].button("Hit", key=f"hit_{st.session_state.current_hand_index}"):
+                # AI Coach'a sormak için mevcut durumu kaydet
+                st.session_state.bj_ai_coach_message = get_ai_coach_advice(current_hand, st.session_state.dealer_hand[0]['rank'], "Hit")
 
-                 current_hand.append(st.session_state.deck.pop())
-                 player_score = calculate_score(current_hand)
-                 num_player_cards = len(current_hand)
+                current_hand.append(st.session_state.deck.pop())
+                player_score = calculate_score(current_hand)
+                num_player_cards = len(current_hand)
 
-                 # 5-Card Charlie kontrolü
-                 if num_player_cards == 5 and player_score <= 21:
-                     current_hand_data['state'] = 'charlie'
-                     move_to_next_hand_or_dealer()
+                # 5-Card Charlie kontrolü
+                if num_player_cards == 5 and player_score <= 21:
+                    current_hand_data['state'] = 'charlie'
+                    move_to_next_hand_or_dealer()
 
-                 elif player_score > 21:
-                     current_hand_data['state'] = 'bust'
-                     move_to_next_hand_or_dealer()
-                 
-                 else:
-                     st.rerun() # Sadece kart eklendi, devam
-             button_index += 1
+                elif player_score > 21:
+                    current_hand_data['state'] = 'bust'
+                    move_to_next_hand_or_dealer()
+                
+                else:
+                    st.rerun() # Sadece kart eklendi, devam
+            button_index += 1
 
-             if cols[button_index].button("Stand", key=f"stand_{st.session_state.current_hand_index}"):
-                 current_hand_data['state'] = 'stood'
-                 # AI Coach'a sormak için mevcut durumu kaydet
-                 st.session_state.bj_ai_coach_message = get_ai_coach_advice(current_hand, st.session_state.dealer_hand[0]['rank'], "Stand")
-                 move_to_next_hand_or_dealer()
-             button_index += 1
-             
-             # Double Down Butonu
-             if can_double:
-                 if cols[button_index].button("Double Down", key=f"double_{st.session_state.current_hand_index}"):
-                     # AI Coach'a sormak için mevcut durumu kaydet
-                     st.session_state.bj_ai_coach_message = get_ai_coach_advice(current_hand, st.session_state.dealer_hand[0]['rank'], "Double Down")
-                     
-                     st.session_state.player_balance -= current_bet
-                     current_hand_data['bet'] += current_bet # Bahsi ikiye katla
-                     current_hand_data['state'] = 'doubled' # Durum: ikiye katlandı (ve durdu)
+            if cols[button_index].button("Stand", key=f"stand_{st.session_state.current_hand_index}"):
+                current_hand_data['state'] = 'stood'
+                # AI Coach'a sormak için mevcut durumu kaydet
+                st.session_state.bj_ai_coach_message = get_ai_coach_advice(current_hand, st.session_state.dealer_hand[0]['rank'], "Stand")
+                move_to_next_hand_or_dealer()
+            button_index += 1
+            
+            # Double Down Butonu
+            if can_double:
+                if cols[button_index].button("Double Down", key=f"double_{st.session_state.current_hand_index}"):
+                    # AI Coach'a sormak için mevcut durumu kaydet
+                    st.session_state.bj_ai_coach_message = get_ai_coach_advice(current_hand, st.session_state.dealer_hand[0]['rank'], "Double Down")
+                    
+                    st.session_state.player_balance -= current_bet
+                    current_hand_data['bet'] += current_bet # Bahsi ikiye katla
+                    current_hand_data['state'] = 'doubled' # Durum: ikiye katlandı (ve durdu)
 
-                     current_hand.append(st.session_state.deck.pop())
-                     player_score = calculate_score(current_hand)
-                     
-                     if player_score > 21:
-                         current_hand_data['state'] = 'bust' # Bust oldu
+                    current_hand.append(st.session_state.deck.pop())
+                    player_score = calculate_score(current_hand)
+                    
+                    if player_score > 21:
+                        current_hand_data['state'] = 'bust' # Bust oldu
 
-                     move_to_next_hand_or_dealer()
-                 button_index += 1
+                    move_to_next_hand_or_dealer()
+                button_index += 1
 
-             # --- SPLIT BUTONU ---
-             if can_split:
-                 if cols[button_index].button("Split", key=f"split_{st.session_state.current_hand_index}"):
-                     st.session_state.bj_ai_coach_message = get_ai_coach_advice(current_hand, st.session_state.dealer_hand[0]['rank'], "Split")
-                     
-                     # Yeni el için bahsi düş
-                     st.session_state.player_balance -= current_bet
-                     
-                     # Mevcut eli listeden çıkar
-                     hand_to_split_data = st.session_state.player_hands.pop(st.session_state.current_hand_index)
-                     card1 = hand_to_split_data['hand'][0]
-                     card2 = hand_to_split_data['hand'][1]
-                     original_bet = hand_to_split_data['bet']
-                     
-                     is_aces = (card1['rank'] == 'A')
+            # --- SPLIT BUTONU ---
+            if can_split:
+                if cols[button_index].button("Split", key=f"split_{st.session_state.current_hand_index}"):
+                    st.session_state.bj_ai_coach_message = get_ai_coach_advice(current_hand, st.session_state.dealer_hand[0]['rank'], "Split")
+                    
+                    # Yeni el için bahsi düş
+                    st.session_state.player_balance -= current_bet
+                    
+                    # Mevcut eli listeden çıkar
+                    hand_to_split_data = st.session_state.player_hands.pop(st.session_state.current_hand_index)
+                    card1 = hand_to_split_data['hand'][0]
+                    card2 = hand_to_split_data['hand'][1]
+                    original_bet = hand_to_split_data['bet']
+                    
+                    is_aces = (card1['rank'] == 'A')
 
-                     # İki yeni el oluştur
-                     new_card1 = st.session_state.deck.pop()
-                     new_card2 = st.session_state.deck.pop()
-                     
-                     # Asları bölüyorsak, sadece 1 kart alırlar ve dururlar
-                     hand1_state = 'stood' if is_aces else 'active'
-                     hand2_state = 'stood' if is_aces else 'active'
-                     
-                     # Yeni eller 21 mi diye kontrol et (ama BJ değil)
-                     score1 = calculate_score([card1, new_card1])
-                     score2 = calculate_score([card2, new_card2])
-                     
-                     # Eğer As split değilse ve 21 olduysa, dur
-                     if not is_aces and score1 == 21: hand1_state = 'stood'
-                     if not is_aces and score2 == 21: hand2_state = 'stood'
+                    # İki yeni el oluştur
+                    new_card1 = st.session_state.deck.pop()
+                    new_card2 = st.session_state.deck.pop()
+                    
+                    # Asları bölüyorsak, sadece 1 kart alırlar ve dururlar
+                    hand1_state = 'stood' if is_aces else 'active'
+                    hand2_state = 'stood' if is_aces else 'active'
+                    
+                    # Yeni eller 21 mi diye kontrol et (ama BJ değil)
+                    score1 = calculate_score([card1, new_card1])
+                    score2 = calculate_score([card2, new_card2])
+                    
+                    # Eğer As split değilse ve 21 olduysa, dur
+                    if not is_aces and score1 == 21: hand1_state = 'stood'
+                    if not is_aces and score2 == 21: hand2_state = 'stood'
 
-                     hand1 = {
-                         'hand': [card1, new_card1], 'bet': original_bet, 'state': hand1_state,
-                         'splittable': (card1['rank'] == new_card1['rank']) and not is_aces # Aslar tekrar bölünemez
-                     }
-                     hand2 = {
-                         'hand': [card2, new_card2], 'bet': original_bet, 'state': hand2_state,
-                         'splittable': (card2['rank'] == new_card2['rank']) and not is_aces
-                     }
-                     
-                     # Yeni elleri listeye ekle
-                     st.session_state.player_hands.insert(st.session_state.current_hand_index, hand2)
-                     st.session_state.player_hands.insert(st.session_state.current_hand_index, hand1)
-                     
-                     # Eğer Aslar bölündüyse ve tüm eller 'stood' ise, doğrudan krupiyeye geç
-                     all_hands_finished = all(h['state'] != 'active' for h in st.session_state.player_hands)
-                     if all_hands_finished:
-                         st.session_state.game_state = "dealer_turn"
-                     
-                     st.rerun()
-                 button_index += 1
+                    # Yeni ellerin bölünebilir olup olmadığını DEĞER ile kontrol et
+                    hand1_splittable = (get_card_value(card1['rank']) == get_card_value(new_card1['rank'])) and not is_aces
+                    hand2_splittable = (get_card_value(card2['rank']) == get_card_value(new_card2['rank'])) and not is_aces
+                    
+                    hand1 = {
+                        'hand': [card1, new_card1], 'bet': original_bet, 'state': hand1_state,
+                        'splittable': hand1_splittable
+                    }
+                    hand2 = {
+                        'hand': [card2, new_card2], 'bet': original_bet, 'state': hand2_state,
+                        'splittable': hand2_splittable
+                    }
+                    
+                    # Yeni elleri listeye ekle
+                    st.session_state.player_hands.insert(st.session_state.current_hand_index, hand2)
+                    st.session_state.player_hands.insert(st.session_state.current_hand_index, hand1)
+                    
+                    # Eğer Aslar bölündüyse ve tüm eller 'stood' ise, doğrudan krupiyeye geç
+                    all_hands_finished = all(h['state'] != 'active' for h in st.session_state.player_hands)
+                    if all_hands_finished:
+                        st.session_state.game_state = "dealer_turn"
+                    
+                    st.rerun()
+                button_index += 1
 
 
-             # Dinamik Cashout
-             if cashout_offer > 0:
-                 if cols[button_index].button(f"Cash Out for 💰 {cashout_offer}", key=f"cashout_{st.session_state.current_hand_index}"):
-                     cashout_profit = cashout_offer - current_bet
-                     st.session_state.player_balance += cashout_offer
-                     current_hand_data['state'] = 'cashed_out'
-                     current_hand_data['profit'] = cashout_profit # Kazancı kaydet
-                     
-                     # Bu el bitti, bir sonrakine geç
-                     move_to_next_hand_or_dealer()
+            # Dinamik Cashout
+            if cashout_offer > 0:
+                if cols[button_index].button(f"Cash Out for 💰 {cashout_offer}", key=f"cashout_{st.session_state.current_hand_index}"):
+                    cashout_profit = cashout_offer - current_bet
+                    st.session_state.player_balance += cashout_offer
+                    current_hand_data['state'] = 'cashed_out'
+                    current_hand_data['profit'] = cashout_profit # Kazancı kaydet
+                    
+                    # Add_history'yi burada çağır (SADECE bu el için)
+                    add_history("bj", current_bet, cashout_profit, st.session_state.player_balance)
+                    
+                    # Bu el bitti, bir sonrakine geç
+                    move_to_next_hand_or_dealer()
+                button_index +=1
 
     if st.session_state.game_state == "dealer_turn":
         dealer_score = calculate_score(st.session_state.dealer_hand)
@@ -1375,8 +1409,8 @@ with tab_blackjack:
                 break 
 
         # --- GÜNCELLENDİ: Tüm elleri çöz ---
-        player_score = 0 # Geçici
-        bet = st.session_state.current_bet # Ana bahsi al
+        # player_score = 0 # Geçici
+        # bet = st.session_state.current_bet # Ana bahsi al (artık elden alınacak)
 
         # Bust It! kontrolü
         bust_winnings, bust_msg = check_bust_it(st.session_state.dealer_hand, dealer_score, st.session_state.bet_bust)
@@ -1390,6 +1424,8 @@ with tab_blackjack:
 
         # Ana bahisleri ve L7'leri çöz
         final_messages = []
+        lucky_seven_bet_processed = False # L7 bahsi sadece bir kez kaybedilmeli
+        
         for i, hand_data in enumerate(st.session_state.player_hands):
              hand_id = f"Hand {i+1}"
              player_score = calculate_score(hand_data['hand'])
@@ -1402,14 +1438,12 @@ with tab_blackjack:
                  st.session_state.player_balance += l7_winnings
                  st.session_state.side_bet_message += f"\n{hand_id} {l7_msg}"
                  add_history("bj", st.session_state.bet_lucky_seven, l7_winnings - st.session_state.bet_lucky_seven, st.session_state.player_balance)
-             elif i == 0 and st.session_state.bet_lucky_seven > 0: # L7 bahsini sadece bir kez kaybet
-                 add_history("bj", st.session_state.bet_lucky_seven, -st.session_state.bet_lucky_seven, st.session_state.player_balance)
-
+                 lucky_seven_bet_processed = True
+             
              # Ana bahsi çöz
              if state == 'cashed_out':
                  final_messages.append(f"{hand_id}: Cashed out (Profit: {hand_data['profit']})")
-                 # Add_history zaten cashout sırasında yapıldı
-                 add_history("bj", bet, hand_data['profit'], st.session_state.player_balance) # DÜZELTME: Add_history'yi buraya taşı
+                 # add_history zaten cashout sırasında yapıldı
              elif state == 'charlie':
                  final_messages.append(f"{hand_id}: 5-Card Charlie! 🎉 You win!")
                  win_amount = bet
@@ -1431,10 +1465,15 @@ with tab_blackjack:
                  win_amount = bet
                  st.session_state.player_balance += bet + win_amount
                  add_history("bj", bet, win_amount, st.session_state.player_balance)
-             else:
+             else: # (player_score == dealer_score)
                  final_messages.append(f"{hand_id}: It's a tie! (Push) 😐")
                  st.session_state.player_balance += bet
                  add_history("bj", bet, 0, st.session_state.player_balance)
+
+        # Eğer L7 bahsi varsa ve hiç kazanmadıysa, şimdi kaybı işle
+        if st.session_state.bet_lucky_seven > 0 and not lucky_seven_bet_processed:
+             add_history("bj", st.session_state.bet_lucky_seven, -st.session_state.bet_lucky_seven, st.session_state.player_balance)
+
 
         st.session_state.game_message = " \n".join(final_messages)
         st.session_state.game_state = "game_over"
@@ -1898,12 +1937,14 @@ with tab_vpoker:
 
             st.caption(st.session_state.vp_message)
 
-            if st.button("Draw", key="vp_draw", disabled=(st.session_state.vp_state != "holding")):
+            if st.button("Draw", key="vp_draw", disabled=(st.session_state.vp_state != "holding" and st.session_state.vp_state != "dealt")):
+                st.session_state.vp_state = "holding" # Draw'a basıldığında state'i holding yap (tekrar basılmasın diye)
+                
                 for i in range(5):
                     if not st.session_state.vp_hand[i]['held']:
                         if st.session_state.vp_deck:
                              st.session_state.vp_hand[i]['card'] = st.session_state.vp_deck.pop()
-                             st.session_state.vp_hand[i]['held'] = False
+                             st.session_state.vp_hand[i]['held'] = False # Hold'u kaldır
                         else:
                             st.error("Deck is empty!")
 
@@ -1936,7 +1977,12 @@ with tab_vpoker:
 
             st.header(st.session_state.vp_message)
             if st.button("Deal New Hand", key="vp_new_deal"):
-                reset_vpoker_state()
+                # reset_vpoker_state() # Bet'i sıfırlamasın, sadece oyunu başa alsın
+                st.session_state.vp_state = "betting"
+                st.session_state.vp_deck = []
+                st.session_state.vp_hand = []
+                st.session_state.vp_message = ""
+                # st.session_state.vp_current_bet = 1 # Keep last bet
                 st.rerun()
 
     display_history("vp")
@@ -1983,8 +2029,14 @@ with tab_stats:
             if played > 0:
                 won = game_data["won"]
                 lost = game_data["lost"]
-                win_rate = f"{((won / (won + lost)) * 100):.1f}" if (won + lost) > 0 else "N/A"
-                push = game_data.get("push", "-") 
+                # BJ'de, 'played' (ana el/split el) 'won' ve 'lost' toplamından farklı olabilir (push'lar yüzünden)
+                if game_key == "bj":
+                     push = game_data.get("push", 0)
+                     # Win rate: (Won / (Won + Lost))
+                     win_rate = f"{((won / (won + lost)) * 100):.1f}" if (won + lost) > 0 else "N/A"
+                else:
+                    win_rate = f"{((won / played) * 100):.1f}" if played > 0 else "0.0"
+                    push = "-"
             else:
                 won, lost, win_rate, push = 0, 0, "0.0", "-"
 
@@ -2019,10 +2071,24 @@ with tab_music:
     st.header("🎶 Music Player")
     st.markdown("How about a nice blues session? Maybe it will relax you.")
 
-    youtube_url = "https://www.youtube.com/watch?v=1eNSWZ4x2ZU&list=PLoPLEt1InO1x_fhNUCZW2HgRI3uTUn5NY"
+    blues_url = "https://www.youtube.com/watch?v=1eNSWZ4x2ZU&list=PLoPLEt1InO1x_fhNUCZW2HgRI3uTUn5NY"
+    guilty_url = "https://www.youtube.com/watch?v=yQ9lXHfv9Yg"
 
-    st.video(youtube_url)
+    choice = st.radio(
+        "Choose your music:",
+        ("Blues 🎶", "Guilty pleasures? 🤫"),
+        horizontal=True,
+        label_visibility="collapsed"
+    )
+
+    if choice == "Blues 🎶":
+        st.video(blues_url)
+    else: # Guilty pleasures
+        st.subheader("manifest - arıyor")
+        st.video(guilty_url)
+    
     st.caption("Music provided via YouTube embed.")
+
 
 # --- SEKME 9: CREATIVE CORNER ---
 with tab_creative:
