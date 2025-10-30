@@ -486,7 +486,7 @@ with tab_chat:
     else:
         PROMPT_TEMPLATE = default_prompt_template
         # Eğer dosya yüklü değilse varsayılan mesajı göster
-        if not st.session_state.processed_file_names:
+        if not ("processed_file_names" in st.session_state and st.session_state.processed_file_names):
              st.caption("ℹ️ *Querying default knowledge base (Dolly-15k)*")
 
 
@@ -1033,14 +1033,11 @@ with tab_blackjack:
                     card1 = st.session_state.deck.pop()
                     card2 = st.session_state.deck.pop()
                     
-                    # SPLIT KONTROLÜ (DEĞER TEMELLİ)
-                    is_splittable = (get_card_value(card1['rank']) == get_card_value(card2['rank']))
-                    
+                    # 'splittable' flag'ını KULLANMA
                     st.session_state.player_hands = [{
                         'hand': [card1, card2],
                         'bet': bet_amount,
                         'state': 'active', # 'active', 'stood', 'bust', 'doubled', 'charlie'
-                        'splittable': is_splittable, # Split mümkün mü?
                     }]
                     st.session_state.current_hand_index = 0
                     st.session_state.dealer_hand = [st.session_state.deck.pop(), st.session_state.deck.pop()]
@@ -1226,9 +1223,14 @@ with tab_blackjack:
              
             # İşlem yapılacak aktif eli al
             if st.session_state.current_hand_index >= len(st.session_state.player_hands):
-                 # Bu durum olmamalı, ama olursa diye
-                 st.session_state.game_state = "dealer_turn"
-                 st.rerun()
+                 # Bu durum olmamalı, ama olursa diye (örneğin As split sonrası)
+                 all_hands_finished = all(h['state'] != 'active' for h in st.session_state.player_hands)
+                 if all_hands_finished:
+                      st.session_state.game_state = "dealer_turn"
+                      st.rerun()
+                 else:
+                      # Bu bir hata olurdu, ama şimdilik devam et
+                      st.warning("Hand index error.")
             
             current_hand_data = st.session_state.player_hands[st.session_state.current_hand_index]
             current_hand = current_hand_data['hand']
@@ -1243,11 +1245,19 @@ with tab_blackjack:
 
             # Butonlar
             num_buttons = 2 # Hit, Stand
+            
+            # DOUBLE DOWN KONTROLÜ (Düzeltildi)
             can_double = len(current_hand) == 2 and st.session_state.player_balance >= current_bet and current_hand_data['state'] == 'active'
             if can_double: num_buttons += 1
             
-            # SPLIT KONTROLÜ
-            can_split = current_hand_data['splittable'] and len(current_hand) == 2 and st.session_state.player_balance >= current_bet
+            # SPLIT KONTROLÜ (Düzeltildi - Dinamik)
+            can_split = False
+            if len(current_hand) == 2 and st.session_state.player_balance >= current_bet and current_hand_data['state'] == 'active':
+                card1_val = get_card_value(current_hand[0]['rank'])
+                card2_val = get_card_value(current_hand[1]['rank'])
+                if card1_val == card2_val:
+                    can_split = True
+            
             if can_split: num_buttons += 1
             
             if cashout_offer > 0: num_buttons += 1
@@ -1348,18 +1358,12 @@ with tab_blackjack:
                     # Eğer As split değilse ve 21 olduysa, dur
                     if not is_aces and score1 == 21: hand1_state = 'stood'
                     if not is_aces and score2 == 21: hand2_state = 'stood'
-
-                    # Yeni ellerin bölünebilir olup olmadığını DEĞER ile kontrol et
-                    hand1_splittable = (get_card_value(card1['rank']) == get_card_value(new_card1['rank'])) and not is_aces
-                    hand2_splittable = (get_card_value(card2['rank']) == get_card_value(new_card2['rank'])) and not is_aces
                     
                     hand1 = {
-                        'hand': [card1, new_card1], 'bet': original_bet, 'state': hand1_state,
-                        'splittable': hand1_splittable
+                        'hand': [card1, new_card1], 'bet': original_bet, 'state': hand1_state
                     }
                     hand2 = {
-                        'hand': [card2, new_card2], 'bet': original_bet, 'state': hand2_state,
-                        'splittable': hand2_splittable
+                        'hand': [card2, new_card2], 'bet': original_bet, 'state': hand2_state
                     }
                     
                     # Yeni elleri listeye ekle
@@ -1442,7 +1446,7 @@ with tab_blackjack:
              
              # Ana bahsi çöz
              if state == 'cashed_out':
-                 final_messages.append(f"{hand_id}: Cashed out (Profit: {hand_data['profit']})")
+                 final_messages.append(f"{hand_id}: Cashed out (Profit: {hand_data.get('profit', 0)})")
                  # add_history zaten cashout sırasında yapıldı
              elif state == 'charlie':
                  final_messages.append(f"{hand_id}: 5-Card Charlie! 🎉 You win!")
@@ -1938,7 +1942,7 @@ with tab_vpoker:
             st.caption(st.session_state.vp_message)
 
             if st.button("Draw", key="vp_draw", disabled=(st.session_state.vp_state != "holding" and st.session_state.vp_state != "dealt")):
-                st.session_state.vp_state = "holding" # Draw'a basıldığında state'i holding yap (tekrar basılmasın diye)
+                st.session_state.vp_state = "drawing" # Çift tıklamayı önle
                 
                 for i in range(5):
                     if not st.session_state.vp_hand[i]['held']:
@@ -2069,7 +2073,6 @@ with tab_stats:
 # --- SEKME 8: MUSIC PLAYER ---
 with tab_music:
     st.header("🎶 Music Player")
-    st.markdown("How about a nice blues session? Maybe it will relax you.")
 
     blues_url = "https://www.youtube.com/watch?v=1eNSWZ4x2ZU&list=PLoPLEt1InO1x_fhNUCZW2HgRI3uTUn5NY"
     guilty_url = "https://www.youtube.com/watch?v=yQ9lXHfv9Yg"
@@ -2078,16 +2081,18 @@ with tab_music:
         "Choose your music:",
         ("Blues 🎶", "Guilty pleasures? 🤫"),
         horizontal=True,
-        label_visibility="collapsed"
+        label_visibility="visible" # Label'ı görünür yap
     )
 
     if choice == "Blues 🎶":
+        st.markdown("How about a nice blues session? Maybe it will relax you.")
         st.video(blues_url)
     else: # Guilty pleasures
-        st.subheader("manifest - arıyor")
+        st.markdown("Guilty pleasures?")
+        st.subheader("manifest - Arıyo") # Düzeltilmiş başlık
         st.video(guilty_url)
     
-    st.caption("Music provided via YouTube embed.")
+    st.caption("Music provided via YouTube embed. Playback may stop when switching tabs.")
 
 
 # --- SEKME 9: CREATIVE CORNER ---
@@ -2157,7 +2162,7 @@ with tab_creative:
             st.warning("Please enter a topic or theme.")
 
     # Sonucu göster (eğer butonla tetiklenmediyse state'den)
-    if st.session_state.creative_output and not st.button:
+    if st.session_state.creative_output and not ("creative_generate" in st.session_state and st.session_state.creative_generate):
         st.markdown(f"### Your {creative_type}:")
         st.markdown(f"> {st.session_state.creative_output}") 
 
