@@ -179,7 +179,3 @@ This project was developed by **Göktuğ Türkdağ**.
   * **Book a Meeting:** [cal.com/goktugturkdag](https://cal.com/goktugturkdag)
 
 -----
-
-## 📜 License
-
-This project is licensed under the MIT License. See the `LICENSE` file for more details.
