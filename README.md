@@ -2,7 +2,7 @@
 
 # DocuMentor 📄
 
-**[🚀 View the Live Application Here\!](https://www.google.com/search?q=https://documentor1.streamlit.app/)**
+**[🚀 View the Live Application Here\!](https://www.google.com/url?sa=E&source=gmail&q=https://documentor1.streamlit.app/)**
 
 -----
 
@@ -139,7 +139,7 @@ To run this project on your local machine, follow these steps.
 
 ### 4\. Running the Application
 
-Launch the Streamlit app from your terminal:
+Launch the Streamlit app from your terminal (assuming your main file is `app.py`):
 
 ```bash
 streamlit run app.py
@@ -177,5 +177,3 @@ This project was developed by **Göktuğ Türkdağ**.
   * **LinkedIn:** [linkedin.com/in/goktugturkdag](https://www.linkedin.com/in/goktugturkdag)
   * **GitHub:** [github.com/goktug-turkdag](https://github.com/goktug-turkdag)
   * **Book a Meeting:** [cal.com/goktugturkdag](https://cal.com/goktugturkdag)
-
------
