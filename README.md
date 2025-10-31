@@ -105,7 +105,7 @@ To run this project on your local machine, follow these steps.
 1.  Clone this repository:
 
     ```bash
-    git clone https://github.com/your-username/docuMentor.git
+    git clone https://github.com/goktug-turkdag/docuMentor.git
     cd docuMentor
     ```
 
