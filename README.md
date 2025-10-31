@@ -1,202 +1,185 @@
-````markdown
-# DocuMentor 📄 - Advanced AI Chatbot & Interactive Features
+-----
 
-**DocuMentor** is a multi-functional Streamlit web application developed by Göktuğ Türkdağ. It started as an intelligent Q&A chatbot leveraging Retrieval-Augmented Generation (RAG) but has evolved into a comprehensive platform showcasing advanced AI integration, complex state management, and interactive features, including several games of chance and creative text generation.
+# DocuMentor 📄
 
-This project serves as a portfolio piece demonstrating proficiency in building sophisticated, interactive AI applications using Python and modern AI frameworks.
+**[🚀 View the Live Application Here\!](https://www.google.com/search?q=https://documentor1.streamlit.app/)**
 
----
+-----
 
-## ✨ Features
+**DocuMentor** is a sophisticated, multi-functional Streamlit application that combines an advanced Retrieval-Augmented Generation (RAG) chatbot with a suite of interactive games and creative tools. This project is designed to showcase complex AI integrations, advanced state management, and a feature-rich user interface.
 
-The application is organized into several tabs, each offering distinct functionalities:
+## 🚀 Core Features
 
-### 💬 Chatbot
-* **Intelligent Q&A:** Answers questions based on a knowledge base using a RAG architecture.
-* **Multi-Document Chat:** Users can upload multiple `.pdf`, `.docx`, or `.txt` files via the sidebar and chat specifically with their content.
-* **Default Knowledge Base:** Utilizes the Databricks Dolly 15k dataset when no user files are uploaded.
-* **Conversational Memory:** Remembers the context of the conversation for follow-up questions (`ConversationalRetrievalChain`).
-* **Streaming Responses:** Answers are streamed token-by-token for a smoother user experience (`st.write_stream`).
-* **Multilingual Understanding:** Can understand questions in various languages thanks to multilingual embeddings.
-* **Source Highlighting:** Shows snippets of the source documents used to generate the answer.
-* **Simlish Mode 👽:** An optional fun mode (toggleable in Settings) where the chatbot responds by imitating Simlish, demonstrating prompt engineering.
-* **Developer FAQ Easter Egg:** The chatbot can answer specific questions about its developer, Göktuğ Türkdağ (skills, experience, contact), in multiple languages.
-* **Content Moderation:** Includes an expanded safety barrier to detect and refuse to answer inappropriate, unethical, harmful, or sensitive political questions, providing helpful redirections where appropriate (e.g., for self-harm related queries).
+The application is organized into multiple tabs, accessible via a main navigation bar:
 
-### 🃏 Blackjack
-* **Classic Game:** Full implementation of Blackjack rules.
-* **Multiple Decks:** Uses a configurable number of decks (4, 6, or 8 via Settings).
-* **Betting System:** Players bet using a shared balance.
-* **Side Bets:** Includes popular side bets:
-    * Perfect Pairs (Mixed, Colored, Perfect)
-    * 21+3 (Flush, Straight, Trips, Straight Flush)
-    * Lucky 7s (Pays on number of 7s)
-    * Bust It! (Pays based on the number of cards the dealer busts with)
-* **Advanced Rules:** Implements **Double Down** and **Insurance**.
-* **Special Wins:** Includes the **5-Card Charlie** rule.
-* **Dynamic Cash Out:** Offers a cash-out value based on a heuristic evaluation of the player's hand vs. the dealer's upcard before the player acts.
-* **Visual Card Display:** Uses styled text and emojis to represent cards.
-* **Basic Strategy Guide:** An expandable section explains optimal play.
-* **History Tracking:** Records the outcome of the last 5 hands.
+### 1\. 💬 Intelligent RAG Chatbot
 
-### 🪙 Coin Flip
-* **Simple Betting:** Classic Heads or Tails game.
-* **Balance Integration:** Uses the shared player balance.
-* **Last Bet Memory:** Remembers the previous bet amount and choice.
-* **History Tracking:** Records the outcome of the last 5 flips.
-* **Simple Animation:** Includes a basic "Flipping..." visual effect.
+  * **Multi-Document Q\&A:** Allows users to upload multiple `.pdf`, `.docx`, and `.txt` files simultaneously and ask questions based on their content.
+  * **LLM Engine:** Powered by **Google's Gemini Pro** model (via LangChain) to understand context and generate answers.
+  * **Vector Store:** Chunks and embeds uploaded documents into a **ChromaDB** vector store for efficient retrieval.
+  * **Embeddings:** Uses the `paraphrase-multilingual-MiniLM-L12-v2` model (from HuggingFace) for multilingual text vectorization.
+  * **Default Knowledge Base:** When no files are uploaded, the chatbot defaults to a knowledge base built from the `databricks-dolly-15k` dataset.
+  * **Conversational Memory:** Uses `ConversationalRetrievalChain` to maintain the context of the conversation.
+  * **Streaming Responses:** Answers are streamed token-by-token for a dynamic, "live" user experience.
+  * **Content Moderation:** Features an extensive safety barrier to filter potentially harmful, unethical, or political queries, providing guided responses.
+  * **Easter Eggs:**
+      * **Simlish Mode:** A toggle in the Settings tab that makes the chatbot respond in the playful, nonsensical language from "The Sims."
+      * **Developer FAQ:** Provides hard-coded, detailed answers to questions about the developer (Göktuğ Türkdağ), his skills, experience, and contact info.
 
-### 🎡 Roulette
-* **European Roulette:** Single zero wheel (0-36).
-* **Basic Bets:** Supports betting on individual numbers (Straight Up) and outside bets (Red/Black, Odd/Even, Low/High).
-* **Balance Integration:** Uses the shared player balance.
-* **Last Bet Memory:** Remembers the previous bets placed.
-* **History Tracking:** Records the outcome of the last 5 spins.
-* **Visual Result:** Displays the winning number with a color emoji.
-* **Simple Animation:** Includes a basic "Spinning..." visual effect.
+### 2\. 🎲 Interactive Games (Advanced State Management)
 
-### 🎰 Slots
-* **Simple 3-Reel Slot:** Classic slot machine mechanic.
-* **Weighted Symbols:** Uses different probabilities for symbols (`random.choices`).
-* **Payout Table:** Clear payouts for 3-of-a-kind and cherry combinations on the middle line.
-* **Balance Integration:** Uses the shared player balance.
-* **Last Bet Memory:** Remembers the previous bet amount.
-* **History Tracking:** Records the outcome of the last 5 spins.
-* **Simple Animation:** Includes a basic reel "spinning" effect using `time.sleep`.
+All games run on pure Python logic, share a single `player_balance`, and are managed entirely within Streamlit's `session_state`.
 
-### 🃏 Video Poker (Jacks or Better)
-* **Classic Game:** Standard Jacks or Better rules (Pair of Jacks or higher wins).
-* **5-Card Draw:** Player receives 5 cards and chooses which ones to hold.
-* **Payout Table:** Displays standard payout ratios for poker hands.
-* **Balance Integration:** Uses the shared player balance (bet 1-5 credits).
-* **History Tracking:** Records the outcome of the last 5 hands.
-* **Visual Card Display:** Uses styled text and emojis with clear "Hold" indication.
+  * **🃏 Blackjack:**
 
-### 📊 Stats
-* **Overall Performance:** Tracks Starting Balance, Current Balance, Total Bets Placed, Net Profit/Loss, Biggest Win, Biggest Loss.
-* **Performance by Game:** Shows Played, Won, Lost, Push (for BJ), and Win Rate (%) for each game.
-* **Reset Option:** Allows resetting statistics independently.
+      * **Full-Featured Gameplay:** A complete Blackjack experience against a dealer.
+      * **Side Bets:** Includes four optional side bets: Perfect Pairs (up to 25:1), 21+3 (up to 40:1), Lucky 7s (up to 100:1), and Bust It\! (up to 5:1).
+      * **Core Features:**
+          * **Split:** Fully functional hand-splitting on any two cards of the same value (e.g., 8-8, 10-J, Q-K).
+          * **Double Down:** Allows the player to double their bet on any initial two-card hand (e.g., 8-3, 5-5, A-2).
+          * **Insurance:** Offered when the dealer shows an Ace.
+          * **5-Card Charlie:** Automatically wins if the player draws 5 cards without busting.
+      * **AI Coach:** Uses Google Gemini Pro to analyze the player's (Hit, Stand, Double, Split) moves against basic strategy and provides actionable feedback at the end of the hand.
 
-### 🎶 Music Player
-* **YouTube Embed:** Plays a selected YouTube playlist (currently a Blues playlist) using `st.video`.
+  * **🎡 Roulette:**
 
-### 🎨 Creative Corner
-* **Text Generation:** Uses the creative Gemini model (`load_creative_llm`) to generate:
-    * Short Poems
-    * Story Ideas
-    * Haikus
-    * Tweets
-* **User Prompts:** Takes a topic or theme from the user as input.
+      * **European Style:** Single-zero roulette wheel.
+      * **Betting:** Supports inside (straight-up number) and all outside (Red/Black, Odd/Even, Low/High) bets.
 
-### ⚙️ Settings
-* **Simlish Mode Toggle:** Enable/disable the chatbot's Simlish personality.
-* **Blackjack Deck Count:** Select the number of decks used in the Blackjack game.
-* **General Info:** Points to the sidebar reset button.
+  * **🎰 Slot Machine:**
 
----
+      * **Classic 3-Reel:** A simple, single-payline slot machine.
+      * **Symbols & Payouts:** Features 7 symbols (🍒, 🍋, 🍊, 🍉, ⭐, 💎, ❼) with payouts for 2 Cherries (2x) or any 3-of-a-kind (up to 100x).
 
-## 🛠️ Tech Stack
+  * **🃏 Video Poker:**
 
-* **UI Framework:** [Streamlit](https://streamlit.io/)
-* **Core Logic:** Python 3.11+
-* **AI/LLM Framework:** [LangChain](https://python.langchain.com/)
-* **LLM:** Google Gemini Pro (via `langchain-google-genai`)
-* **Embeddings:** HuggingFace Sentence Transformers (`paraphrase-multilingual-MiniLM-L12-v2` via `langchain-huggingface`)
-* **Vector Database:** [ChromaDB](https://www.trychroma.com/) (via `langchain-community`)
-* **Data Handling:** `datasets` (for Dolly 15k), `PyPDFLoader`, `Docx2txtLoader`, `TextLoader` (via `langchain-community`), `tempfile`
-* **Environment Variables:** `python-dotenv`
-* **Utilities:** `random`, `time`, `collections.Counter`, `math`
+      * **Jacks or Better:** Classic 5-card draw poker where a pair of Jacks or better wins.
+      * **Hold Mechanic:** Full card-holding functionality with standard poker hand payouts (up to 800x for a Royal Flush).
 
----
+  * **🪙 Coin Flip:**
 
-## 🚀 Setup & Installation
+      * A simple 1:1 Heads or Tails betting game.
 
-1.  **Clone the repository:**
+### 3\. 📊 Player Stats
+
+  * **Overall Performance:** Tracks Starting Balance, Current Balance, Total Wagered, Net Profit/Loss, Biggest Win, and Biggest Loss.
+  * **Per-Game Breakdown:** A detailed dataframe showing stats for each game (Played, Won, Lost, Push, Win Rate %).
+
+### 4\. 🎨 Creative Corner
+
+  * **Generative AI Playground:** Uses a high-temperature instance of Gemini Pro to generate creative text based on user prompts.
+  * **Generation Types:** Short Poem, Story Idea, Haiku (5-7-5 syllables), and Tweet (max 280 chars).
+
+### 5\. 🎶 Music Player
+
+  * **Embedded Media:** An embedded YouTube player that can play music while browsing other tabs (playback may stop on some browsers/mobile).
+  * **User Choice:** A radio button allows the user to switch between:
+      * **Blues 🎶** (A relaxing blues playlist)
+      * **Guilty pleasures? 🤫** (manifest - Arıyo)
+
+-----
+
+## 🛠️ Technology Stack
+
+  * **Core Language:** Python
+  * **Web Framework:** Streamlit
+  * **AI & LLM:** Google Gemini Pro
+  * **LLM Orchestration:** LangChain
+  * **Embeddings:** HuggingFace Sentence Transformers (`paraphrase-multilingual-MiniLM-L12-v2`)
+  * **Vector Store:** ChromaDB
+  * **Data Handling:** `datasets` (HuggingFace), `pypdf`, `docx2txt`
+
+-----
+
+## 🏁 Setup & Installation
+
+To run this project on your local machine, follow these steps.
+
+### 1\. Prerequisites
+
+  * Python 3.9 or newer.
+  * A valid [Google API Key](https://aistudio.google.com/app/apikey) for Google Gemini.
+
+### 2\. Installation
+
+1.  Clone this repository:
+
     ```bash
-    git clone [https://github.com/goktug-turkdag/DocuMentor.git](https://github.com/goktug-turkdag/DocuMentor.git) # Replace with your actual repo URL if different
-    cd DocuMentor
+    git clone https://github.com/your-username/docuMentor.git
+    cd docuMentor
     ```
 
-2.  **Create and activate a virtual environment:** (Recommended)
+2.  Create and activate a virtual environment:
+
     ```bash
+    # Windows
     python -m venv venv
-    # On Windows:
-    .\venv\Scripts\activate
-    # On macOS/Linux:
+    venv\Scripts\activate
+
+    # macOS / Linux
+    python3 -m venv venv
     source venv/bin/activate
     ```
 
-3.  **Install dependencies:**
-    Make sure your `requirements.txt` file includes all necessary packages:
-    ```txt
-    streamlit
-    python-dotenv
-    datasets
-    langchain
-    langchain-core
-    langchain-community
-    langchain-huggingface
-    langchain-google-genai
-    google-generativeai
-    sentence-transformers
-    chromadb
-    pypdf
-    docx2txt
-    # Add any other specific versions if needed
-    ```
-    Then run:
+3.  Install the required Python packages from `requirements.txt`:
+
     ```bash
     pip install -r requirements.txt
     ```
 
-4.  **Create a `.env` file:**
-    In the root directory of the project, create a file named `.env` and add your Google API key:
-    ```ini
-    GOOGLE_API_KEY="YOUR_GOOGLE_API_KEY_HERE"
+### 3\. Configuration
+
+1.  Create a file named `.env` in the root directory of the project.
+
+2.  Add your Google API Key to this file in the following format:
+
+    ```env
+    GOOGLE_API_KEY="AIzaSy...your_google_api_key_here"
     ```
-    *(You can get an API key from Google AI Studio.)*
 
----
+### 4\. Running the Application
 
-## ▶️ Running the Application
-
-Once the setup is complete, run the Streamlit app from your terminal:
+Launch the Streamlit app from your terminal:
 
 ```bash
 streamlit run app.py
-````
-
-The application should open automatically in your web browser.
-
------
-
-## usage
-
-  * Navigate between the different features (Chatbot, Games, Music, Settings) using the tabs at the top.
-  * **Chatbot:** Ask questions in the input bar. Use the sidebar to upload your own documents to chat with them instead of the default knowledge base.
-  * **Games:** Follow the on-screen instructions to place bets and play. Use the sidebar button to reset game states and balance.
-  * **Settings:** Toggle Simlish mode or adjust Blackjack deck settings.
-
------
-
-## 💻 Codebase
-
-This entire application, including the AI logic, multiple game implementations, and UI, is contained within a single `app.py` file exceeding 2000 lines. While this demonstrates the ability to manage a large script, in a production scenario, breaking the code into multiple modules (e.g., `chatbot.py`, `blackjack.py`, `utils.py`) would be recommended for better maintainability.
-
------
-
-## 👨‍💻 Developer
-
-Developed by **Göktuğ Türkdağ**.
-
-  * **LinkedIn:** [linkedin.com/in/goktugturkdag](https://www.google.com/search?q=https://www.linkedin.com/in/goktugturkdag)
-  * **GitHub:** [github.com/goktug-turkdag](https://www.google.com/search?q=https://github.com/goktug-turkdag)
-  * **Book a Meeting:** [cal.com/goktugturkdag](https://www.google.com/search?q=https://cal.com/goktugturkdag)
-
------
-
-Enjoy using DocuMentor\!
-Live: https://documentor1.streamlit.app
 ```
 
+The application will now be running and accessible in your web browser, typically at `http://localhost:8501`.
+
+-----
+
+## 📦 Sample `requirements.txt`
+
+This project relies on the following major libraries:
+
 ```
+streamlit
+python-dotenv
+datasets
+langchain
+langchain-community
+langchain-google-genai
+langchain-huggingface
+chromadb
+sentence-transformers
+pypdf
+docx2txt
+tiktoken
+```
+
+-----
+
+## 👤 Developer
+
+This project was developed by **Göktuğ Türkdağ**.
+
+  * **LinkedIn:** [linkedin.com/in/goktugturkdag](https://www.linkedin.com/in/goktugturkdag)
+  * **GitHub:** [github.com/goktug-turkdag](https://github.com/goktug-turkdag)
+  * **Book a Meeting:** [cal.com/goktugturkdag](https://cal.com/goktugturkdag)
+
+-----
+
+## 📜 License
+
+This project is licensed under the MIT License. See the `LICENSE` file for more details.
