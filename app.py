@@ -2078,6 +2078,30 @@ with tab_stats:
     
 # --- SEKME 7.5: SISYPHUS' CLIMB (CRASH GAME) ---
 with tab_crash:
+    
+    # DÜZELTME: Cash Out butonunu yeşil yapmak için CSS enjekte et
+    # Bu CSS, "primary" türündeki tüm butonları yeşile çevirecektir.
+    # "climbing" durumundayken sadece Cash Out butonu "primary" olduğu için bu sorun olmaz.
+    st.markdown("""
+    <style>
+    button[kind="primary"] {
+        background-color: #28a745; /* Bootstrap Green */
+        border-color: #28a745;
+    }
+    button[kind="primary"]:hover {
+        background-color: #218838;
+        border-color: #1e7e34;
+    }
+    button[kind="primary"]:active {
+        background-color: #1e7e34;
+        border-color: #1e7e34;
+    }
+    button[kind="primary"]:focus {
+        box-shadow: 0 0 0 0.2rem rgba(40,167,69,.5);
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
     st.header("⛰️ Sisyphus' Climb")
     st.markdown(
         """
@@ -2124,11 +2148,10 @@ with tab_crash:
         else:
             return round(random.uniform(5.01, 15.0), 2)
 
-    # Çarpanı geçen süreye göre hesapla (DÜZELTME: DAHA YAVAŞ HIZLANMA)
+    # Çarpanı geçen süreye göre hesapla
     def get_current_multiplier(start_time):
         elapsed = time.time() - start_time
-        # y = 1 + 0.05 * x^1.15 (Daha yavaş hızlanma)
-        multiplier = 1 + 0.05 * (elapsed ** 1.15)
+        multiplier = 1 + 0.05 * (elapsed ** 1.15) # Yavaş hızlanma
         return round(multiplier, 2)
 
     # --- Arayüz ---
@@ -2146,13 +2169,12 @@ with tab_crash:
         else:
             st.session_state.sc_message = "" # Mesajı temizle
             
-            # DÜZELTME: MixedNumericTypesError için int() kullan
             current_balance_int = int(st.session_state.player_balance)
             default_sc_bet = min(st.session_state.sc_bet, current_balance_int)
             
             with st.form(key="sc_bet_form"):
                 bet_amount = st.number_input(
-                    "Bet Amount:", min_value=1, max_value=current_balance_int, # DÜZELTME
+                    "Bet Amount:", min_value=1, max_value=current_balance_int,
                     value=default_sc_bet, step=1
                 )
                 start_climb_button = st.form_submit_button("Start the Climb")
@@ -2182,15 +2204,15 @@ with tab_crash:
             st.rerun() # Bitiş ekranına git
             st.stop() # Script'i burada durdur
 
-        # 3. (YENİ) BÜYÜK HTML/CSS ANİMASYONUNU GÜNCELLE
+        # 3. BÜYÜK HTML/CSS ANİMASYONUNU GÜNCELLE
         with st.session_state.sc_animation_placeholder.container():
             
             # Önce Çarpanı Göster
-            st.markdown(f"<h1 style='text-align: center; color: #2E8B57; font-size: 4em;'>{multiplier:.2f}x</h1>", unsafe_allow_html=True)
+            st.markdown(f"<h1 style='text-align: center; color: #4CAF50; font-size: 4em;'>{multiplier:.2f}x</h1>", unsafe_allow_html=True)
             
             # Sisyphos Görsel Animasyonu
-            # Görsel tepe noktası (örn. 10x)
-            max_visual_multiplier = 10.0 
+            # DÜZELTME: Zirveyi 99x olarak ayarla
+            max_visual_multiplier = 99.0 
             # 0'dan 100'e bir ilerleme yüzdesi hesapla
             progress = min(100, int((multiplier - 1.0) / (max_visual_multiplier - 1.0) * 100))
 
@@ -2212,13 +2234,13 @@ with tab_crash:
                 margin-top: 10px;
             ">
                 <div style="position:absolute; top: 10px; right: 10px; font-size: 2.5em;">🏁</div>
+                <div style="position:absolute; top: 35px; right: 10px; font-size: 1.0em; color: white;">(99x)</div>
 
                 <div style="
                     position: absolute; 
                     bottom: {bottom_pos}%; 
                     left: {left_pos}%; 
                     font-size: 3em; 
-                    transition: all 0.1s linear;
                 ">
                     🧍🪨
                 </div>
@@ -2226,8 +2248,8 @@ with tab_crash:
             """
             st.markdown(html_animation, unsafe_allow_html=True)
             
-            # Eski st.progress bar'ı da ekleyelim (isteğe bağlı ama faydalı)
-            st.progress(progress, text=f"{progress}% to the visual peak")
+            # İlerleme çubuğu
+            st.progress(progress, text=f"{progress}% to the (visual) peak")
 
 
         # 4. Cash Out BUTONUNU GÖSTER (Animasyondan SONRA)
@@ -2235,16 +2257,16 @@ with tab_crash:
             # --- KAZANMA DURUMU ---
             winnings = st.session_state.sc_bet * st.session_state.sc_multiplier
             net_profit = winnings - st.session_state.sc_bet
-            st.session_state.player_balance += round(winnings) # Bahis + kazanç (YUVARLA)
-            st.session_state.sc_message = f"⛰️ Cashed out at {st.session_state.sc_multiplier:.2f}x! You win {round(net_profit)}." # YUVARLA
+            st.session_state.player_balance += round(winnings)
+            st.session_state.sc_message = f"⛰️ Cashed out at {st.session_state.sc_multiplier:.2f}x! You win {round(net_profit)}."
             st.session_state.sc_state = "finished"
-            add_history("sc", st.session_state.sc_bet, round(net_profit), st.session_state.player_balance) # YUVARLA
+            add_history("sc", st.session_state.sc_bet, round(net_profit), st.session_state.player_balance)
             st.balloons()
             st.rerun() # Bitiş ekranına git
             st.stop() # Script'i burada durdur
 
-        # 5. Ekranı yenilemek için kısa bir bekleme ve script'i tekrar çalıştır (animasyon döngüsü)
-        time.sleep(0.05) # Hızı ayarla (düşük tutun)
+        # 5. Ekranı yenilemek için kısa bir bekleme ve script'i tekrar çalıştır
+        time.sleep(0.05) 
         st.rerun()
             
     # --- Bitiş Aşaması ---
@@ -2253,7 +2275,7 @@ with tab_crash:
         if "Cashed out" in st.session_state.sc_message:
             st.success(st.session_state.sc_message)
             # Son çarpanı göster
-            st.markdown(f"<h1 style='text-align: center; color: #2E8B57; font-size: 4em;'>{st.session_state.sc_multiplier:.2f}x</h1>", unsafe_allow_html=True)
+            st.markdown(f"<h1 style='text-align: center; color: #28a745; font-size: 4em;'>{st.session_state.sc_multiplier:.2f}x</h1>", unsafe_allow_html=True)
             st.caption(f"The boulder would have crashed at {st.session_state.sc_crash_point:.2f}x.")
         else:
             st.error(st.session_state.sc_message)
