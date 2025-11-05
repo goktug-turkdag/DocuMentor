@@ -155,18 +155,19 @@ st.set_page_config(page_title="DocuMentor", layout="wide")
 st.title("DocuMentor 📄")
 
 # --- Sekmeler ---
+# YENİ OYUN (SISYPHUS) EKLENMİŞ VE GİRİNTİLER DÜZELTİLMİŞTİR
 tab_chat, tab_blackjack, tab_coinflip, tab_roulette, tab_slots, tab_vpoker, tab_stats, tab_crash, tab_music, tab_creative, tab_settings = st.tabs([
-    "💬 Chatbot",
-    "🃏 Blackjack",
-    "🪙 Coin Flip",
-    "🎡 Roulette",
-    "🎰 Slots",
-    "🃏 Video Poker",
-    "📊 Stats",
+    "💬 Chatbot",
+    "🃏 Blackjack",
+    "🪙 Coin Flip",
+    "🎡 Roulette",
+    "🎰 Slots",
+    "🃏 Video Poker",
+    "📊 Stats",
     "⛰️ Sisyphus' Climb", # YENİ SEKME
-    "🎶 Music Player",
-    "🎨 Creative Corner",
-    "⚙️ Settings"
+    "🎶 Music Player",
+    "🎨 Creative Corner",
+    "⚙️ Settings"
 ])
 
 # --- Sidebar ---
