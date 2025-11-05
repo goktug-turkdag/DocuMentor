@@ -1231,7 +1231,7 @@ with tab_blackjack:
                         st.session_state.game_message = "Push! Both have Blackjack. 😐"
                         st.session_state.player_balance += st.session_state.current_bet
                         add_history("bj", st.session_state.current_bet, 0, st.session_state.player_balance)
-                        unlock_achievement("bj_blackjack") # <-- BU SATIRI GÜNCELLEYİN/EKLEYİN
+                        unlock_achievement("bj_blackjack") # <-- BU SATIRI EKLEYİN
                         if st.session_state.bet_lucky_seven > 0: add_history("bj", st.session_state.bet_lucky_seven, -st.session_state.bet_lucky_seven, st.session_state.player_balance)
 
                     elif dealer_score == 21: 
@@ -1556,6 +1556,7 @@ with tab_blackjack:
         elif st.session_state.bet_bust > 0:
              st.session_state.side_bet_message += "\nBust It! bet lost."
              add_history("bj", st.session_state.bet_bust, -st.session_state.bet_bust, st.session_state.player_balance)
+             unlock_achievement("bj_side_bet") # <-- BU SATIRI EKLEYİN
 
         # Ana bahisleri ve L7'leri çöz
         final_messages = []
@@ -1573,6 +1574,7 @@ with tab_blackjack:
                  st.session_state.player_balance += l7_winnings
                  st.session_state.side_bet_message += f"\n{hand_id} {l7_msg}"
                  add_history("bj", st.session_state.bet_lucky_seven, l7_winnings - st.session_state.bet_lucky_seven, st.session_state.player_balance)
+                 unlock_achievement("bj_side_bet") # <-- BU SATIRI EKLEYİN
                  lucky_seven_bet_processed = True
              
              # Ana bahsi çöz
