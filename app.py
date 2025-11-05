@@ -1855,14 +1855,14 @@ with tab_roulette:
     display_history("rl")
 
 
-# --- SEKME 5: SLOTS ---
+# --- SEKME 5: SLOTS (AUTOSPIN İLE GÜNCELLENDİ) ---
 with tab_slots:
     st.header("🎰 Simple Slots")
-    st.markdown("Spin the reels and try to match the symbols on the middle line!")
+    st.markdown("Spin the reels and try to match the symbols on the middle line! **Now with Autospin!**")
 
     # Slot Sembolleri ve Olasılıkları
     symbols = ["🍒", "🍋", "🍊", "🍉", "⭐", "💎", "❼"]
-    weights = [    25,    20,    18,    15,    10,     7,    5]
+    weights = [    25,    20,    18,    15,    10,     7,     5]
 
     # Payout Oranları
     payouts = {
@@ -1875,13 +1875,16 @@ with tab_slots:
         "❼": {3: 100}
     }
 
-    # State başlatma
+    # State başlatma (Autospin eklendi)
     if "slot_state" not in st.session_state:
-        st.session_state.slot_state = "ready"
+        st.session_state.slot_state = "ready" # ready, spinning, result
         st.session_state.slot_reels = ["❓", "❓", "❓"]
         st.session_state.slot_message = "Place your bet and spin!"
         st.session_state.slot_history = []
         st.session_state.last_slot_bet = 5
+        st.session_state.autospin_active = False
+        st.session_state.autospin_remaining = 0
+        st.session_state.temp_balloons = False
 
     def reset_slots_state(reset_balance=False):
         st.session_state.slot_state = "ready"
@@ -1889,12 +1892,16 @@ with tab_slots:
         st.session_state.slot_message = "Place your bet and spin!"
         st.session_state.slot_history = []
         st.session_state.last_slot_bet = 5
+        st.session_state.autospin_active = False
+        st.session_state.autospin_remaining = 0
+        st.session_state.temp_balloons = False
         if reset_balance: st.session_state.player_balance = 1000
     globals()["sl_reset_func"] = reset_slots_state
 
     def spin_reels():
         return random.choices(symbols, weights=weights, k=3)
 
+    # check_win fonksiyonu (Başarım tetikleyicileri ile güncellenmiş hali)
     def check_win(reels, bet):
         middle_symbol = reels[1]
 
@@ -1903,7 +1910,7 @@ with tab_slots:
             symbol = middle_symbol
             if symbol in payouts and 3 in payouts[symbol]:
                 if symbol == "❼":
-                    unlock_achievement("slot_jackpot_7") # <-- BAŞARIM TETİKLEYİCİSİ
+                    unlock_achievement("slot_jackpot_7")
                 multiplier = payouts[symbol][3]
                 winnings = bet * multiplier
                 return winnings, f"🎉 JACKPOT! Three {symbol}! Win {winnings} ({multiplier}x)!"
@@ -1911,7 +1918,7 @@ with tab_slots:
         # İkili kiraz
         if (reels[0] == "🍒" == reels[1]) or (reels[1] == "🍒" == reels[2]):
                 if "🍒" in payouts and 2 in payouts["🍒"]:
-                    unlock_achievement("slot_win_cherry") # <-- BAŞARIM TETİKLEYİCİSİ
+                    unlock_achievement("slot_win_cherry")
                     multiplier = payouts["🍒"][2]
                     winnings = bet * multiplier
                     return winnings, f"🍒 Two Cherries! Win {winnings} ({multiplier}x)!"
@@ -1923,64 +1930,171 @@ with tab_slots:
     if st.session_state.player_balance <= 0:
         st.error("You are out of money! Reset features from the sidebar.")
     else:
-        # Son bahsi kullan ve bakiye ile sınırla
-        default_slot_bet = min(st.session_state.last_slot_bet, st.session_state.player_balance) if st.session_state.player_balance > 0 else 1
-        slot_bet = st.number_input("Bet Amount per Spin:", min_value=1, max_value=st.session_state.player_balance,
-                                    value=default_slot_bet, step=1, key="slot_bet")
+        
+        # --- AUTOSPIN MANTIĞI ---
+        # 1. Autospin Tetikleyicisi
+        # Eğer autospin aktifse, durum 'ready' ise ve spin hakkı varsa...
+        if (st.session_state.autospin_active and 
+            st.session_state.slot_state == "ready" and 
+            st.session_state.autospin_remaining > 0):
+            
+            # Bakiyeyi kontrol et
+            if st.session_state.player_balance >= st.session_state.last_slot_bet:
+                # Durumu 'spinning' olarak ayarla ve script'i yeniden çalıştır
+                st.session_state.slot_state = "spinning"
+                st.rerun()
+            else:
+                # Bakiye yetersizse autospin'i durdur
+                st.session_state.autospin_active = False
+                st.session_state.autospin_remaining = 0
+                st.warning("Autospin stopped. Insufficient balance.")
 
-        spin_button = st.button("Spin Reels!", key="spin_slots", disabled=(st.session_state.slot_state == "spinning"))
+        # --- ARAYÜZ ---
+        
+        # Bahis miktarını ayarla (Autospin aktifse kilitli)
+        default_slot_bet = min(st.session_state.last_slot_bet, st.session_state.player_balance)
+        slot_bet = st.number_input(
+            "Bet Amount per Spin:", 
+            min_value=1, 
+            max_value=st.session_state.player_balance,
+            value=default_slot_bet, 
+            step=1, 
+            key="slot_bet_input",
+            disabled=st.session_state.autospin_active # Autospin'deyse kilitle
+        )
 
-        # Çarkları göster
-        reel_cols = st.columns(3)
-        reel_placeholders = [col.empty() for col in reel_cols] # Animasyon için placeholder
+        # Butonları ayarla
+        col1, col2, col3 = st.columns([1, 1, 1])
 
-        # Mevcut çark durumunu göster
-        for i, symbol in enumerate(st.session_state.slot_reels):
-             with reel_placeholders[i].container(border=True):
-                 st.markdown(f"<h1 style='text-align: center; font-size: 4em;'>{symbol}</h1>", unsafe_allow_html=True)
-
-        if spin_button:
+        # 1. Manuel Spin Butonu
+        def manual_spin():
             st.session_state.slot_state = "spinning"
-            st.session_state.player_balance -= slot_bet
-            st.session_state.slot_main_bet = slot_bet # Stats için
-            st.session_state.last_slot_bet = slot_bet
+            st.session_state.last_slot_bet = st.session_state.slot_bet_input # Bahsi ayarla
+
+        col1.button(
+            "Spin Reels!", 
+            key="spin_slots_manual", 
+            on_click=manual_spin,
+            disabled=(st.session_state.slot_state != "ready" or st.session_state.autospin_active)
+        )
+
+        # 2. Autospin Başlat/Durdur Butonları
+        if not st.session_state.autospin_active:
+            autospin_count_select = col2.selectbox(
+                "Autospins:", 
+                [10, 25, 50, 100], 
+                key="autospin_count",
+                disabled=(st.session_state.slot_state != "ready")
+            )
+            
+            def start_autospin():
+                st.session_state.autospin_active = True
+                st.session_state.autospin_remaining = st.session_state.autospin_count
+                st.session_state.last_slot_bet = st.session_state.slot_bet_input # Bahsi kilitle
+                st.session_state.slot_state = "ready" # Başlamaya hazırla
+                st.rerun() # Autospin döngüsünü tetikle
+            
+            col3.button(
+                "Start Autospin", 
+                on_click=start_autospin,
+                disabled=(st.session_state.slot_state != "ready")
+            )
+        else:
+            def stop_autospin():
+                st.session_state.autospin_active = False
+                st.session_state.autospin_remaining = 0
+
+            col2.button(
+                f"Stop ({st.session_state.autospin_remaining} left)", 
+                on_click=stop_autospin,
+                type="primary"
+            )
+
+        # --- Çarkları Göster ---
+        reel_cols = st.columns(3)
+        reel_placeholders = [col.empty() for col in reel_cols]
+        for i, symbol in enumerate(st.session_state.slot_reels):
+            with reel_placeholders[i].container(border=True):
+                st.markdown(f"<h1 style='text-align: center; font-size: 4em;'>{symbol}</h1>", unsafe_allow_html=True)
+
+        # --- OYUN AKIŞ MANTIĞI ---
+
+        # 1. SPINNING DURUMU (Manuel veya Autospin ile tetiklenir)
+        if st.session_state.slot_state == "spinning":
+            
+            # Bahsi kullan (Autospin'deyse kilitli bahsi, değilse mevcut bahsi)
+            current_bet = st.session_state.last_slot_bet
+            
+            # Son bakiye kontrolü (teorik olarak autospin tetiği bunu yapar ama güvenlik için)
+            if st.session_state.player_balance < current_bet:
+                st.session_state.slot_state = "ready"
+                st.session_state.autospin_active = False
+                st.warning("Autospin stopped. Insufficient balance.")
+                st.rerun()
+            
+            st.session_state.player_balance -= current_bet
+            st.session_state.slot_main_bet = current_bet 
             st.session_state.slot_message = "Spinning..."
 
             # Basit animasyon
-            spin_duration = 0.8 # saniye
+            spin_duration = 0.8 # saniye (Autospin için hızlı tut)
+            if st.session_state.autospin_active:
+                spin_duration = 0.2 # Autospin'deyse çok daha hızlı
+                
             steps = 8
             for _ in range(steps):
                 temp_reels = spin_reels()
                 for i, symbol in enumerate(temp_reels):
                     with reel_placeholders[i].container(border=True):
-                         st.markdown(f"<h1 style='text-align: center; font-size: 4em;'>{symbol}</h1>", unsafe_allow_html=True)
+                        st.markdown(f"<h1 style='text-align: center; font-size: 4em;'>{symbol}</h1>", unsafe_allow_html=True)
                 time.sleep(spin_duration / steps)
 
             # Sonuçları işle
             st.session_state.slot_reels = spin_reels() # Gerçek sonuç
-            winnings, message = check_win(st.session_state.slot_reels, st.session_state.last_slot_bet)
+            winnings, message = check_win(st.session_state.slot_reels, current_bet)
 
             # Sonucu animasyon placeholder'ına yaz
             for i, symbol in enumerate(st.session_state.slot_reels):
-                 with reel_placeholders[i].container(border=True):
-                     st.markdown(f"<h1 style='text-align: center; font-size: 4em;'>{symbol}</h1>", unsafe_allow_html=True)
+                with reel_placeholders[i].container(border=True):
+                    st.markdown(f"<h1 style='text-align: center; font-size: 4em;'>{symbol}</h1>", unsafe_allow_html=True)
 
             if winnings > 0:
-                st.session_state.player_balance += winnings + st.session_state.last_slot_bet
-                add_history("slot", st.session_state.last_slot_bet, winnings, st.session_state.player_balance)
-                st.balloons()
+                st.session_state.player_balance += winnings + current_bet
+                add_history("slot", current_bet, winnings, st.session_state.player_balance)
+                st.session_state.temp_balloons = True # Balonları hazırla
             else:
-                 add_history("slot", st.session_state.last_slot_bet, -st.session_state.last_slot_bet, st.session_state.player_balance)
+                add_history("slot", current_bet, -current_bet, st.session_state.player_balance)
 
             st.session_state.slot_message = message
+            
+            # Autospin sayacını güncelle
+            if st.session_state.autospin_active:
+                st.session_state.autospin_remaining -= 1
+                if st.session_state.autospin_remaining <= 0:
+                    st.session_state.autospin_active = False # Spin hakkı bitti
+            
+            # "result" durumuna geç
             st.session_state.slot_state = "result"
-            st.rerun() # Sonucu ve mesajı göster
+            st.rerun()
 
-    # Sonucu göster (sadece result state'inde)
-    if st.session_state.slot_state == "result":
-        st.markdown(f"**{st.session_state.slot_message}**")
-        st.session_state.slot_state = "ready" # Bir sonraki spin için hazırla
+        # 2. RESULT DURUMU (Sonucu göster, sonra 'ready'e geç)
+        elif st.session_state.slot_state == "result":
+            st.markdown(f"**{st.session_state.slot_message}**")
+            
+            # Balonları patlat
+            if st.session_state.get("temp_balloons", False):
+                st.balloons()
+                st.session_state.temp_balloons = False # Bayrağı temizle
+            
+            # Bir sonraki spin için "ready" durumuna geç
+            st.session_state.slot_state = "ready"
+            
+            # Eğer hala autospin'deysek, bir sonraki turu tetiklemek için bekle ve yeniden çalıştır
+            if st.session_state.autospin_active:
+                time.sleep(1.0) # Sonucu görmek için 1 saniye bekle
+                st.rerun() # Bu, en baştaki "Autospin Tetikleyicisi"ne takılacak
 
+    # Bakiye Geçmişi
     display_history("slot")
 
 # --- SEKME 6: VIDEO POKER ---
