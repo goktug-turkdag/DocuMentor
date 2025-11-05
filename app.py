@@ -328,17 +328,12 @@ if "player_stats" not in st.session_state:
         "rl": {"played": 0, "won": 0, "lost": 0},
         "slot": {"played": 0, "won": 0, "lost": 0},
         "vp": {"played": 0, "won": 0, "lost": 0},
-        "sc": {"played": 0, "won": 0, "lost": 0}, # YENİ İSTATİSTİK
+        "sc": {"played": 0, "won": 0, "lost": 0}, # Sisyphus Climb istatistiği
         "biggest_win": 0, "biggest_loss": 0,
     }
-
-# Oyunlar için state başlatmaları, ilgili sekmelerin başına taşındı
-
-# Oyuncu İstatistikleri için State
-if "player_stats" not in st.session_state:
-    # ... (mevcut kodunuz) ...
     
 # --- 1.B BAŞARIM SİSTEMİ: STATE BAŞLATMA ---
+# (Bu blok, "if player_stats..." bloğunun DIŞINDA olmalı, aynı girinti seviyesinde)
 if "achievements" not in st.session_state:
     st.session_state.achievements = {
         ach_id: {
