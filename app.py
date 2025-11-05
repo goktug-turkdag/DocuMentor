@@ -2182,32 +2182,57 @@ with tab_crash:
             st.rerun() # Bitiş ekranına git
             st.stop() # Script'i burada durdur
 
-        # 3. Animasyonu ÖNCE GÜNCELLE
+        # 3. (YENİ) BÜYÜK HTML/CSS ANİMASYONUNU GÜNCELLE
         with st.session_state.sc_animation_placeholder.container():
+            
+            # Önce Çarpanı Göster
             st.markdown(f"<h1 style='text-align: center; color: #2E8B57; font-size: 4em;'>{multiplier:.2f}x</h1>", unsafe_allow_html=True)
             
-            # Sisyphos animasyonu (BÜYÜK)
-            max_visual_multiplier = 10.0 # 10x'ten sonrası aynı görünür
+            # Sisyphos Görsel Animasyonu
+            # Görsel tepe noktası (örn. 10x)
+            max_visual_multiplier = 10.0 
+            # 0'dan 100'e bir ilerleme yüzdesi hesapla
             progress = min(100, int((multiplier - 1.0) / (max_visual_multiplier - 1.0) * 100))
+
+            # CSS ile Sisyphus'u hareket ettir
+            # bottom: 0% -> 85% (Yukarı)
+            # left: 5% -> 85% (Yana)
+            bottom_pos = progress * 0.85
+            left_pos = 5 + (progress * 0.8)
+
+            html_animation = f"""
+            <div style="
+                position: relative; 
+                width: 100%; 
+                height: 250px; 
+                background: linear-gradient(160deg, #CD853F 20%, #8B4513 100%); 
+                border-radius: 10px;
+                border-bottom: 5px solid #5C2F0E;
+                overflow: hidden; 
+                margin-top: 10px;
+            ">
+                <div style="position:absolute; top: 10px; right: 10px; font-size: 2.5em;">🏁</div>
+
+                <div style="
+                    position: absolute; 
+                    bottom: {bottom_pos}%; 
+                    left: {left_pos}%; 
+                    font-size: 3em; 
+                    transition: all 0.1s linear;
+                ">
+                    🧍🪨
+                </div>
+            </div>
+            """
+            st.markdown(html_animation, unsafe_allow_html=True)
             
-            # Emojiyi hareket ettir
-            steps = 20
-            emoji_pos = int(progress / (100 / steps))
-            
-            # DÜZELTME: Animasyonun görünür olması için trail karakterini değiştir
-            trail = "·" * emoji_pos # Gidilen yolu · ile göster
-            remaining = "&nbsp;" * (steps - emoji_pos) # Kalan yolu boşlukla
-            
-            st.markdown(f"<h2 style='text-align: center; font-family: monospace; background-color: #f0f2f6; padding: 10px; border-radius: 5px;'>[{trail}🧑‍🔬🪨{remaining}]⛰️</h2>", unsafe_allow_html=True)
-            
-            st.progress(progress, text=f"{progress}% to the (visual) peak")
+            # Eski st.progress bar'ı da ekleyelim (isteğe bağlı ama faydalı)
+            st.progress(progress, text=f"{progress}% to the visual peak")
 
 
-        # 4. Crash olmadıysa, Cash Out BUTONUNU GÖSTER (Animasyondan SONRA)
+        # 4. Cash Out BUTONUNU GÖSTER (Animasyondan SONRA)
         if st.button(f"CASH OUT @ {st.session_state.sc_multiplier:.2f}x", type="primary", use_container_width=True, key="sc_cashout_button"):
             # --- KAZANMA DURUMU ---
-            
-            # DÜZELTME: MixedNumericTypesError için round() kullan
             winnings = st.session_state.sc_bet * st.session_state.sc_multiplier
             net_profit = winnings - st.session_state.sc_bet
             st.session_state.player_balance += round(winnings) # Bahis + kazanç (YUVARLA)
