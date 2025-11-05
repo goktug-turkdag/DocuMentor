@@ -1810,21 +1810,22 @@ with tab_roulette:
                 winning_messages = []
                 net_outcome = -total_current_bet
 
+                # --- BAŞARIM KONTROLLERİ BURADA (DOĞRU GİRİNTİLENMİŞ) ---
                 for bet_type, bet_amount in st.session_state.roulette_bets.items():
-                win = False
-                payout_ratio = 0
+                    win = False
+                    payout_ratio = 0
 
-                if bet_type.startswith("number_"):
-                    bet_num = int(bet_type.split("_")[1])
-                    if bet_num == winning_number: 
-                        win = True; payout_ratio = 35
-                        if bet_num == 0:
-                            unlock_achievement("rl_win_0") # <-- GÜNCELLENDİ
-                elif bet_type == "Red" and winning_color == "Red": win = True; payout_ratio = 1
-                elif bet_type == "Black" and winning_color == "Black": 
-                    win = True; payout_ratio = 1
-                    unlock_achievement("rl_win_black") # <-- GÜNCELLENDİ
-                elif bet_type == "Odd" and winning_odd_even == "Odd": win = True; payout_ratio = 1
+                    if bet_type.startswith("number_"):
+                        bet_num = int(bet_type.split("_")[1])
+                        if bet_num == winning_number: 
+                            win = True; payout_ratio = 35
+                            if bet_num == 0:
+                                unlock_achievement("rl_win_0") # <-- BAŞARIM KODU
+                    elif bet_type == "Red" and winning_color == "Red": win = True; payout_ratio = 1
+                    elif bet_type == "Black" and winning_color == "Black": 
+                        win = True; payout_ratio = 1
+                        unlock_achievement("rl_win_black") # <-- BAŞARIM KODU
+                    elif bet_type == "Odd" and winning_odd_even == "Odd": win = True; payout_ratio = 1
                     elif bet_type == "Even" and winning_odd_even == "Even": win = True; payout_ratio = 1
                     elif bet_type == "Low" and winning_low_high == "Low": win = True; payout_ratio = 1
                     elif bet_type == "High" and winning_low_high == "High": win = True; payout_ratio = 1
