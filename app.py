@@ -2124,11 +2124,11 @@ with tab_crash:
         else:
             return round(random.uniform(5.01, 15.0), 2)
 
-    # Çarpanı geçen süreye göre hesapla (yavaş başlar, hızlanır)
+    # Çarpanı geçen süreye göre hesapla (DÜZELTME: DAHA YAVAŞ HIZLANMA)
     def get_current_multiplier(start_time):
         elapsed = time.time() - start_time
-        # y = 1 + 0.1 * x^1.2 (yavaş başlar, hızlanır)
-        multiplier = 1 + 0.1 * (elapsed ** 1.2)
+        # y = 1 + 0.05 * x^1.15 (Daha yavaş hızlanma)
+        multiplier = 1 + 0.05 * (elapsed ** 1.15)
         return round(multiplier, 2)
 
     # --- Arayüz ---
@@ -2145,11 +2145,14 @@ with tab_crash:
             st.error("You are out of money! Reset features from the sidebar.")
         else:
             st.session_state.sc_message = "" # Mesajı temizle
-            default_sc_bet = min(st.session_state.sc_bet, st.session_state.player_balance)
+            
+            # DÜZELTME: MixedNumericTypesError için int() kullan
+            current_balance_int = int(st.session_state.player_balance)
+            default_sc_bet = min(st.session_state.sc_bet, current_balance_int)
             
             with st.form(key="sc_bet_form"):
                 bet_amount = st.number_input(
-                    "Bet Amount:", min_value=1, max_value=st.session_state.player_balance,
+                    "Bet Amount:", min_value=1, max_value=current_balance_int, # DÜZELTME
                     value=default_sc_bet, step=1
                 )
                 start_climb_button = st.form_submit_button("Start the Climb")
@@ -2180,7 +2183,6 @@ with tab_crash:
             st.stop() # Script'i burada durdur
 
         # 3. Animasyonu ÖNCE GÜNCELLE
-        #    Kullanıcının isteği üzerine daha büyük animasyon:
         with st.session_state.sc_animation_placeholder.container():
             st.markdown(f"<h1 style='text-align: center; color: #2E8B57; font-size: 4em;'>{multiplier:.2f}x</h1>", unsafe_allow_html=True)
             
@@ -2191,11 +2193,11 @@ with tab_crash:
             # Emojiyi hareket ettir
             steps = 20
             emoji_pos = int(progress / (100 / steps))
-            # Monospace (sabit genişlikli) bir fontta boşluk kullan
-            trail = "&nbsp;" * emoji_pos
-            remaining = "&nbsp;" * (steps - emoji_pos)
             
-            # st.code'u st.markdown ile değiştir
+            # DÜZELTME: Animasyonun görünür olması için trail karakterini değiştir
+            trail = "·" * emoji_pos # Gidilen yolu · ile göster
+            remaining = "&nbsp;" * (steps - emoji_pos) # Kalan yolu boşlukla
+            
             st.markdown(f"<h2 style='text-align: center; font-family: monospace; background-color: #f0f2f6; padding: 10px; border-radius: 5px;'>[{trail}🧑‍🔬🪨{remaining}]⛰️</h2>", unsafe_allow_html=True)
             
             st.progress(progress, text=f"{progress}% to the (visual) peak")
@@ -2204,12 +2206,14 @@ with tab_crash:
         # 4. Crash olmadıysa, Cash Out BUTONUNU GÖSTER (Animasyondan SONRA)
         if st.button(f"CASH OUT @ {st.session_state.sc_multiplier:.2f}x", type="primary", use_container_width=True, key="sc_cashout_button"):
             # --- KAZANMA DURUMU ---
+            
+            # DÜZELTME: MixedNumericTypesError için round() kullan
             winnings = st.session_state.sc_bet * st.session_state.sc_multiplier
             net_profit = winnings - st.session_state.sc_bet
-            st.session_state.player_balance += winnings # Bahis + kazanç
-            st.session_state.sc_message = f"⛰️ Cashed out at {st.session_state.sc_multiplier:.2f}x! You win {net_profit:.0f}."
+            st.session_state.player_balance += round(winnings) # Bahis + kazanç (YUVARLA)
+            st.session_state.sc_message = f"⛰️ Cashed out at {st.session_state.sc_multiplier:.2f}x! You win {round(net_profit)}." # YUVARLA
             st.session_state.sc_state = "finished"
-            add_history("sc", st.session_state.sc_bet, net_profit, st.session_state.player_balance)
+            add_history("sc", st.session_state.sc_bet, round(net_profit), st.session_state.player_balance) # YUVARLA
             st.balloons()
             st.rerun() # Bitiş ekranına git
             st.stop() # Script'i burada durdur
