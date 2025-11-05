@@ -2164,7 +2164,7 @@ with tab_crash:
                 st.session_state.sc_state = "climbing"
                 st.rerun()
 
-    # --- Tırmanış (Oyun) Aşaması ---
+   # --- Tırmanış (Oyun) Aşaması ---
     elif st.session_state.sc_state == "climbing":
         
         # 1. Çarpanı hesapla
@@ -2177,7 +2177,7 @@ with tab_crash:
             st.session_state.sc_state = "finished"
             add_history("sc", st.session_state.sc_bet, -st.session_state.sc_bet, st.session_state.player_balance)
             st.rerun() # Bitiş ekranına git
-            return # Bu script çalışmasını burada durdur
+            st.stop() # DÜZELTME: Script'i burada durdur
 
         # 3. Crash olmadıysa, Cash Out BUTONUNU GÖSTER (Artık her karede çizilecek)
         if st.button(f"CASH OUT @ {st.session_state.sc_multiplier:.2f}x", type="primary", use_container_width=True, key="sc_cashout_button"):
@@ -2190,10 +2190,9 @@ with tab_crash:
             add_history("sc", st.session_state.sc_bet, net_profit, st.session_state.player_balance)
             st.balloons()
             st.rerun() # Bitiş ekranına git
-            return # Bu script çalışmasını burada durdur
+            st.stop() # DÜZELTME: Script'i burada durdur
 
         # 4. Butonları ve kontrolleri çizdikten sonra, animasyonu GÜNCELLE
-        #    (while True: DÖNGÜSÜNÜN DIŞINDA, st.rerun'dan önce)
         with st.session_state.sc_animation_placeholder.container():
             st.markdown(f"<h1 style='text-align: center; color: #2E8B57; font-size: 4em;'>{multiplier:.2f}x</h1>", unsafe_allow_html=True)
             
