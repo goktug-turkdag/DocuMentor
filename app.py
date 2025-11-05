@@ -2030,7 +2030,7 @@ with tab_stats:
     
     game_stats_data = []
     game_keys = ["bj", "cf", "rl", "slot", "vp", "sc"] # YENİ OYUNU EKLE
-    game_names = {"bj": "Blackjack", "cf": "Coin Flip", "rl": "Roulette", "slot": "Slots", "vp": "Video Poker", "sc": "Sisyphus' Climb"} # YENİ OYUNU EKLE
+    game_names = {"bj": "Blackjack", "cf": "Coin Flip", "rl": "Roulette", "slot": "Slots", "vp": "Video Poker", "sc": "Sisyphus' Climb"} # YENİ OYUNU EKLE
 
     for game_key in game_keys:
         game_data = stats.get(game_key)
