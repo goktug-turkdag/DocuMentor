@@ -2151,18 +2151,17 @@ with tab_crash:
         multiplier = 1 + 0.05 * (elapsed ** 1.15) # Yavaş hızlanma
         return round(multiplier, 2)
     
-    # Animasyonu çizen modüler fonksiyon
+    # DÜZELTME: Animasyonu çizen modüler fonksiyon (TEMİZ CSS İLE)
     def draw_sisyphus_animation(multiplier, state="betting"):
         """
         Sisyphus animasyonunu mevcut duruma göre çizer.
-        state: "betting", "climbing", "cashed_out", "crashed"
         """
         
         # 1. Çarpan Metnini Hazırla
         color = "#4CAF50" # Yeşil (Climbing)
         if state == "betting":
             color = "#808080" # Gri
-            multiplier = 1.00 # Bahis yaparken 1.00'da başla
+            multiplier = 1.00 
         elif state == "crashed":
             color = "#DC143C" # Kırmızı (Crash)
         
@@ -2174,36 +2173,24 @@ with tab_crash:
         if state in ["climbing", "cashed_out", "crashed"]:
             progress = min(100, int((multiplier - 1.0) / (max_visual_multiplier - 1.0) * 100))
         
-        # 0'dan 100'e ilerlemeyi CSS pozisyonlarına (yüzde) çevir
         bottom_pos = progress * 0.85 # 0% -> 85%
         left_pos = 5 + (progress * 0.8) # 5% -> 85%
         
-        # 3. HTML Animasyonunu Çiz
-        html_animation = f"""
-        <div style="
-            position: relative; 
-            width: 100%; 
-            height: 250px; 
-            background: linear-gradient(160deg, #CD853F 20%, #8B4513 100%); 
-            border-radius: 10px;
-            border-bottom: 5px solid #5C2F0E;
-            overflow: hidden; 
-            margin-top: 10px;
-        ">
-            <div style="position:absolute; top: 10px; right: 10px; font-size: 2.5em;">🏁</div>
-            <div style="position:absolute; top: 35px; right: 10px; font-size: 1.0em; color: white;">(99x)</div>
+        # 3. DÜZELTME: HTML/CSS'i Streamlit'in seveceği şekilde tek satıra indirge
+        style_mountain = "position: relative; width: 100%; height: 250px; background: linear-gradient(160deg, #CD853F 20%, #8B4513 100%); border-radius: 10px; border-bottom: 5px solid #5C2F0E; overflow: hidden; margin-top: 10px;"
+        style_peak = "position:absolute; top: 10px; right: 10px; font-size: 2.5em;"
+        style_peak_text = "position:absolute; top: 35px; right: 10px; font-size: 1.0em; color: white;"
+        style_sisyphus = f"position: absolute; bottom: {bottom_pos}%; left: {left_pos}%; font-size: 3em;"
 
-            <div style="
-                position: absolute; 
-                bottom: {bottom_pos}%; 
-                left: {left_pos}%; 
-                font-size: 3em; 
-            ">
+        html_animation = f"""
+        <div style="{style_mountain}">
+            <div style="{style_peak}">🏁</div>
+            <div style="{style_peak_text}">(99x)</div>
+            <div style="{style_sisyphus}">
                 🧍🪨
             </div>
         </div>
         """
-        # DÜZELTME: HTML'i render etmesi için unsafe_allow_html=True EKLENDİ
         st.markdown(html_animation, unsafe_allow_html=True)
         st.progress(progress)
 
@@ -2254,48 +2241,42 @@ with tab_crash:
             st.session_state.sc_message = f"💥 CRASHED at {st.session_state.sc_crash_point:.2f}x! The boulder rolled back down."
             st.session_state.sc_state = "finished"
             add_history("sc", st.session_state.sc_bet, -st.session_state.sc_bet, st.session_state.player_balance)
-            st.rerun() # Bitiş ekranına git
-            st.stop() # Script'i burada durdur
+            st.rerun() 
+            st.stop() 
 
-        # 3. Animasyonu Çiz (Doğrudan)
+        # 3. Animasyonu Çiz
         draw_sisyphus_animation(multiplier, state="climbing")
 
-        # 4. Cash Out BUTONUNU GÖSTER (Animasyondan SONRA)
+        # 4. Cash Out BUTONUNU GÖSTER 
         if st.button(f"CASH OUT @ {st.session_state.sc_multiplier:.2f}x", type="primary", use_container_width=True, key="sc_cashout_button"):
-            # --- KAZANMA DURUMU ---
             winnings = st.session_state.sc_bet * st.session_state.sc_multiplier
             net_profit = winnings - st.session_state.sc_bet
             st.session_state.player_balance += round(winnings)
             st.session_state.sc_message = f"⛰️ Cashed out at {st.session_state.sc_multiplier:.2f}x! You win {round(net_profit)}."
-            st.session_state.sc_state = "finished" # Durumu "finished" yap
+            st.session_state.sc_state = "finished" 
             add_history("sc", st.session_state.sc_bet, round(net_profit), st.session_state.player_balance)
             st.balloons()
-            st.rerun() # Bitiş ekranına git
-            st.stop() # Script'i burada durdur
+            st.rerun() 
+            st.stop() 
 
-        # 5. Ekranı yenilemek için kısa bir bekleme ve script'i tekrar çalıştır
+        # 5. Ekranı yenile
         time.sleep(0.05) 
         st.rerun()
             
     # --- Bitiş Aşaması ---
     elif st.session_state.sc_state == "finished":
-        # Sonuç mesajını ve animasyonun son halini göster
         
         final_multiplier = st.session_state.sc_multiplier
         
         if "Cashed out" in st.session_state.sc_message:
             st.success(st.session_state.sc_message)
-            # Animasyonun son halini (kazanılan) göster
             draw_sisyphus_animation(final_multiplier, state="cashed_out")
             st.caption(f"The boulder would have crashed at {st.session_state.sc_crash_point:.2f}x.")
         else:
             st.error(st.session_state.sc_message)
-            # Animasyonun son halini (crash) göster
-            # DÜZELTME: Crash noktasını göster
             draw_sisyphus_animation(st.session_state.sc_crash_point, state="crashed")
             
         if st.button("Play Again", use_container_width=True):
-            # Sadece oyun state'ini sıfırla, bakiyeyi değil
             reset_sisyphus_climb_state(reset_balance=False)
             st.rerun()
 
