@@ -21,6 +21,49 @@ from langchain.prompts import PromptTemplate, ChatPromptTemplate # Creative Corn
 from langchain_core.messages import HumanMessage, AIMessage
 from langchain_community.document_loaders import PyPDFLoader, Docx2txtLoader, TextLoader
 
+# --- 1.A BAŞARIM SİSTEMİ: ANA LİSTE (YENİ) ---
+ACHIEVEMENT_LIST = {
+    # General
+    "gen_welcome": {"name": "Hoşgeldin Paketi", "desc": "Oyunu ilk kez açtın. (Bu bedavaydı.)", "icon": "👋"},
+    "gen_balance_10k": {"name": "Nostradamus musun?", "desc": "Bakiyeni 10,000'in üzerine çıkar. Geleceği mi görüyorsun?", "icon": "🔮"},
+    "gen_balance_100": {"name": "Son Pişmanlık", "desc": "Bakiyen 100'ün altına düştü. (Müslüm Baba anısına)", "icon": "🎻"},
+    "gen_win_1000": {"name": "I'M NOT LEAVING!", "desc": "Tek bir bahisten 1000 veya daha fazla kazan.", "icon": "🐺"},
+    "gen_played_all": {"name": "Mekanın Sahibi", "desc": "Tüm 6 oyunu (BJ, CF, RL, Slots, VP, SC) en az bir kez oyna.", "icon": "👑"},
+
+    # Blackjack
+    "bj_win_1": {"name": "Acemi Şansı", "desc": "İlk Blackjack elini kazan.", "icon": "🃏"},
+    "bj_win_25": {"name": "Kasa Katili", "desc": "Blackjack'te 25 el kazan.", "icon": "🦈"},
+    "bj_blackjack": {"name": "Natural 21", "desc": "Daha ilk iki kartta Blackjack yap.", "icon": "✨"},
+    "bj_charlie": {"name": "Beşibiryerde", "desc": "5-Card Charlie ile bir el kazan (Batmadan 5 kart çek).", "icon": "✋"},
+    "bj_split_win": {"name": "Dublör", "desc": "Elleri böldükten (Split) sonra en az bir eli kazan.", "icon": "👯"},
+    "bj_side_bet": {"name": "Yan Gelir", "desc": "Bir Blackjack yan bahsi (e.g., 21+3, PP) kazan.", "icon": "💸"},
+
+    # Coin Flip
+    "cf_win_10": {"name": "Yazı Tura", "desc": "Toplam 10 kez Yazı Tura kazan.", "icon": "🪙"},
+    "cf_played_25": {"name": "Flipping Out", "desc": "25 kez Yazı Tura oyna.", "icon": "🔄"},
+
+    # Roulette
+    "rl_win_0": {"name": "Can Polat'ım...", "desc": "0'a (Yeşil) bahis koy ve tesbihin 35 kat değerlensin.", "icon": "📿"},
+    "rl_win_black": {"name": "Always Bet on Black", "desc": "Siyaha bahis koy ve kazan. (Wesley Snipes anısına)", "icon": "⚫"},
+    "rl_played_25": {"name": "Dönme Dolap", "desc": "Rulette 25 spin oyna.", "icon": "🎡"},
+
+    # Slots
+    "slot_jackpot_7": {"name": "Midas Dokunuşu", "desc": "Slot makinesinde ❼❼❼ (Jackpot) yakala.", "icon": "💎"},
+    "slot_win_cherry": {"name": "Kiraz Mevsimi", "desc": "Slotlarda iki 🍒 ile kazan.", "icon": "🍒"},
+    "slot_played_100": {"name": "Kolu Çürüttün", "desc": "Slot makinesinde 100 kez spin at.", "icon": "🦾"},
+
+    # Video Poker
+    "vp_win_royal": {"name": "Ezel", "desc": "Royal Flush yakala. İntikam soğuk yenen bir yemektir.", "icon": "👑"},
+    "vp_win_aces": {"name": "Kare As", "desc": "Dört As (Four of a Kind) ile bir el kazan.", "icon": "♠️"},
+    "vp_played_25": {"name": "Poker Face", "desc": "Video Pokerde 25 el oyna.", "icon": "😐"},
+
+    # Sisyphus' Climb
+    "sc_cashout_20x": {"name": "Fly Me to the Moon", "desc": "Sisyphus ile 20x veya daha yüksek bir çarpanda cash out yap.", "icon": "🚀"},
+    "sc_cashout_50x": {"name": "Zirve", "desc": "Sisyphus ile 50x veya daha yüksek bir çarpanda cash out yap.", "icon": "🏔️"},
+    "sc_crash_early": {"name": "Absürd", "desc": "Sisyphus 1.05x veya altında crash yapsın (Kaybet). (Camus anısına)", "icon": "💥"},
+    "sc_cashout_1_01x": {"name": "Risk Budur.", "desc": "Tam olarak 1.01x'te cash out yap. (İronik)", "icon": "🐔"},
+}
+
 # --- 1. SETUP, CACHING VE API ANAHTARLARI ---
 load_dotenv()
 if "GOOGLE_API_KEY" not in os.environ:
@@ -155,8 +198,7 @@ st.set_page_config(page_title="DocuMentor", layout="wide")
 st.title("DocuMentor 📄")
 
 # --- Sekmeler ---
-# YENİ OYUN (SISYPHUS) EKLENMİŞ VE GİRİNTİLER DÜZELTİLMİŞTİR
-tab_chat, tab_blackjack, tab_coinflip, tab_roulette, tab_slots, tab_vpoker, tab_stats, tab_crash, tab_music, tab_creative, tab_settings = st.tabs([
+tab_chat, tab_blackjack, tab_coinflip, tab_roulette, tab_slots, tab_vpoker, tab_stats, tab_achievements, tab_crash, tab_music, tab_creative, tab_settings = st.tabs([
     "💬 Chatbot",
     "🃏 Blackjack",
     "🪙 Coin Flip",
@@ -164,11 +206,23 @@ tab_chat, tab_blackjack, tab_coinflip, tab_roulette, tab_slots, tab_vpoker, tab_
     "🎰 Slots",
     "🃏 Video Poker",
     "📊 Stats",
-    "⛰️ Sisyphus' Climb", # YENİ SEKME
+    "🏆 Achievements", # YENİ SEKME
+    "⛰️ Sisyphus' Climb",
     "🎶 Music Player",
     "🎨 Creative Corner",
     "⚙️ Settings"
 ])
+
+# --- 1.E BAŞARIM SİSTEMİ: BİLDİRİM SIRASI ---
+if "achievement_queue" in st.session_state:
+    while st.session_state.achievement_queue:
+        ach_id = st.session_state.achievement_queue.pop(0)
+        if ach_id in st.session_state.achievements:
+            ach_data = st.session_state.achievements[ach_id]
+            st.toast(f"Başarım Açıldı! {ach_data['name']}", icon=ach_data['icon'])
+            time.sleep(0.5) # Bildirimlerin üst üste binmemesi için
+
+# --- BURADAN İTİBAREN SEKME KODLARI BAŞLAR ---
 
 # --- Sidebar ---
 with st.sidebar:
@@ -280,6 +334,26 @@ if "player_stats" not in st.session_state:
 
 # Oyunlar için state başlatmaları, ilgili sekmelerin başına taşındı
 
+# Oyuncu İstatistikleri için State
+if "player_stats" not in st.session_state:
+    # ... (mevcut kodunuz) ...
+    
+# --- 1.B BAŞARIM SİSTEMİ: STATE BAŞLATMA ---
+if "achievements" not in st.session_state:
+    st.session_state.achievements = {
+        ach_id: {
+            "name": data["name"],
+            "description": data["desc"],
+            "icon": data["icon"],
+            "unlocked": False
+        } for ach_id, data in ACHIEVEMENT_LIST.items()
+    }
+    # İlk başarıyı hemen aç (ID GÜNCELLENDİ)
+    st.session_state.achievements["gen_welcome"]["unlocked"] = True 
+
+if "achievement_queue" not in st.session_state:
+    st.session_state.achievement_queue = [] # Bildirimler için
+
 # --- Yardımcı Fonksiyonlar ---
 # Bakiye Geçmişi ve İstatistik Güncelleme
 def add_history(game_key, bet, outcome, balance):
@@ -342,9 +416,15 @@ def add_history(game_key, bet, outcome, balance):
              stats[game_key]["played"] += 1 # Diğer oyunlar için her zaman 1 artır
             
         st.session_state.player_stats = stats
+        # --- 1.D BAŞARIM SİSTEMİ: KONTROLLERİ ÇAĞIR (BURAYA YENİ EKLİYORSUNUZ) ---
+            check_stat_achievements() # İstatistik bazlıları kontrol et
+            
+            # ID GÜNCELLENDİ (gen_win_1000) ve KOŞUL DEĞİŞTİ (1000)
+            if outcome >= 1000: 
+                unlock_achievement("gen_win_1000")
+
     except Exception as e:
          print(f"Stats update error for game_key '{game_key}': {e}")
-
 
 def display_history(game_key):
      history_key = f"{game_key}_history"
@@ -370,6 +450,50 @@ def reset_stats_state():
      }
 globals()["st_reset_func"] = reset_stats_state
 
+globals()["st_reset_func"] = reset_stats_state
+
+
+# --- 1.C BAŞARIM SİSTEMİ: YARDIMCI FONKSİYONLAR (YENİ) ---
+def unlock_achievement(ach_id):
+    """Bir başarımı açar ve bildirim sırasına ekler."""
+    if ach_id in st.session_state.achievements and not st.session_state.achievements[ach_id]["unlocked"]:
+        st.session_state.achievements[ach_id]["unlocked"] = True
+        st.session_state.achievement_queue.append(ach_id)
+
+def check_stat_achievements():
+    """İstatistiklere dayalı başarımları kontrol eder."""
+    try:
+        stats = st.session_state.player_stats
+        
+        # General
+        if st.session_state.player_balance >= 10000: unlock_achievement("gen_balance_10k")
+        if st.session_state.player_balance < 100: unlock_achievement("gen_balance_100")
+        
+        # Tüm oyunları oynadı mı?
+        if (stats["bj"]["played"] > 0 and stats["cf"]["played"] > 0 and 
+            stats["rl"]["played"] > 0 and stats["slot"]["played"] > 0 and 
+            stats["vp"]["played"] > 0 and stats["sc"]["played"] > 0):
+            unlock_achievement("gen_played_all")
+
+        # Blackjack
+        if stats["bj"]["won"] >= 1: unlock_achievement("bj_win_1")
+        if stats["bj"]["won"] >= 25: unlock_achievement("bj_win_25")
+        
+        # Coin Flip
+        if stats["cf"]["won"] >= 10: unlock_achievement("cf_win_10")
+        if stats["cf"]["played"] >= 25: unlock_achievement("cf_played_25")
+        
+        # Roulette
+        if stats["rl"]["played"] >= 25: unlock_achievement("rl_played_25")
+
+        # Slots
+        if stats["slot"]["played"] >= 100: unlock_achievement("slot_played_100")
+
+        # Video Poker
+        if stats["vp"]["played"] >= 25: unlock_achievement("vp_played_25")
+        
+    except Exception as e:
+        print(f"Error checking stat achievements: {e}")
 
 # --- Genişletilmiş Güvenlik Bariyeri ---
 BANNED_KEYWORDS = [
@@ -1057,6 +1181,7 @@ with tab_blackjack:
                             st.session_state.player_balance += winnings + st.session_state.bet_perfect_pairs
                             side_messages.append(f"**Perfect Pairs Win: +{winnings}!** ({pp_payout}:1)")
                             add_history("bj", st.session_state.bet_perfect_pairs, winnings, st.session_state.player_balance)
+                            unlock_achievement("bj_side_bet") # <-- BU SATIRI GÜNCELLEYİN/EKLEYİN
                         else:
                             add_history("bj", st.session_state.bet_perfect_pairs, -st.session_state.bet_perfect_pairs, st.session_state.player_balance)
 
@@ -1068,6 +1193,7 @@ with tab_blackjack:
                             st.session_state.player_balance += winnings + st.session_state.bet_21_3
                             side_messages.append(f"**21+3 Win: +{winnings}!** ({p3_payout}:1)")
                             add_history("bj", st.session_state.bet_21_3, winnings, st.session_state.player_balance)
+                            unlock_achievement("bj_side_bet") # <-- BU SATIRI GÜNCELLEYİN/EKLEYİN
                         else:
                             add_history("bj", st.session_state.bet_21_3, -st.session_state.bet_21_3, st.session_state.player_balance)
 
@@ -1108,6 +1234,7 @@ with tab_blackjack:
                         st.session_state.game_message = "Push! Both have Blackjack. 😐"
                         st.session_state.player_balance += st.session_state.current_bet
                         add_history("bj", st.session_state.current_bet, 0, st.session_state.player_balance)
+                        unlock_achievement("bj_blackjack") # <-- BU SATIRI GÜNCELLEYİN/EKLEYİN
                         if st.session_state.bet_lucky_seven > 0: add_history("bj", st.session_state.bet_lucky_seven, -st.session_state.bet_lucky_seven, st.session_state.player_balance)
 
                     elif dealer_score == 21: 
@@ -1410,6 +1537,7 @@ with tab_blackjack:
         while dealer_score < 17:
             time.sleep(0.7) 
             if len(st.session_state.deck) > 0: 
+                unlock_achievement("bj_split_win") # <-- BU SATIRI GÜNCELLEYİN/EKLEYİN
                 st.session_state.dealer_hand.append(st.session_state.deck.pop())
                 dealer_score = calculate_score(st.session_state.dealer_hand)
                 with dealer_hand_placeholder.container():
@@ -1459,6 +1587,7 @@ with tab_blackjack:
                  win_amount = bet
                  st.session_state.player_balance += bet + win_amount 
                  add_history("bj", bet, win_amount, st.session_state.player_balance)
+                 unlock_achievement("bj_charlie") # <-- BU SATIRI GÜNCELLEYİN/EKLEYİN
              elif state == 'bust':
                  final_messages.append(f"{hand_id}: Bust! 💥 You lose.")
                  add_history("bj", bet, -bet, st.session_state.player_balance)
@@ -1685,15 +1814,20 @@ with tab_roulette:
                 net_outcome = -total_current_bet
 
                 for bet_type, bet_amount in st.session_state.roulette_bets.items():
-                    win = False
-                    payout_ratio = 0
+                win = False
+                payout_ratio = 0
 
-                    if bet_type.startswith("number_"):
-                        bet_num = int(bet_type.split("_")[1])
-                        if bet_num == winning_number: win = True; payout_ratio = 35
-                    elif bet_type == "Red" and winning_color == "Red": win = True; payout_ratio = 1
-                    elif bet_type == "Black" and winning_color == "Black": win = True; payout_ratio = 1
-                    elif bet_type == "Odd" and winning_odd_even == "Odd": win = True; payout_ratio = 1
+                if bet_type.startswith("number_"):
+                    bet_num = int(bet_type.split("_")[1])
+                    if bet_num == winning_number: 
+                        win = True; payout_ratio = 35
+                        if bet_num == 0:
+                            unlock_achievement("rl_win_0") # <-- GÜNCELLENDİ
+                elif bet_type == "Red" and winning_color == "Red": win = True; payout_ratio = 1
+                elif bet_type == "Black" and winning_color == "Black": 
+                    win = True; payout_ratio = 1
+                    unlock_achievement("rl_win_black") # <-- GÜNCELLENDİ
+                elif bet_type == "Odd" and winning_odd_even == "Odd": win = True; payout_ratio = 1
                     elif bet_type == "Even" and winning_odd_even == "Even": win = True; payout_ratio = 1
                     elif bet_type == "Low" and winning_low_high == "Low": win = True; payout_ratio = 1
                     elif bet_type == "High" and winning_low_high == "High": win = True; payout_ratio = 1
@@ -1768,16 +1902,19 @@ with tab_slots:
         if reels[0] == middle_symbol == reels[2]:
             symbol = middle_symbol
             if symbol in payouts and 3 in payouts[symbol]:
+                if symbol == "❼":
+                    unlock_achievement("slot_jackpot_7") # <-- BAŞARIM TETİKLEYİCİSİ
                 multiplier = payouts[symbol][3]
                 winnings = bet * multiplier
                 return winnings, f"🎉 JACKPOT! Three {symbol}! Win {winnings} ({multiplier}x)!"
 
-        # İkili kiraz (sadece ortada başlarsa)
+        # İkili kiraz
         if (reels[0] == "🍒" == reels[1]) or (reels[1] == "🍒" == reels[2]):
-             if "🍒" in payouts and 2 in payouts["🍒"]:
-                 multiplier = payouts["🍒"][2]
-                 winnings = bet * multiplier
-                 return winnings, f"🍒 Two Cherries! Win {winnings} ({multiplier}x)!"
+                if "🍒" in payouts and 2 in payouts["🍒"]:
+                    unlock_achievement("slot_win_cherry") # <-- BAŞARIM TETİKLEYİCİSİ
+                    multiplier = payouts["🍒"][2]
+                    winnings = bet * multiplier
+                    return winnings, f"🍒 Two Cherries! Win {winnings} ({multiplier}x)!"
 
         return 0, "😕 No win this time."
 
@@ -1877,19 +2014,25 @@ with tab_vpoker:
         numerical_ranks = sorted(list(set(vp_rank_map.get(r, 0) for r in ranks)))
         is_straight = len(numerical_ranks) == 5 and (numerical_ranks[-1] - numerical_ranks[0] == 4)
         if numerical_ranks == [2, 3, 4, 5, 14]: is_straight = True 
-        
-        if is_straight and is_flush and numerical_ranks[-1] == 14 and numerical_ranks[0] == 10: return "Royal Flush"
+            
+        if is_straight and is_flush and numerical_ranks[-1] == 14 and numerical_ranks[0] == 10: 
+            unlock_achievement("vp_win_royal") # <-- BAŞARIM TETİKLEYİCİSİ
+            return "Royal Flush"
         if is_straight and is_flush: return "Straight Flush"
-        if 4 in rank_counts.values(): return "Four of a Kind"
-        if sorted(rank_counts.values()) == [2, 3]: return "Full House"
-        if is_flush: return "Flush"
-        if is_straight: return "Straight"
+        if 4 in rank_counts.values(): 
+            # Dörtlünün 'A' olup olmadığını kontrol et
+            four_kind_rank = [rank for rank, count in rank_counts.items() if count == 4][0]
+            if four_kind_rank == 'A':
+                unlock_achievement("vp_win_aces") # <-- BAŞARIM TETİKLEYİCİSİ
+            return "Four of a Kind"
+        if sorted(rank_counts.values()) == [2, 3]: 
+            return "Full House"
         if 3 in rank_counts.values(): return "Three of a Kind"
         if list(rank_counts.values()).count(2) == 2: return "Two Pair"
         for rank, count in rank_counts.items():
             if count == 2 and rank in ['J', 'Q', 'K', 'A']:
                 return "Jacks or Better"
-        return "Nothing" 
+        return "Nothing"
 
     vp_rank_map = {'2':2, '3':3, '4':4, '5':5, '6':6, '7':7, '8':8, '9':9, '10':10, 'J':11, 'Q':12, 'K':13, 'A':14}
 
@@ -1996,6 +2139,34 @@ with tab_vpoker:
                 st.rerun()
 
     display_history("vp")
+
+# --- SEKME 7: BAŞARIMLAR (YENİ) ---
+with tab_achievements:
+    st.header("🏆 Achievements")
+    
+    unlocked_count = sum(1 for ach in st.session_state.achievements.values() if ach["unlocked"])
+    total_count = len(st.session_state.achievements)
+    st.progress(unlocked_count / total_count, text=f"{unlocked_count} / {total_count} Kilidi Açıldı")
+    st.markdown("---")
+    
+    st.subheader("Açılan Başarımlar")
+    unlocked_achs = [ach for ach in st.session_state.achievements.values() if ach["unlocked"]]
+    if not unlocked_achs:
+        st.caption("Henüz hiç başarım açılmadı. Oynamaya başla!")
+    
+    # Kilidi açılanları 3 sütunlu bir grid'de göster
+    cols = st.columns(3)
+    col_idx = 0
+    for ach in unlocked_achs:
+        with cols[col_idx]:
+            st.success(f"**{ach['icon']} {ach['name']}**\n\n*{ach['description']}*")
+        col_idx = (col_idx + 1) % 3
+
+    # Kilitlileri bir expander içinde göster
+    with st.expander("Kilitli Başarımları Göster"):
+        locked_achs = [ach for ach in st.session_state.achievements.values() if not ach["unlocked"]]
+        for ach in locked_achs:
+            st.info(f"**🔒 {ach['name']}** - *{ach['description']}*")
 
 # --- SEKME 7: STATS ---
 with tab_stats:
@@ -2240,24 +2411,41 @@ with tab_crash:
         if multiplier >= st.session_state.sc_crash_point:
             st.session_state.sc_message = f"💥 CRASHED at {st.session_state.sc_crash_point:.2f}x! The boulder rolled back down."
             st.session_state.sc_state = "finished"
+            
+            if st.session_state.sc_crash_point <= 1.05: # 1.05 veya altı
+                 unlock_achievement("sc_crash_early") # <-- BAŞARIM TETİKLEYİCİSİ
+                 
             add_history("sc", st.session_state.sc_bet, -st.session_state.sc_bet, st.session_state.player_balance)
             st.rerun() 
-            st.stop() 
+            st.stop()
 
         # 3. Animasyonu Çiz
         draw_sisyphus_animation(multiplier, state="climbing")
 
-        # 4. Cash Out BUTONUNU GÖSTER 
+        # 4. Cash Out BUTONUNU GÖSTER
         if st.button(f"CASH OUT @ {st.session_state.sc_multiplier:.2f}x", type="primary", use_container_width=True, key="sc_cashout_button"):
-            winnings = st.session_state.sc_bet * st.session_state.sc_multiplier
+            
+            # --- YENİ BAŞARIM KONTROLLERİ ---
+            current_multiplier = st.session_state.sc_multiplier
+            if current_multiplier >= 50.0:
+                unlock_achievement("sc_cashout_50x")
+            elif current_multiplier >= 20.0:
+                unlock_achievement("sc_cashout_20x")
+            
+            if current_multiplier == 1.01:
+                unlock_achievement("sc_cashout_1_01x")
+            # --- BİTTİ ---
+
+            # --- KAZANMA DURUMU ---
+            winnings = st.session_state.sc_bet * current_multiplier
             net_profit = winnings - st.session_state.sc_bet
             st.session_state.player_balance += round(winnings)
-            st.session_state.sc_message = f"⛰️ Cashed out at {st.session_state.sc_multiplier:.2f}x! You win {round(net_profit)}."
+            st.session_state.sc_message = f"⛰️ Cashed out at {current_multiplier:.2f}x! You win {round(net_profit)}."
             st.session_state.sc_state = "finished" 
             add_history("sc", st.session_state.sc_bet, round(net_profit), st.session_state.player_balance)
             st.balloons()
             st.rerun() 
-            st.stop() 
+            st.stop()
 
         # 5. Ekranı yenile
         time.sleep(0.05) 
