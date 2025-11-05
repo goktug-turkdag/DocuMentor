@@ -2079,7 +2079,7 @@ with tab_stats:
 # --- SEKME 7.5: SISYPHUS' CLIMB (CRASH GAME) ---
 with tab_crash:
     
-    # DÜZELTME: Cash Out butonunu yeşil yapmak için CSS enjekte et
+    # Cash Out butonunu yeşil yapmak için CSS enjekte et
     st.markdown("""
     <style>
     button[kind="primary"] {
@@ -2123,7 +2123,6 @@ with tab_crash:
         st.session_state.sc_start_time = 0
         st.session_state.sc_message = ""
         st.session_state.sc_history = []
-        # DÜZELTME: sc_animation_placeholder state'i kaldırıldı.
 
     # Reset Fonksiyonu
     def reset_sisyphus_climb_state(reset_balance=False):
@@ -2152,7 +2151,7 @@ with tab_crash:
         multiplier = 1 + 0.05 * (elapsed ** 1.15) # Yavaş hızlanma
         return round(multiplier, 2)
     
-    # DÜZELTME: Animasyonu çizen modüler fonksiyon
+    # Animasyonu çizen modüler fonksiyon
     def draw_sisyphus_animation(multiplier, state="betting"):
         """
         Sisyphus animasyonunu mevcut duruma göre çizer.
@@ -2199,12 +2198,12 @@ with tab_crash:
                 bottom: {bottom_pos}%; 
                 left: {left_pos}%; 
                 font-size: 3em; 
-                /* DÜZELTME: Transition kaldırıldı, st.rerun anlık pozisyonu belirleyecek */
             ">
                 🧍🪨
             </div>
         </div>
         """
+        # DÜZELTME: HTML'i render etmesi için unsafe_allow_html=True EKLENDİ
         st.markdown(html_animation, unsafe_allow_html=True)
         st.progress(progress)
 
@@ -2292,6 +2291,7 @@ with tab_crash:
         else:
             st.error(st.session_state.sc_message)
             # Animasyonun son halini (crash) göster
+            # DÜZELTME: Crash noktasını göster
             draw_sisyphus_animation(st.session_state.sc_crash_point, state="crashed")
             
         if st.button("Play Again", use_container_width=True):
