@@ -2075,7 +2075,7 @@ with tab_stats:
         st.success("Stats have been reset!")
         time.sleep(1)
         st.rerun()
-
+    
 # --- SEKME 7.5: SISYPHUS' CLIMB (CRASH GAME) ---
 with tab_crash:
     st.header("⛰️ Sisyphus' Climb")
@@ -2164,10 +2164,10 @@ with tab_crash:
                 st.session_state.sc_state = "climbing"
                 st.rerun()
 
-   # --- Tırmanış (Oyun) Aşaması ---
+    # --- Tırmanış (Oyun) Aşaması ---
     elif st.session_state.sc_state == "climbing":
         
-        # 1. Çarpanı hesapla
+        # 1. Çarpanı ve animasyon ilerlemesini hesapla
         multiplier = get_current_multiplier(st.session_state.sc_start_time)
         st.session_state.sc_multiplier = multiplier
 
@@ -2177,9 +2177,31 @@ with tab_crash:
             st.session_state.sc_state = "finished"
             add_history("sc", st.session_state.sc_bet, -st.session_state.sc_bet, st.session_state.player_balance)
             st.rerun() # Bitiş ekranına git
-            st.stop() # DÜZELTME: Script'i burada durdur
+            st.stop() # Script'i burada durdur
 
-        # 3. Crash olmadıysa, Cash Out BUTONUNU GÖSTER (Artık her karede çizilecek)
+        # 3. Animasyonu ÖNCE GÜNCELLE
+        #    Kullanıcının isteği üzerine daha büyük animasyon:
+        with st.session_state.sc_animation_placeholder.container():
+            st.markdown(f"<h1 style='text-align: center; color: #2E8B57; font-size: 4em;'>{multiplier:.2f}x</h1>", unsafe_allow_html=True)
+            
+            # Sisyphos animasyonu (BÜYÜK)
+            max_visual_multiplier = 10.0 # 10x'ten sonrası aynı görünür
+            progress = min(100, int((multiplier - 1.0) / (max_visual_multiplier - 1.0) * 100))
+            
+            # Emojiyi hareket ettir
+            steps = 20
+            emoji_pos = int(progress / (100 / steps))
+            # Monospace (sabit genişlikli) bir fontta boşluk kullan
+            trail = "&nbsp;" * emoji_pos
+            remaining = "&nbsp;" * (steps - emoji_pos)
+            
+            # st.code'u st.markdown ile değiştir
+            st.markdown(f"<h2 style='text-align: center; font-family: monospace; background-color: #f0f2f6; padding: 10px; border-radius: 5px;'>[{trail}🧑‍🔬🪨{remaining}]⛰️</h2>", unsafe_allow_html=True)
+            
+            st.progress(progress, text=f"{progress}% to the (visual) peak")
+
+
+        # 4. Crash olmadıysa, Cash Out BUTONUNU GÖSTER (Animasyondan SONRA)
         if st.button(f"CASH OUT @ {st.session_state.sc_multiplier:.2f}x", type="primary", use_container_width=True, key="sc_cashout_button"):
             # --- KAZANMA DURUMU ---
             winnings = st.session_state.sc_bet * st.session_state.sc_multiplier
@@ -2190,24 +2212,8 @@ with tab_crash:
             add_history("sc", st.session_state.sc_bet, net_profit, st.session_state.player_balance)
             st.balloons()
             st.rerun() # Bitiş ekranına git
-            st.stop() # DÜZELTME: Script'i burada durdur
+            st.stop() # Script'i burada durdur
 
-        # 4. Butonları ve kontrolleri çizdikten sonra, animasyonu GÜNCELLE
-        with st.session_state.sc_animation_placeholder.container():
-            st.markdown(f"<h1 style='text-align: center; color: #2E8B57; font-size: 4em;'>{multiplier:.2f}x</h1>", unsafe_allow_html=True)
-            
-            # Sisyphos animasyonu (basit)
-            max_visual_multiplier = 10.0 # 10x'ten sonrası aynı görünür
-            progress = min(100, int((multiplier - 1.0) / (max_visual_multiplier - 1.0) * 100))
-            
-            # Emojiyi hareket ettir
-            steps = 20
-            emoji_pos = int(progress / (100 / steps))
-            trail = "_" * emoji_pos
-            remaining = " " * (steps - emoji_pos)
-            st.code(f"[{trail}🧑‍🔬🪨{remaining}] ⛰️", language=None)
-            st.progress(progress)
-            
         # 5. Ekranı yenilemek için kısa bir bekleme ve script'i tekrar çalıştır (animasyon döngüsü)
         time.sleep(0.05) # Hızı ayarla (düşük tutun)
         st.rerun()
