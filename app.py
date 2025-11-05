@@ -155,17 +155,18 @@ st.set_page_config(page_title="DocuMentor", layout="wide")
 st.title("DocuMentor 📄")
 
 # --- Sekmeler ---
-tab_chat, tab_blackjack, tab_coinflip, tab_roulette, tab_slots, tab_vpoker, tab_stats, tab_music, tab_creative, tab_settings = st.tabs([
-    "💬 Chatbot",
-    "🃏 Blackjack",
-    "🪙 Coin Flip",
-    "🎡 Roulette",
-    "🎰 Slots",
-    "🃏 Video Poker", # Emoji güncellendi
-    "📊 Stats",
-    "🎶 Music Player",
-    "🎨 Creative Corner",
-    "⚙️ Settings"
+tab_chat, tab_blackjack, tab_coinflip, tab_roulette, tab_slots, tab_vpoker, tab_stats, tab_crash, tab_music, tab_creative, tab_settings = st.tabs([
+    "💬 Chatbot",
+    "🃏 Blackjack",
+    "🪙 Coin Flip",
+    "🎡 Roulette",
+    "🎰 Slots",
+    "🃏 Video Poker",
+    "📊 Stats",
+    "⛰️ Sisyphus' Climb", # YENİ SEKME
+    "🎶 Music Player",
+    "🎨 Creative Corner",
+    "⚙️ Settings"
 ])
 
 # --- Sidebar ---
@@ -204,6 +205,7 @@ with st.sidebar:
     sl_reset_func = lambda reset_balance=False: None
     vp_reset_func = lambda reset_balance=False: None
     st_reset_func = lambda: None # Stats reset için
+    sc_reset_func = lambda reset_balance=False: None # Sisyphus' Climb için
 
 
     # Butonlar
@@ -223,6 +225,7 @@ with st.sidebar:
         sl_reset_func(reset_balance=True)
         vp_reset_func(reset_balance=True)
         st_reset_func() # Stats reset
+        sc_reset_func(reset_balance=True) # YENİ OYUNU EKLE
 
         st.session_state.player_balance = 1000 # Bakiyeyi sıfırla
         st.success("Balance, feature states, and stats reset!")
@@ -270,6 +273,7 @@ if "player_stats" not in st.session_state:
         "rl": {"played": 0, "won": 0, "lost": 0},
         "slot": {"played": 0, "won": 0, "lost": 0},
         "vp": {"played": 0, "won": 0, "lost": 0},
+        "sc": {"played": 0, "won": 0, "lost": 0}, # YENİ İSTATİSTİK
         "biggest_win": 0, "biggest_loss": 0,
     }
 
@@ -360,6 +364,7 @@ def reset_stats_state():
         "rl": {"played": 0, "won": 0, "lost": 0},
         "slot": {"played": 0, "won": 0, "lost": 0},
         "vp": {"played": 0, "won": 0, "lost": 0},
+        "sc": {"played": 0, "won": 0, "lost": 0}, # YENİ İSTATİSTİK
         "biggest_win": 0,"biggest_loss": 0,
      }
 globals()["st_reset_func"] = reset_stats_state
@@ -2023,8 +2028,8 @@ with tab_stats:
     st.subheader("Performance by Game")
     
     game_stats_data = []
-    game_keys = ["bj", "cf", "rl", "slot", "vp"] 
-    game_names = {"bj": "Blackjack", "cf": "Coin Flip", "rl": "Roulette", "slot": "Slots", "vp": "Video Poker"}
+    game_keys = ["bj", "cf", "rl", "slot", "vp", "sc"] # YENİ OYUNU EKLE
+    game_names = {"bj": "Blackjack", "cf": "Coin Flip", "rl": "Roulette", "slot": "Slots", "vp": "Video Poker", "sc": "Sisyphus' Climb"} # YENİ OYUNU EKLE
 
     for game_key in game_keys:
         game_data = stats.get(game_key)
@@ -2069,6 +2074,163 @@ with tab_stats:
         st.success("Stats have been reset!")
         time.sleep(1)
         st.rerun()
+
+# --- SEKME 7.5: SISYPHUS' CLIMB (CRASH GAME) ---
+with tab_crash:
+    st.header("⛰️ Sisyphus' Climb")
+    st.markdown(
+        """
+        *"The struggle itself toward the heights is enough to fill a man's heart. One must imagine Sisyphus happy."* - Albert Camus
+       
+        Place your bet. Watch Sisyphus push the boulder (and the multiplier) up the mountain. 
+        **Cash out** before the boulder rolls back down (crashes)! How long can you resist?
+        """
+    )
+    st.markdown("---")
+
+    # State başlatma
+    if "sc_state" not in st.session_state:
+        st.session_state.sc_state = "betting" # betting, climbing, finished
+        st.session_state.sc_bet = 10
+        st.session_state.sc_multiplier = 1.0
+        st.session_state.sc_crash_point = 1.0
+        st.session_state.sc_start_time = 0
+        st.session_state.sc_message = ""
+        st.session_state.sc_history = []
+        st.session_state.sc_animation_placeholder = None
+
+    # Reset Fonksiyonu
+    def reset_sisyphus_climb_state(reset_balance=False):
+        st.session_state.sc_state = "betting"
+        st.session_state.sc_bet = 10
+        st.session_state.sc_multiplier = 1.0
+        st.session_state.sc_crash_point = 1.0
+        st.session_state.sc_start_time = 0
+        st.session_state.sc_message = ""
+        if reset_balance: st.session_state.player_balance = 1000
+    globals()["sc_reset_func"] = reset_sisyphus_climb_state
+
+    # Crash noktasını belirle (Adil bir dağılım için)
+    def generate_crash_point():
+        # 1.01 ile 2.0 arasında %70 şans
+        # 2.01 ile 5.0 arasında %20 şans
+        # 5.01 ile 15.0 arasında %10 şans
+        r = random.random()
+        if r < 0.70:
+            return round(random.uniform(1.01, 2.0), 2)
+        elif r < 0.90:
+            return round(random.uniform(2.01, 5.0), 2)
+        else:
+            return round(random.uniform(5.01, 15.0), 2)
+
+    # Çarpanı geçen süreye göre hesapla (yavaş başlar, hızlanır)
+    def get_current_multiplier(start_time):
+        elapsed = time.time() - start_time
+        # y = 1 + 0.1 * x^1.2 (yavaş başlar, hızlanır)
+        multiplier = 1 + 0.1 * (elapsed ** 1.2)
+        return round(multiplier, 2)
+
+    # --- Arayüz ---
+    st.metric(label="Your Balance", value=f"💰 {st.session_state.player_balance}")
+    st.markdown("---")
+
+    # Animasyon ve Çarpan için Placeholder
+    if "sc_animation_placeholder" not in st.session_state or st.session_state.sc_animation_placeholder is None:
+        st.session_state.sc_animation_placeholder = st.empty()
+
+    # --- Bahis Aşaması ---
+    if st.session_state.sc_state == "betting":
+        if st.session_state.player_balance <= 0:
+            st.error("You are out of money! Reset features from the sidebar.")
+        else:
+            st.session_state.sc_message = "" # Mesajı temizle
+            default_sc_bet = min(st.session_state.sc_bet, st.session_state.player_balance)
+            
+            with st.form(key="sc_bet_form"):
+                bet_amount = st.number_input(
+                    "Bet Amount:", min_value=1, max_value=st.session_state.player_balance,
+                    value=default_sc_bet, step=1
+                )
+                start_climb_button = st.form_submit_button("Start the Climb")
+
+            if start_climb_button:
+                st.session_state.player_balance -= bet_amount
+                st.session_state.sc_bet = bet_amount
+                st.session_state.sc_main_bet = bet_amount # Stats için
+                st.session_state.sc_crash_point = generate_crash_point()
+                st.session_state.sc_start_time = time.time()
+                st.session_state.sc_multiplier = 1.0
+                st.session_state.sc_state = "climbing"
+                st.rerun()
+
+    # --- Tırmanış (Oyun) Aşaması ---
+    elif st.session_state.sc_state == "climbing":
+        
+        # "Cash Out" butonu (animasyonun üstünde)
+        if st.button(f"CASH OUT @ {st.session_state.sc_multiplier:.2f}x", type="primary", use_container_width=True):
+            # --- KAZANMA DURUMU ---
+            winnings = st.session_state.sc_bet * st.session_state.sc_multiplier
+            net_profit = winnings - st.session_state.sc_bet
+            st.session_state.player_balance += winnings # Bahis + kazanç
+            st.session_state.sc_message = f"⛰️ Cashed out at {st.session_state.sc_multiplier:.2f}x! You win {net_profit:.0f}."
+            st.session_state.sc_state = "finished"
+            add_history("sc", st.session_state.sc_bet, net_profit, st.session_state.player_balance)
+            st.balloons()
+            st.rerun()
+        
+        # Animasyon ve çarpanı güncelle
+        while True:
+            multiplier = get_current_multiplier(st.session_state.sc_start_time)
+            st.session_state.sc_multiplier = multiplier
+            
+            # --- CRASH DURUMU ---
+            if multiplier >= st.session_state.sc_crash_point:
+                st.session_state.sc_message = f"💥 CRASHED at {st.session_state.sc_crash_point:.2f}x! The boulder rolled back down."
+                st.session_state.sc_state = "finished"
+                add_history("sc", st.session_state.sc_bet, -st.session_state.sc_bet, st.session_state.player_balance)
+                st.rerun()
+            
+            # Animasyonu çiz
+            with st.session_state.sc_animation_placeholder.container():
+                st.markdown(f"<h1 style='text-align: center; color: #2E8B57; font-size: 4em;'>{multiplier:.2f}x</h1>", unsafe_allow_html=True)
+                
+                # Sisyphos animasyonu (basit)
+                # Çarpan 1.0'dan 10.0'a (örneğin) giderken ilerlemeyi haritala
+                max_visual_multiplier = 10.0 # 10x'ten sonrası aynı görünür
+                progress = min(100, int((multiplier - 1.0) / (max_visual_multiplier - 1.0) * 100))
+                
+                # Emojiyi hareket ettir
+                # 20 karakterlik bir alan varsayalım
+                steps = 20
+                emoji_pos = int(progress / (100 / steps))
+                trail = "_" * emoji_pos
+                remaining = " " * (steps - emoji_pos)
+                st.code(f"[{trail}🧑‍🔬🪨{remaining}] ⛰️", language=None)
+                st.progress(progress)
+                
+            # Sayfanın yeniden çizilmesi için kısa bir bekleme
+            time.sleep(0.05) # Hızlı güncelleme
+            
+    # --- Bitiş Aşaması ---
+    elif st.session_state.sc_state == "finished":
+        # Sonuç mesajını göster
+        if "Cashed out" in st.session_state.sc_message:
+            st.success(st.session_state.sc_message)
+            # Son çarpanı göster
+            st.markdown(f"<h1 style='text-align: center; color: #2E8B57; font-size: 4em;'>{st.session_state.sc_multiplier:.2f}x</h1>", unsafe_allow_html=True)
+            st.caption(f"The boulder would have crashed at {st.session_state.sc_crash_point:.2f}x.")
+        else:
+            st.error(st.session_state.sc_message)
+            # Crash çarpanını göster
+            st.markdown(f"<h1 style='text-align: center; color: #DC143C; font-size: 4em;'>{st.session_state.sc_crash_point:.2f}x</h1>", unsafe_allow_html=True)
+            
+        if st.button("Play Again", use_container_width=True):
+            # Sadece oyun state'ini sıfırla, bakiyeyi değil
+            reset_sisyphus_climb_state(reset_balance=False)
+            st.rerun()
+
+    # Bakiye Geçmişi
+    display_history("sc")
 
 # --- SEKME 8: MUSIC PLAYER ---
 with tab_music:
