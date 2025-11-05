@@ -2167,8 +2167,20 @@ with tab_crash:
     # --- Tırmanış (Oyun) Aşaması ---
     elif st.session_state.sc_state == "climbing":
         
-        # "Cash Out" butonu (animasyonun üstünde)
-        if st.button(f"CASH OUT @ {st.session_state.sc_multiplier:.2f}x", type="primary", use_container_width=True):
+        # 1. Çarpanı hesapla
+        multiplier = get_current_multiplier(st.session_state.sc_start_time)
+        st.session_state.sc_multiplier = multiplier
+
+        # 2. Crash oldu mu diye KONTROL ET
+        if multiplier >= st.session_state.sc_crash_point:
+            st.session_state.sc_message = f"💥 CRASHED at {st.session_state.sc_crash_point:.2f}x! The boulder rolled back down."
+            st.session_state.sc_state = "finished"
+            add_history("sc", st.session_state.sc_bet, -st.session_state.sc_bet, st.session_state.player_balance)
+            st.rerun() # Bitiş ekranına git
+            return # Bu script çalışmasını burada durdur
+
+        # 3. Crash olmadıysa, Cash Out BUTONUNU GÖSTER (Artık her karede çizilecek)
+        if st.button(f"CASH OUT @ {st.session_state.sc_multiplier:.2f}x", type="primary", use_container_width=True, key="sc_cashout_button"):
             # --- KAZANMA DURUMU ---
             winnings = st.session_state.sc_bet * st.session_state.sc_multiplier
             net_profit = winnings - st.session_state.sc_bet
@@ -2177,40 +2189,29 @@ with tab_crash:
             st.session_state.sc_state = "finished"
             add_history("sc", st.session_state.sc_bet, net_profit, st.session_state.player_balance)
             st.balloons()
-            st.rerun()
-        
-        # Animasyon ve çarpanı güncelle
-        while True:
-            multiplier = get_current_multiplier(st.session_state.sc_start_time)
-            st.session_state.sc_multiplier = multiplier
+            st.rerun() # Bitiş ekranına git
+            return # Bu script çalışmasını burada durdur
+
+        # 4. Butonları ve kontrolleri çizdikten sonra, animasyonu GÜNCELLE
+        #    (while True: DÖNGÜSÜNÜN DIŞINDA, st.rerun'dan önce)
+        with st.session_state.sc_animation_placeholder.container():
+            st.markdown(f"<h1 style='text-align: center; color: #2E8B57; font-size: 4em;'>{multiplier:.2f}x</h1>", unsafe_allow_html=True)
             
-            # --- CRASH DURUMU ---
-            if multiplier >= st.session_state.sc_crash_point:
-                st.session_state.sc_message = f"💥 CRASHED at {st.session_state.sc_crash_point:.2f}x! The boulder rolled back down."
-                st.session_state.sc_state = "finished"
-                add_history("sc", st.session_state.sc_bet, -st.session_state.sc_bet, st.session_state.player_balance)
-                st.rerun()
+            # Sisyphos animasyonu (basit)
+            max_visual_multiplier = 10.0 # 10x'ten sonrası aynı görünür
+            progress = min(100, int((multiplier - 1.0) / (max_visual_multiplier - 1.0) * 100))
             
-            # Animasyonu çiz
-            with st.session_state.sc_animation_placeholder.container():
-                st.markdown(f"<h1 style='text-align: center; color: #2E8B57; font-size: 4em;'>{multiplier:.2f}x</h1>", unsafe_allow_html=True)
-                
-                # Sisyphos animasyonu (basit)
-                # Çarpan 1.0'dan 10.0'a (örneğin) giderken ilerlemeyi haritala
-                max_visual_multiplier = 10.0 # 10x'ten sonrası aynı görünür
-                progress = min(100, int((multiplier - 1.0) / (max_visual_multiplier - 1.0) * 100))
-                
-                # Emojiyi hareket ettir
-                # 20 karakterlik bir alan varsayalım
-                steps = 20
-                emoji_pos = int(progress / (100 / steps))
-                trail = "_" * emoji_pos
-                remaining = " " * (steps - emoji_pos)
-                st.code(f"[{trail}🧑‍🔬🪨{remaining}] ⛰️", language=None)
-                st.progress(progress)
-                
-            # Sayfanın yeniden çizilmesi için kısa bir bekleme
-            time.sleep(0.05) # Hızlı güncelleme
+            # Emojiyi hareket ettir
+            steps = 20
+            emoji_pos = int(progress / (100 / steps))
+            trail = "_" * emoji_pos
+            remaining = " " * (steps - emoji_pos)
+            st.code(f"[{trail}🧑‍🔬🪨{remaining}] ⛰️", language=None)
+            st.progress(progress)
+            
+        # 5. Ekranı yenilemek için kısa bir bekleme ve script'i tekrar çalıştır (animasyon döngüsü)
+        time.sleep(0.05) # Hızı ayarla (düşük tutun)
+        st.rerun()
             
     # --- Bitiş Aşaması ---
     elif st.session_state.sc_state == "finished":
