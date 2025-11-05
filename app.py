@@ -350,7 +350,8 @@ if "achievement_queue" not in st.session_state:
     st.session_state.achievement_queue = [] # Bildirimler için
 
 # --- Yardımcı Fonksiyonlar ---
-# Bakiye Geçmişi ve İstatistik Güncelleme
+# --- add_history fonksiyonunun tamamını bununla değiştirin ---
+
 def add_history(game_key, bet, outcome, balance):
     history_key = f"{game_key}_history"
     if history_key not in st.session_state:
@@ -372,7 +373,7 @@ def add_history(game_key, bet, outcome, balance):
         if outcome > 0:
             stats["total_won_amount"] += outcome
             if game_key in stats and bet == st.session_state.get(f"{game_key}_main_bet", bet): # Sadece ana bahsi oyun sayısı olarak say
-                 stats[game_key]["won"] += 1
+                stats[game_key]["won"] += 1
             stats["biggest_win"] = max(stats["biggest_win"], outcome)
         elif outcome < 0:
             stats["total_lost_amount"] += abs(outcome)
@@ -389,38 +390,39 @@ def add_history(game_key, bet, outcome, balance):
         
         is_side_bet = False
         if game_key == "bj":
-             # 'bet' in yan bahis olup olmadığını kontrol et
-             side_bet_values = [
-                 st.session_state.get("bet_21_3", 0),
-                 st.session_state.get("bet_perfect_pairs", 0),
-                 st.session_state.get("bet_lucky_seven", 0),
-                 st.session_state.get("bet_bust", 0),
-                 st.session_state.get("bet_insurance", 0)
-             ]
-             # Eğer 'bet' bu değerlerden biriyse (ve 0 değilse) VE o anki 'current_bet' (ana el bahsi) değilse, yan bahistir.
-             if bet in side_bet_values and bet > 0 and bet != st.session_state.get("current_bet", -1):
-                 is_side_bet = True
-             
-             # Eğer yan bahis değilse, 'played'ı artır
-             if not is_side_bet:
-                 stats[game_key]["played"] += 1
-                 # Ana bahsi (stats için) o anki elin bahsi olarak güncelle
-                 st.session_state.bj_main_bet = bet 
-                 
+                # 'bet' in yan bahis olup olmadığını kontrol et
+                side_bet_values = [
+                    st.session_state.get("bet_21_3", 0),
+                    st.session_state.get("bet_perfect_pairs", 0),
+                    st.session_state.get("bet_lucky_seven", 0),
+                    st.session_state.get("bet_bust", 0),
+                    st.session_state.get("bet_insurance", 0)
+                ]
+                # Eğer 'bet' bu değerlerden biriyse (ve 0 değilse) VE o anki 'current_bet' (ana el bahsi) değilse, yan bahistir.
+                if bet in side_bet_values and bet > 0 and bet != st.session_state.get("current_bet", -1):
+                    is_side_bet = True
+                
+                # Eğer yan bahis değilse, 'played'ı artır
+                if not is_side_bet:
+                    stats[game_key]["played"] += 1
+                    # Ana bahsi (stats için) o anki elin bahsi olarak güncelle
+                    st.session_state.bj_main_bet = bet 
+                    
         elif game_key in stats:
-             stats[game_key]["played"] += 1 # Diğer oyunlar için her zaman 1 artır
+                stats[game_key]["played"] += 1 # Diğer oyunlar için her zaman 1 artır
             
         st.session_state.player_stats = stats
-        # --- 1.D BAŞARIM SİSTEMİ: KONTROLLERİ ÇAĞIR (BURAYA YENİ EKLİYORSUNUZ) ---
-            check_stat_achievements() # İstatistik bazlıları kontrol et
-            
-            # ID GÜNCELLENDİ (gen_win_1000) ve KOŞUL DEĞİŞTİ (1000)
-            if outcome >= 1000: 
-                unlock_achievement("gen_win_1000")
+
+        # --- 1.D BAŞARIM SİSTEMİ: KONTROLLERİ ÇAĞIR (DOĞRU GİRİNTİ) ---
+        # Bu blok, 'st.session_state.player_stats = stats' satırı ile aynı girintide olmalı
+        check_stat_achievements() # İstatistik bazlıları kontrol et
+        
+        if outcome >= 1000: # 1000+ kazanç
+            unlock_achievement("gen_win_1000")
+        # --- YENİ KODUN SONU ---
 
     except Exception as e:
-         print(f"Stats update error for game_key '{game_key}': {e}")
-
+        print(f"Stats update error for game_key '{game_key}': {e}")
 def display_history(game_key):
      history_key = f"{game_key}_history"
      if history_key in st.session_state and st.session_state[history_key]:
