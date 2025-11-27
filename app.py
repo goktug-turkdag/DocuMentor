@@ -201,8 +201,9 @@ Simlish Answer:
 st.set_page_config(page_title="DocuMentor", layout="wide")
 st.title("DocuMentor 📄")
 
-# --- Sekmeler ---
-tab_chat, tab_blackjack, tab_coinflip, tab_roulette, tab_slots, tab_vpoker, tab_stats, tab_achievements, tab_crash, tab_music, tab_creative, tab_settings = st.tabs([
+# --- Sekmeler (BURAYI GÜNCELLEYİN) ---
+# tab_iq değişkenini listeye ekliyoruz:
+tab_chat, tab_blackjack, tab_coinflip, tab_roulette, tab_slots, tab_vpoker, tab_stats, tab_achievements, tab_crash, tab_iq, tab_music, tab_creative, tab_settings = st.tabs([
     "💬 Chatbot",
     "🃏 Blackjack",
     "🪙 Coin Flip",
@@ -210,8 +211,9 @@ tab_chat, tab_blackjack, tab_coinflip, tab_roulette, tab_slots, tab_vpoker, tab_
     "🎰 Slots",
     "🃏 Video Poker",
     "📊 Stats",
-    "🏆 Achievements", # YENİ SEKME
+    "🏆 Achievements", 
     "⛰️ Sisyphus' Climb",
+    "🧠 Cognitive Test", # <--- YENİ EKLENEN KISIM
     "🎶 Music Player",
     "🎨 Creative Corner",
     "⚙️ Settings"
