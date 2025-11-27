@@ -2709,11 +2709,12 @@ with tab_settings:
     st.subheader("General Settings")
     st.markdown("Use the 'Reset Interactive Features & Stats' button in the sidebar to reset game states, the shared balance to 1000, and player statistics.")
 
-   # --- BU KISMI "with tab_iq:" BLOĞUNUN YERİNE YAPIŞTIRIN ---
+   # --- BU KODU "with tab_iq:" BLOĞUNUN TAMAMI OLARAK YAPIŞTIRIN ---
 with tab_iq:
     import time
     import random
     import io
+    import copy
     import matplotlib.pyplot as plt
     import matplotlib.patches as patches
     
@@ -2766,7 +2767,7 @@ with tab_iq:
     }
 
     # --------------------------------------------------------
-    # 2. GÖRSEL MATRİS MOTORU (GÜNCELLENMİŞ BOYUT VE ZORLUK)
+    # 2. GÖRSEL MOTOR: ŞIKLARI DA ÜRETEN SÜRÜM
     # --------------------------------------------------------
     def draw_shape_matrix(ax, shape_type, color, x, y, size=0.8, rotation=0):
         if shape_type == 'square':
@@ -2781,70 +2782,93 @@ with tab_iq:
             patch = patches.Rectangle((x + 0.4, y + 0.1), 0.2, size, color=color)
         else:
             patch = patches.Circle((x + 0.5, y + 0.5), size/4, color='black')
-        
         ax.add_patch(patch)
 
-    def generate_raven_matrix_full(q_index):
-        # RESİM BOYUTUNU KÜÇÜLTTÜM: (3.5, 3.5)
+    def generate_single_option_image(params):
+        """Tek bir seçenek için görsel (byte) üretir."""
+        fig, ax = plt.subplots(figsize=(1.5, 1.5))
+        ax.set_xlim(0, 1); ax.set_ylim(0, 1); ax.axis('off'); ax.set_aspect('equal')
+        
+        draw_shape_matrix(ax, params['shape'], params['color'], 0, 0, params['size'], params.get('rot', 0))
+        
+        # Hafif gri çerçeve
+        rect = patches.Rectangle((0,0), 1, 1, linewidth=1, edgecolor='#eee', facecolor='none')
+        ax.add_patch(rect)
+        
+        buf = io.BytesIO()
+        fig.savefig(buf, format="png", bbox_inches='tight', transparent=False, dpi=70) # Küçük DPI
+        plt.close(fig)
+        return buf.getvalue()
+
+    def generate_raven_matrix_and_options(q_index):
+        # 1. SORU MATRİSİNİ OLUŞTUR
         fig, axes = plt.subplots(3, 3, figsize=(3.5, 3.5)) 
         plt.subplots_adjust(wspace=0.1, hspace=0.1)
         random.seed(q_index * 42)
         
         matrix_data = []
+        correct_params = {} # Sağ alt köşe (doğru cevap) özellikleri
         
-        # ZORLUK MANTIĞI (Mensa Style)
+        # --- ZORLUK MANTIĞI & CEVAP BELİRLEME ---
         if q_index <= 5: # Level 1: Boyut Artışı
             base_shape = random.choice(['square', 'circle'])
             base_color = '#2c3e50'
             for i in range(3):
                 row = []
                 for j in range(3):
-                    # Mantık: Soldan sağa ve yukarıdan aşağıya büyür
                     s = 0.2 + (j * 0.2) + (i * 0.1)
-                    row.append({'shape': base_shape, 'color': base_color, 'size': min(0.9, s), 'rot': 0})
+                    params = {'shape': base_shape, 'color': base_color, 'size': min(0.9, s), 'rot': 0}
+                    row.append(params)
+                    if i==2 and j==2: correct_params = params
                 matrix_data.append(row)
                 
-        elif q_index <= 10: # Level 2: Şekil Değişimi (Satırda)
+        elif q_index <= 10: # Level 2: Şekil Değişimi
             shapes = ['circle', 'square', 'triangle']
             for i in range(3):
                 row = []
-                # Her satırda şekiller 1 birim kayar
                 row_shapes = shapes[i:] + shapes[:i] 
                 for j in range(3):
-                    row.append({'shape': row_shapes[j], 'color': '#34495e', 'size': 0.6, 'rot': 0})
+                    params = {'shape': row_shapes[j], 'color': '#34495e', 'size': 0.6, 'rot': 0}
+                    row.append(params)
+                    if i==2 and j==2: correct_params = params
                 matrix_data.append(row)
                 
-        elif q_index <= 15: # Level 3: Renk/Grayscale + Rotasyon
+        elif q_index <= 15: # Level 3: Renk + Rotasyon
             base_shape = 'diamond'
             for i in range(3):
                 row = []
                 for j in range(3):
-                    # Mantık: Gittikçe açılan renk + dönme
                     gray_val = max(0.1, 0.9 - (j * 0.3) - (i * 0.1))
                     color = str(round(gray_val, 2))
-                    rot = (i + j) * 15 # Hafif dönme
-                    row.append({'shape': base_shape, 'color': color, 'size': 0.7, 'rot': rot})
+                    rot = (i + j) * 15
+                    params = {'shape': base_shape, 'color': color, 'size': 0.7, 'rot': rot}
+                    row.append(params)
+                    if i==2 and j==2: correct_params = params
                 matrix_data.append(row)
                 
-        else: # Level 4 (Q16-20): Mantıksal Toplama (Çubuklar)
-            # Mantık: 3. Sütun = 1. Sütun + 2. Sütun (Yükseklik olarak)
+        else: # Level 4: Toplama (Bar)
             for i in range(3):
                 row = []
-                size1 = 0.2 + (i * 0.1) # Değişken yükseklikler
+                size1 = 0.2 + (i * 0.1)
                 size2 = 0.2 + (random.random() * 0.2)
+                # Col 1 & 2
                 row.append({'shape': 'bar', 'color': '#7f8c8d', 'size': size1, 'rot': 0})
                 row.append({'shape': 'bar', 'color': '#95a5a6', 'size': size2, 'rot': 0})
-                # Toplam
-                row.append({'shape': 'bar', 'color': '#2c3e50', 'size': min(0.9, size1 + size2), 'rot': 0})
+                # Col 3 (Toplam) - Doğru Cevap Burası
+                total_size = min(0.9, size1 + size2)
+                params = {'shape': 'bar', 'color': '#2c3e50', 'size': total_size, 'rot': 0}
+                row.append(params)
+                if i==2: correct_params = params # Son satırın sonu
                 matrix_data.append(row)
 
-        # Çizim
+        # 2. SORU MATRİSİNİ ÇİZ
         for i in range(3):
             for j in range(3):
                 ax = axes[i, j]
                 ax.set_xlim(0, 1); ax.set_ylim(0, 1); ax.axis('off'); ax.set_aspect('equal')
                 
                 if i == 2 and j == 2:
+                    # Soru İşareti
                     ax.text(0.5, 0.5, '?', fontsize=30, ha='center', va='center', color='#e74c3c', weight='bold')
                     rect = patches.Rectangle((0,0), 1, 1, linewidth=2, edgecolor='#e74c3c', facecolor='none', linestyle='--')
                     ax.add_patch(rect)
@@ -2857,7 +2881,50 @@ with tab_iq:
         buf = io.BytesIO()
         fig.savefig(buf, format="png", bbox_inches='tight', transparent=True, dpi=100)
         plt.close(fig)
-        return buf.getvalue()
+        question_img = buf.getvalue()
+
+        # 3. SEÇENEKLERİ (OPTIONS) ÜRET
+        # 1 Doğru + 5 Yanlış (Çeldirici)
+        options_data = []
+        
+        # A) Doğru Cevap
+        options_data.append({"img": generate_single_option_image(correct_params), "is_correct": True})
+        
+        # B) Çeldiriciler (Yanlışlar) - Parametreleri hafifçe bozarak üret
+        for _ in range(5):
+            fake_params = correct_params.copy()
+            choice = random.choice(['size', 'shape', 'color', 'rot'])
+            
+            if choice == 'size':
+                fake_params['size'] = max(0.2, min(0.9, fake_params['size'] + random.choice([-0.2, 0.2])))
+            elif choice == 'shape':
+                shapes = ['square', 'circle', 'triangle', 'diamond', 'bar']
+                fake_params['shape'] = random.choice([s for s in shapes if s != fake_params['shape']])
+            elif choice == 'color':
+                if isinstance(fake_params['color'], str) and fake_params['color'].startswith('#'):
+                    fake_params['color'] = '#95a5a6' # Gri yap
+                else:
+                    try:
+                        val = float(fake_params['color'])
+                        fake_params['color'] = str(max(0.1, min(0.9, val + 0.3)))
+                    except: pass
+            elif choice == 'rot':
+                fake_params['rot'] = fake_params.get('rot', 0) + 45
+            
+            options_data.append({"img": generate_single_option_image(fake_params), "is_correct": False})
+        
+        # Seçenekleri karıştır
+        random.shuffle(options_data)
+        
+        # Hangi harf doğru cevap?
+        correct_letter = ""
+        letters = ["A", "B", "C", "D", "E", "F"]
+        for idx, opt in enumerate(options_data):
+            if opt["is_correct"]:
+                correct_letter = letters[idx]
+                break
+                
+        return question_img, options_data, correct_letter
 
     # --------------------------------------------------------
     # 3. STATE VE AKIŞ YÖNETİMİ
@@ -2865,6 +2932,7 @@ with tab_iq:
     if "iq_state" not in st.session_state:
         st.session_state.iq_state = "intro"
         st.session_state.iq_answers = {}
+        st.session_state.iq_correct_keys = {} # Matris sorularının doğru cevap anahtarı burada tutulacak
         st.session_state.iq_current_q = 1
         st.session_state.iq_start_time = 0
         st.session_state.iq_lang = "EN"
@@ -2878,12 +2946,13 @@ with tab_iq:
             iq_lang = st.radio("Select Language / Dil Seçimi", ["English", "Türkçe"], horizontal=True)
             st.session_state.iq_lang = 'EN' if iq_lang == "English" else 'TR'
             
-            st.write("") # Spacer
+            st.write("") 
             if st.button("START ASSESSMENT ►", type="primary", use_container_width=True):
                 st.session_state.iq_state = "test"
                 st.session_state.iq_start_time = time.time()
                 st.session_state.iq_current_q = 1
                 st.session_state.iq_answers = {}
+                st.session_state.iq_correct_keys = {}
                 st.rerun()
 
     # --- EKRAN 2: TEST SÜRECİ ---
@@ -2905,28 +2974,48 @@ with tab_iq:
         
         q_num = st.session_state.iq_current_q
         
-        # --- DÜZENLEME: SORU VE ŞIKLARI YAN YANA GÖSTERME (Visible Options Fix) ---
-        # Sütun oranını 1:1 yaptık (Görsel çok yer kaplamasın)
-        col_content, col_ui = st.columns([1, 1])
-        
-        # A) GÖRSEL SORULAR (1-20)
+        # --- A) GÖRSEL SORULAR (1-20) ---
         if q_num <= 20:
             st.subheader(f"Part I: Abstract Reasoning ({q_num}/35)")
             
-            with col_content:
-                # Görseli oluştur
-                matrix_img = generate_raven_matrix_full(q_num)
-                # use_container_width=True ile sığdırır, ama figsize küçük olduğu için devasa olmaz
-                st.image(matrix_img, use_container_width=True)
+            # Sütunları ayarla: Sol (Matris) - Sağ (Seçenekler)
+            col_matrix, col_options = st.columns([1, 1])
             
-            with col_ui:
-                st.info("Which option completes the pattern?")
-                # Mensa stili A-F şıkları
+            # Matrisi ve Şıkları Üret
+            q_img, opts_data, correct_let = generate_raven_matrix_and_options(q_num)
+            
+            # Doğru cevabı state'e kaydet (Puanlama için)
+            st.session_state.iq_correct_keys[f"q_{q_num}_key"] = correct_let
+            
+            with col_matrix:
+                st.image(q_img, use_container_width=True, caption="Pattern Matrix")
+            
+            with col_options:
+                st.write("Which option completes the pattern?")
+                
+                # Şıkları 3x2 Grid olarak göster
+                # Row 1
+                c1, c2, c3 = st.columns(3)
+                c1.image(opts_data[0]['img'], caption="A")
+                c2.image(opts_data[1]['img'], caption="B")
+                c3.image(opts_data[2]['img'], caption="C")
+                
+                # Row 2
+                c4, c5, c6 = st.columns(3)
+                c4.image(opts_data[3]['img'], caption="D")
+                c5.image(opts_data[4]['img'], caption="E")
+                c6.image(opts_data[5]['img'], caption="F")
+                
+                # Radyo Butonu
                 options = ["A", "B", "C", "D", "E", "F"]
-                choice = st.radio(f"Select Option for Q{q_num}:", options, key=f"iq_rad_{q_num}", horizontal=True)
+                # Mevcut cevabı hatırla (Varsa)
+                current_selection = st.session_state.iq_answers.get(f"q_{q_num}", None)
+                idx = options.index(current_selection) if current_selection else 0
+                
+                choice = st.radio(f"Select Answer for Q{q_num}:", options, index=idx, horizontal=True, key=f"iq_rad_{q_num}")
                 st.session_state.iq_answers[f"q_{q_num}"] = choice
 
-        # B) SÖZEL/SAYISAL SORULAR (21-35)
+        # --- B) SÖZEL/SAYISAL SORULAR (21-35) ---
         else:
             st.subheader(f"Part II: Verbal & Numerical ({q_num}/35)")
             db = FULL_QUESTIONS_DB[st.session_state.iq_lang]
@@ -2934,24 +3023,23 @@ with tab_iq:
             
             if db_idx < len(db):
                 q_data = db[db_idx]
-                with col_content:
-                    # Soruyu sol tarafa koy (Kart içinde)
-                    st.markdown(f"""
-                    <div style="background-color: white; padding: 20px; border-radius: 10px; border: 1px solid #ddd; font-size: 1.2em;">
-                        <b>Q{q_num}:</b><br>{q_data['q']}
-                    </div>
-                    """, unsafe_allow_html=True)
                 
-                with col_ui:
-                    st.write("Select Answer:")
-                    choice = st.radio("Options:", q_data['opts'], key=f"iq_rad_{q_num}")
-                    st.session_state.iq_answers[f"q_{q_num}"] = choice
+                # Kart tasarımı
+                st.markdown(f"""
+                <div style="background-color: white; padding: 20px; border-radius: 10px; border: 1px solid #ddd; margin-bottom: 20px;">
+                    <h4 style="color: #2c3e50; margin:0;">Question {q_num}</h4>
+                    <p style="font-size: 1.3em; margin-top: 10px;">{q_data['q']}</p>
+                </div>
+                """, unsafe_allow_html=True)
+                
+                choice = st.radio("Select Answer:", q_data['opts'], key=f"iq_rad_{q_num}")
+                st.session_state.iq_answers[f"q_{q_num}"] = choice
             else:
                 st.error("End of questions.")
 
         st.markdown("---")
         
-        # İLERİ / GERİ BUTONLARI
+        # NAVİGASYON BUTONLARI
         c_prev, c_next = st.columns([1, 4])
         
         if c_next.button("Next Question ➡️" if q_num < 35 else "FINISH TEST ✅", type="primary", use_container_width=True):
@@ -2966,7 +3054,7 @@ with tab_iq:
     elif st.session_state.iq_state == "result":
         st.balloons()
         
-        # PUANLAMA
+        # --- PUANLAMA ALGORİTMASI ---
         raw_score = 0
         total_weighted_points = 0
         user_points = 0
@@ -2977,12 +3065,11 @@ with tab_iq:
             pts = diff * 10
             total_weighted_points += pts
             
-            ans = st.session_state.iq_answers.get(f"q_{i}")
-            # Demo mantığı: Cevap 'C' ise (veya ileri sorularda değişebilir) doğru say.
-            # Gerçek bir sistemde, doğru cevabı generate fonksiyonundan döndürmeliyiz.
-            # Simülasyon için: Q1-10 arası 'C', Q11-20 arası 'D' doğru olsun.
-            correct_key = 'C' if i <= 10 else 'D'
-            if ans == correct_key: 
+            user_ans = st.session_state.iq_answers.get(f"q_{i}")
+            # Doğru anahtarı state'ten çek
+            correct_ans = st.session_state.iq_correct_keys.get(f"q_{i}_key")
+            
+            if user_ans and correct_ans and user_ans == correct_ans: 
                 user_points += pts
                 raw_score += 1
 
@@ -2991,7 +3078,7 @@ with tab_iq:
         for i, q_data in enumerate(db):
             q_num = 21 + i
             diff = q_data['diff']
-            pts = diff * 12
+            pts = diff * 12 
             total_weighted_points += pts
             
             ans = st.session_state.iq_answers.get(f"q_{q_num}")
@@ -3001,7 +3088,7 @@ with tab_iq:
         
         # IQ HESAPLAMA (Mensa Scale: Mean 100, SD 15)
         success_ratio = user_points / total_weighted_points if total_weighted_points > 0 else 0
-        estimated_iq = 85 + (success_ratio * 60) # 85 ile 145 arası
+        estimated_iq = 85 + (success_ratio * 60) # Range: 85 - 145
         estimated_iq = int(estimated_iq)
         
         st.title("📊 Cognitive Profile Report")
@@ -3016,7 +3103,7 @@ with tab_iq:
         elif estimated_iq >= 110: label = "High Average"
         c3.metric("Classification", label)
         
-        # Başarım Açma (Fonksiyonunuz global scope'taysa)
+        # Başarım Açma
         if "achievements" in st.session_state:
             if estimated_iq >= 130:
                  st.session_state.achievements["iq_genius"]["unlocked"] = True
@@ -3025,7 +3112,6 @@ with tab_iq:
         st.markdown("---")
         st.subheader("Performance Breakdown")
         
-        # Görselleştirme
         col_g, col_v = st.columns(2)
         with col_g:
             st.info("**Abstract Reasoning**")
