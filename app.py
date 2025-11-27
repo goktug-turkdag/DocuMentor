@@ -2926,15 +2926,27 @@ with tab_iq:
                 
         return question_img, options_data, correct_letter
 
+# --------------------------------------------------------
+    # 3. STATE VE AKIŞ YÖNETİMİ (DÜZELTİLMİŞ HALİ)
     # --------------------------------------------------------
-    # 3. STATE VE AKIŞ YÖNETİMİ
-    # --------------------------------------------------------
+    # Her değişkeni tek tek kontrol ediyoruz ki eski state çakışmasın
+    
     if "iq_state" not in st.session_state:
         st.session_state.iq_state = "intro"
+        
+    if "iq_answers" not in st.session_state:
         st.session_state.iq_answers = {}
-        st.session_state.iq_correct_keys = {} # Matris sorularının doğru cevap anahtarı burada tutulacak
+        
+    if "iq_correct_keys" not in st.session_state: # Hata veren kısım burasıydı
+        st.session_state.iq_correct_keys = {} 
+        
+    if "iq_current_q" not in st.session_state:
         st.session_state.iq_current_q = 1
+        
+    if "iq_start_time" not in st.session_state:
         st.session_state.iq_start_time = 0
+        
+    if "iq_lang" not in st.session_state:
         st.session_state.iq_lang = "EN"
 
     # --- EKRAN 1: GİRİŞ ---
