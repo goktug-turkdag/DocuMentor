@@ -2709,26 +2709,11 @@ with tab_settings:
     st.subheader("General Settings")
     st.markdown("Use the 'Reset Interactive Features & Stats' button in the sidebar to reset game states, the shared balance to 1000, and player statistics.")
 
-   # --- BU KODU "with tab_iq:" BLOĞUNUN TAMAMI OLARAK YAPIŞTIRIN ---
-with tab_iq:
-    import time
-    import random
-    import io
-    import copy
-    import matplotlib.pyplot as plt
-    import matplotlib.patches as patches
-    
+  with tab_iq:
     st.header("🧠 Cognitive Proficiency Assessment (CPA-35)")
-    st.markdown("""
-    **Protocol:** Mensa & Cambridge Psychometrics Standards.
-    * **Part 1:** Visual Matrix Reasoning (20 Questions) - *Progressive Difficulty*
-    * **Part 2:** Verbal & Numerical Analysis (15 Questions)
-    * **Time:** 25 Minutes
-    """)
+    st.markdown("**Protocol:** Mensa & Cambridge Logic. 35 Questions. 25 Minutes. Progressive Difficulty.")
 
-    # --------------------------------------------------------
-    # 1. TAM SORU VERİTABANI (SÖZEL & SAYISAL - 15 SORU)
-    # --------------------------------------------------------
+    # --- 1. VERİTABANI ---
     FULL_QUESTIONS_DB = {
         'EN': [
             {"id": 21, "cat": "N", "diff": 1, "q": "Which number comes next: 3, 6, 12, 24, ...?", "opts": ["30", "36", "48", "52"], "a": "48"},
@@ -2737,229 +2722,193 @@ with tab_iq:
             {"id": 24, "cat": "L", "diff": 2, "q": "If A > B and B > C, then:", "opts": ["A < C", "A > C", "C > A", "None"], "a": "A > C"},
             {"id": 25, "cat": "V", "diff": 2, "q": "Which word is the odd one out?", "opts": ["Apple", "Banana", "Carrot", "Grape"], "a": "Carrot"},
             {"id": 26, "cat": "N", "diff": 3, "q": "Series: 1, 1, 2, 3, 5, 8, ...?", "opts": ["11", "12", "13", "15"], "a": "13"},
-            {"id": 27, "cat": "V", "diff": 3, "q": "Rearrange 'SILENT' to create a word with the same letters:", "opts": ["LISTEN", "LISTED", "TENSE", "LINES"], "a": "LISTEN"},
+            {"id": 27, "cat": "V", "diff": 3, "q": "Rearrange 'SILENT' to create a word:", "opts": ["LISTEN", "LISTED", "TENSE", "LINES"], "a": "LISTEN"},
             {"id": 28, "cat": "L", "diff": 3, "q": "If all Bloops are Razzies and some Razzies are Zoops, are all Bloops definitely Zoops?", "opts": ["Yes", "No", "Maybe", "Impossible"], "a": "No"},
-            {"id": 29, "cat": "N", "diff": 3, "q": "A watch gains 5 minutes every hour. Set at 8:00. What time does it SHOW at 13:00 real time?", "opts": ["13:05", "13:20", "13:25", "13:30"], "a": "13:25"},
+            {"id": 29, "cat": "N", "diff": 3, "q": "Watch gains 5 mins/hour. Set at 8:00. What does it show at 13:00?", "opts": ["13:05", "13:20", "13:25", "13:30"], "a": "13:25"},
             {"id": 30, "cat": "V", "diff": 3, "q": "Which implies 'To be undecided'?", "opts": ["Vacillate", "Validate", "Ventilate", "Vindicate"], "a": "Vacillate"},
             {"id": 31, "cat": "N", "diff": 4, "q": "If 7+3=410 and 9+6=315, then 5+4=...?", "opts": ["19", "920", "120", "91"], "a": "19"},
-            {"id": 32, "cat": "L", "diff": 4, "q": "Pointing to a man, a woman said: 'His mother is the only daughter of my mother.' How is the woman related to the man?", "opts": ["Sister", "Grandmother", "Mother", "Aunt"], "a": "Mother"},
+            {"id": 32, "cat": "L", "diff": 4, "q": "Pointing to a man: 'His mother is my mother's only daughter.' Relation?", "opts": ["Sister", "Mother", "Aunt", "Grandmother"], "a": "Mother"},
             {"id": 33, "cat": "V", "diff": 5, "q": "Antonym of 'EPHEMERAL':", "opts": ["Transient", "Permanent", "Ethereal", "Internal"], "a": "Permanent"},
-            {"id": 34, "cat": "N", "diff": 5, "q": "A bat and a ball cost $1.10 in total. The bat costs $1.00 more than the ball. How much is the ball?", "opts": ["$0.10", "$0.05", "$0.01", "$0.15"], "a": "$0.05"},
-            {"id": 35, "cat": "L", "diff": 5, "q": "Which conclusions follow? Statements: No A is B. All C are A.", "opts": ["No C is B", "Some C are B", "All B are C", "None follows"], "a": "No C is B"},
+            {"id": 34, "cat": "N", "diff": 5, "q": "Bat & ball cost $1.10. Bat is $1.00 more than ball. Cost of ball?", "opts": ["$0.10", "$0.05", "$0.01", "$0.15"], "a": "$0.05"},
+            {"id": 35, "cat": "L", "diff": 5, "q": "No A is B. All C are A. Conclusion?", "opts": ["No C is B", "Some C are B", "All B are C", "None"], "a": "No C is B"},
         ],
         'TR': [
             {"id": 21, "cat": "N", "diff": 1, "q": "Seriyi tamamla: 3, 6, 12, 24, ...?", "opts": ["30", "36", "48", "52"], "a": "48"},
             {"id": 22, "cat": "V", "diff": 1, "q": "Analoji -> ORMAN : AĞAÇ :: OKYANUS : ...?", "opts": ["Su", "Damla", "Dalga", "Gemi"], "a": "Damla"},
             {"id": 23, "cat": "N", "diff": 2, "q": "150'nin %20'si kaçtır?", "opts": ["20", "25", "30", "35"], "a": "30"},
-            {"id": 24, "cat": "L", "diff": 2, "q": "A > B ve B > C ise, hangisi doğrudur?", "opts": ["A < C", "A > C", "C > A", "Hiçbiri"], "a": "A > C"},
+            {"id": 24, "cat": "L", "diff": 2, "q": "A > B ve B > C ise:", "opts": ["A < C", "A > C", "C > A", "Hiçbiri"], "a": "A > C"},
             {"id": 25, "cat": "V", "diff": 2, "q": "Hangisi diğerlerinden farklıdır?", "opts": ["Elma", "Muz", "Havuç", "Üzüm"], "a": "Havuç"},
-            {"id": 26, "cat": "N", "diff": 3, "q": "Fibonacci serisi: 1, 1, 2, 3, 5, 8, ...?", "opts": ["11", "12", "13", "15"], "a": "13"},
-            {"id": 27, "cat": "V", "diff": 3, "q": "'Z A K İ R' harfleriyle oluşan anlamlı kelime:", "opts": ["Şehir", "Meyve", "Meslek", "Hayvan"], "a": "Meyve"}, 
-            {"id": 28, "cat": "L", "diff": 3, "q": "Bütün X'ler Y ise ve bazı Y'ler Z ise, Bütün X'ler kesinlikle Z midir?", "opts": ["Evet", "Hayır", "Belki", "İmkansız"], "a": "Hayır"},
-            {"id": 29, "cat": "N", "diff": 3, "q": "Bir saat her saat başı 5 dk ileri gidiyor. 08:00'de ayarlandı. Gerçek saat 13:00 iken bu saat kaçı gösterir?", "opts": ["13:05", "13:20", "13:25", "13:30"], "a": "13:25"},
-            {"id": 30, "cat": "V", "diff": 3, "q": "'Müphemlik' kelimesinin zıt anlamlısı:", "opts": ["Belirsizlik", "Açıklık", "Karanlık", "Şüphe"], "a": "Açıklık"},
-            {"id": 31, "cat": "N", "diff": 4, "q": "Eğer 7+3=410 ve 9+6=315 ise, 5+4=...?", "opts": ["19", "920", "120", "91"], "a": "19"},
-            {"id": 32, "cat": "L", "diff": 4, "q": "Bir adama işaret eden kadın dedi ki: 'Onun annesi, benim annemin tek kızıdır.' Kadın adamın neyidir?", "opts": ["Kız Kardeşi", "Anneannesi", "Annesi", "Teyzesi"], "a": "Annesi"},
-            {"id": 33, "cat": "V", "diff": 5, "q": "'Yadsımak' kelimesinin eş anlamlısı:", "opts": ["Kabul etmek", "İnkar etmek", "Onaylamak", "Abartmak"], "a": "İnkar etmek"},
-            {"id": 34, "cat": "N", "diff": 5, "q": "Sopa ve top toplam 1.10 TL. Sopa, toptan 1.00 TL daha pahalı. Top ne kadar?", "opts": ["0.10 TL", "0.05 TL", "0.01 TL", "0.15 TL"], "a": "0.05 TL"},
-            {"id": 35, "cat": "L", "diff": 5, "q": "Öncüller: Hiçbir A, B değildir. Bütün C'ler A'dır. Sonuç?", "opts": ["Hiçbir C, B değildir", "Bazı C'ler B'dir", "Bütün B'ler C'dir", "Sonuç çıkmaz"], "a": "Hiçbir C, B değildir"},
+            {"id": 26, "cat": "N", "diff": 3, "q": "Fibonacci: 1, 1, 2, 3, 5, 8, ...?", "opts": ["11", "12", "13", "15"], "a": "13"},
+            {"id": 27, "cat": "V", "diff": 3, "q": "'Z A K İ R' harfleriyle oluşan kelime:", "opts": ["Şehir", "Meyve", "Meslek", "Hayvan"], "a": "Meyve"},
+            {"id": 28, "cat": "L", "diff": 3, "q": "Bütün X'ler Y, bazı Y'ler Z ise, Bütün X'ler kesinlikle Z midir?", "opts": ["Evet", "Hayır", "Belki", "İmkansız"], "a": "Hayır"},
+            {"id": 29, "cat": "N", "diff": 3, "q": "Saat her saat 5dk ileri gidiyor. 08:00'de kuruldu. 13:00'te kaçı gösterir?", "opts": ["13:05", "13:20", "13:25", "13:30"], "a": "13:25"},
+            {"id": 30, "cat": "V", "diff": 3, "q": "'Müphemlik' zıt anlamlısı:", "opts": ["Belirsizlik", "Açıklık", "Karanlık", "Şüphe"], "a": "Açıklık"},
+            {"id": 31, "cat": "N", "diff": 4, "q": "7+3=410, 9+6=315 ise 5+4=?", "opts": ["19", "920", "120", "91"], "a": "19"},
+            {"id": 32, "cat": "L", "diff": 4, "q": "Kadın dedi ki: 'Onun annesi, benim annemin tek kızıdır.' İlişki?", "opts": ["Kız Kardeş", "Anneanne", "Anne", "Teyze"], "a": "Anne"},
+            {"id": 33, "cat": "V", "diff": 5, "q": "'Yadsımak' eş anlamlısı:", "opts": ["Kabul", "İnkar", "Onay", "Abartı"], "a": "İnkar"},
+            {"id": 34, "cat": "N", "diff": 5, "q": "Sopa ve top 1.10 TL. Sopa 1.00 TL daha pahalı. Top ne kadar?", "opts": ["0.10", "0.05", "0.01", "0.15"], "a": "0.05"},
+            {"id": 35, "cat": "L", "diff": 5, "q": "Hiçbir A, B değildir. Bütün C'ler A'dır. Sonuç?", "opts": ["Hiçbir C, B değildir", "Bazı C, B'dir", "Bütün B, C'dir", "Sonuç yok"], "a": "Hiçbir C, B değildir"},
         ]
     }
 
-    # --------------------------------------------------------
-    # 2. GÖRSEL MOTOR: ŞIKLARI DA ÜRETEN SÜRÜM
-    # --------------------------------------------------------
+    # --- 2. GÖRSEL MOTOR (GÜÇLENDİRİLMİŞ ÇEŞİTLİLİK) ---
     def draw_shape_matrix(ax, shape_type, color, x, y, size=0.8, rotation=0):
-        if shape_type == 'square':
-            patch = patches.Rectangle((x + (1-size)/2, y + (1-size)/2), size, size, color=color, angle=rotation)
-        elif shape_type == 'circle':
-            patch = patches.Circle((x + 0.5, y + 0.5), size/2, color=color)
-        elif shape_type == 'triangle':
-            patch = patches.Polygon([[x + 0.5, y + size], [x + (1-size)/2, y + (1-size)/2], [x + 1 - (1-size)/2, y + (1-size)/2]], color=color)
-        elif shape_type == 'diamond':
-            patch = patches.Rectangle((x + 0.5, y + (1-size)/2 - 0.1), size/1.5, size/1.5, color=color, angle=45)
-        elif shape_type == 'bar':
-            patch = patches.Rectangle((x + 0.4, y + 0.1), 0.2, size, color=color)
-        else:
-            patch = patches.Circle((x + 0.5, y + 0.5), size/4, color='black')
+        if shape_type == 'square': patch = patches.Rectangle((x + (1-size)/2, y + (1-size)/2), size, size, color=color, angle=rotation)
+        elif shape_type == 'circle': patch = patches.Circle((x + 0.5, y + 0.5), size/2, color=color)
+        elif shape_type == 'triangle': patch = patches.Polygon([[x + 0.5, y + size], [x + (1-size)/2, y + (1-size)/2], [x + 1 - (1-size)/2, y + (1-size)/2]], color=color)
+        elif shape_type == 'diamond': patch = patches.Rectangle((x + 0.5, y + (1-size)/2 - 0.1), size/1.5, size/1.5, color=color, angle=45)
+        elif shape_type == 'bar': patch = patches.Rectangle((x + 0.4, y + 0.1), 0.2, size, color=color)
+        else: patch = patches.Circle((x + 0.5, y + 0.5), size/4, color='black')
         ax.add_patch(patch)
 
     def generate_single_option_image(params):
-        """Tek bir seçenek için görsel (byte) üretir."""
         fig, ax = plt.subplots(figsize=(1.5, 1.5))
         ax.set_xlim(0, 1); ax.set_ylim(0, 1); ax.axis('off'); ax.set_aspect('equal')
-        
         draw_shape_matrix(ax, params['shape'], params['color'], 0, 0, params['size'], params.get('rot', 0))
-        
-        # Hafif gri çerçeve
-        rect = patches.Rectangle((0,0), 1, 1, linewidth=1, edgecolor='#eee', facecolor='none')
-        ax.add_patch(rect)
-        
+        ax.add_patch(patches.Rectangle((0,0), 1, 1, linewidth=1, edgecolor='#eee', facecolor='none'))
         buf = io.BytesIO()
-        fig.savefig(buf, format="png", bbox_inches='tight', transparent=False, dpi=70) # Küçük DPI
+        fig.savefig(buf, format="png", bbox_inches='tight', transparent=False, dpi=70)
         plt.close(fig)
         return buf.getvalue()
 
     def generate_raven_matrix_and_options(q_index):
-        # 1. SORU MATRİSİNİ OLUŞTUR
+        # Görsel boyutunu küçülttük ki şıklar ekrana sığsın
         fig, axes = plt.subplots(3, 3, figsize=(3.5, 3.5)) 
         plt.subplots_adjust(wspace=0.1, hspace=0.1)
-        random.seed(q_index * 42)
+        random.seed(q_index * 999) # Seed değiştirildi
         
         matrix_data = []
-        correct_params = {} # Sağ alt köşe (doğru cevap) özellikleri
+        correct_params = {}
         
-        # --- ZORLUK MANTIĞI & CEVAP BELİRLEME ---
-        if q_index <= 5: # Level 1: Boyut Artışı
+        # --- ZORLUK SEVİYELERİ ---
+        if q_index <= 5: # Level 1: Temel Boyut (Bariz)
             base_shape = random.choice(['square', 'circle'])
             base_color = '#2c3e50'
             for i in range(3):
                 row = []
                 for j in range(3):
-                    s = 0.2 + (j * 0.2) + (i * 0.1)
+                    s = 0.2 + (j * 0.25) + (i * 0.1) # Farklar büyük
                     params = {'shape': base_shape, 'color': base_color, 'size': min(0.9, s), 'rot': 0}
                     row.append(params)
                     if i==2 and j==2: correct_params = params
                 matrix_data.append(row)
                 
-        elif q_index <= 10: # Level 2: Şekil Değişimi
+        elif q_index <= 10: # Level 2: Şekil + Renk
             shapes = ['circle', 'square', 'triangle']
             for i in range(3):
                 row = []
                 row_shapes = shapes[i:] + shapes[:i] 
                 for j in range(3):
-                    params = {'shape': row_shapes[j], 'color': '#34495e', 'size': 0.6, 'rot': 0}
+                    gray = str(max(0.1, 0.8 - (j * 0.2)))
+                    params = {'shape': row_shapes[j], 'color': gray, 'size': 0.6, 'rot': 0}
                     row.append(params)
                     if i==2 and j==2: correct_params = params
                 matrix_data.append(row)
                 
-        elif q_index <= 15: # Level 3: Renk + Rotasyon
+        elif q_index <= 15: # Level 3: Rotasyon (Hassas)
             base_shape = 'diamond'
             for i in range(3):
                 row = []
                 for j in range(3):
-                    gray_val = max(0.1, 0.9 - (j * 0.3) - (i * 0.1))
-                    color = str(round(gray_val, 2))
-                    rot = (i + j) * 15
-                    params = {'shape': base_shape, 'color': color, 'size': 0.7, 'rot': rot}
+                    color = '#34495e'
+                    rot = (i * 30) + (j * 30) # 30 derece artış
+                    params = {'shape': base_shape, 'color': color, 'size': 0.6, 'rot': rot}
                     row.append(params)
                     if i==2 and j==2: correct_params = params
                 matrix_data.append(row)
                 
-        else: # Level 4: Toplama (Bar)
+        else: # Level 4: Karmaşık (XOR / Toplama)
             for i in range(3):
                 row = []
-                size1 = 0.2 + (i * 0.1)
-                size2 = 0.2 + (random.random() * 0.2)
-                # Col 1 & 2
-                row.append({'shape': 'bar', 'color': '#7f8c8d', 'size': size1, 'rot': 0})
-                row.append({'shape': 'bar', 'color': '#95a5a6', 'size': size2, 'rot': 0})
-                # Col 3 (Toplam) - Doğru Cevap Burası
-                total_size = min(0.9, size1 + size2)
-                params = {'shape': 'bar', 'color': '#2c3e50', 'size': total_size, 'rot': 0}
+                h1 = 0.2 + (i * 0.1)
+                h2 = 0.2 + (random.random() * 0.2)
+                row.append({'shape': 'bar', 'color': '#7f8c8d', 'size': h1, 'rot': 0})
+                row.append({'shape': 'bar', 'color': '#95a5a6', 'size': h2, 'rot': 0})
+                params = {'shape': 'bar', 'color': '#2c3e50', 'size': min(0.9, h1+h2), 'rot': 0}
                 row.append(params)
-                if i==2: correct_params = params # Son satırın sonu
+                if i==2: correct_params = params
                 matrix_data.append(row)
 
-        # 2. SORU MATRİSİNİ ÇİZ
         for i in range(3):
             for j in range(3):
                 ax = axes[i, j]
                 ax.set_xlim(0, 1); ax.set_ylim(0, 1); ax.axis('off'); ax.set_aspect('equal')
-                
                 if i == 2 and j == 2:
-                    # Soru İşareti
                     ax.text(0.5, 0.5, '?', fontsize=30, ha='center', va='center', color='#e74c3c', weight='bold')
-                    rect = patches.Rectangle((0,0), 1, 1, linewidth=2, edgecolor='#e74c3c', facecolor='none', linestyle='--')
-                    ax.add_patch(rect)
+                    ax.add_patch(patches.Rectangle((0,0), 1, 1, linewidth=2, edgecolor='#e74c3c', facecolor='none', linestyle='--'))
                 else:
                     d = matrix_data[i][j]
                     draw_shape_matrix(ax, d['shape'], d['color'], 0, 0, d['size'], d.get('rot', 0))
-                    rect = patches.Rectangle((0,0), 1, 1, linewidth=1, edgecolor='#bdc3c7', facecolor='none')
-                    ax.add_patch(rect)
+                    ax.add_patch(patches.Rectangle((0,0), 1, 1, linewidth=1, edgecolor='#bdc3c7', facecolor='none'))
 
         buf = io.BytesIO()
         fig.savefig(buf, format="png", bbox_inches='tight', transparent=True, dpi=100)
         plt.close(fig)
         question_img = buf.getvalue()
 
-        # 3. SEÇENEKLERİ (OPTIONS) ÜRET
-        # 1 Doğru + 5 Yanlış (Çeldirici)
+        # --- ŞIK ÜRETİMİ (DISTRACTOR LOGIC) ---
         options_data = []
-        
-        # A) Doğru Cevap
+        # Doğru Şık
         options_data.append({"img": generate_single_option_image(correct_params), "is_correct": True})
         
-        # B) Çeldiriciler (Yanlışlar) - Parametreleri hafifçe bozarak üret
-        for _ in range(5):
-            fake_params = correct_params.copy()
-            choice = random.choice(['size', 'shape', 'color', 'rot'])
-            
-            if choice == 'size':
-                fake_params['size'] = max(0.2, min(0.9, fake_params['size'] + random.choice([-0.2, 0.2])))
-            elif choice == 'shape':
-                shapes = ['square', 'circle', 'triangle', 'diamond', 'bar']
-                fake_params['shape'] = random.choice([s for s in shapes if s != fake_params['shape']])
-            elif choice == 'color':
-                if isinstance(fake_params['color'], str) and fake_params['color'].startswith('#'):
-                    fake_params['color'] = '#95a5a6' # Gri yap
-                else:
-                    try:
-                        val = float(fake_params['color'])
-                        fake_params['color'] = str(max(0.1, min(0.9, val + 0.3)))
-                    except: pass
-            elif choice == 'rot':
-                fake_params['rot'] = fake_params.get('rot', 0) + 45
-            
-            options_data.append({"img": generate_single_option_image(fake_params), "is_correct": False})
+        # Çeldiriciler
+        generated_hashes = [str(correct_params)] # Tekrarları önlemek için
         
-        # Seçenekleri karıştır
-        random.shuffle(options_data)
-        
-        # Hangi harf doğru cevap?
-        correct_letter = ""
-        letters = ["A", "B", "C", "D", "E", "F"]
-        for idx, opt in enumerate(options_data):
-            if opt["is_correct"]:
-                correct_letter = letters[idx]
-                break
+        attempts = 0
+        while len(options_data) < 6 and attempts < 20:
+            attempts += 1
+            fake = correct_params.copy()
+            
+            # Zorluk seviyesine göre çeldirici zorluğu
+            if q_index <= 5: # Kolay sorular -> Bariz yanlışlar
+                change = random.choice(['shape', 'color'])
+            else: # Zor sorular -> İnce farklar (Boyut, Aç)
+                change = random.choice(['size', 'rot'])
+            
+            if change == 'size': 
+                delta = 0.1 if q_index > 10 else 0.3
+                fake['size'] = max(0.2, min(0.9, fake['size'] + random.choice([-delta, delta])))
+            elif change == 'rot':
+                delta = 15 if q_index > 10 else 45
+                fake['rot'] = fake.get('rot', 0) + delta
+            elif change == 'shape':
+                opts = ['square', 'circle', 'triangle', 'diamond', 'bar']
+                fake['shape'] = random.choice([x for x in opts if x != fake['shape']])
+            elif change == 'color':
+                fake['color'] = '#95a5a6' # Griye çevir
                 
+            if str(fake) not in generated_hashes:
+                options_data.append({"img": generate_single_option_image(fake), "is_correct": False})
+                generated_hashes.append(str(fake))
+        
+        # Eğer yeterince üretemezse rastgele doldur
+        while len(options_data) < 6:
+             fake = correct_params.copy()
+             fake['size'] = random.uniform(0.2, 0.9)
+             options_data.append({"img": generate_single_option_image(fake), "is_correct": False})
+
+        random.shuffle(options_data)
+        letters = ["A", "B", "C", "D", "E", "F"]
+        correct_letter = letters[[x["is_correct"] for x in options_data].index(True)]
         return question_img, options_data, correct_letter
 
-# --------------------------------------------------------
-    # 3. STATE VE AKIŞ YÖNETİMİ (DÜZELTİLMİŞ HALİ)
-    # --------------------------------------------------------
-    # Her değişkeni tek tek kontrol ediyoruz ki eski state çakışmasın
-    
-    if "iq_state" not in st.session_state:
-        st.session_state.iq_state = "intro"
-        
-    if "iq_answers" not in st.session_state:
-        st.session_state.iq_answers = {}
-        
-    if "iq_correct_keys" not in st.session_state: # Hata veren kısım burasıydı
-        st.session_state.iq_correct_keys = {} 
-        
-    if "iq_current_q" not in st.session_state:
-        st.session_state.iq_current_q = 1
-        
-    if "iq_start_time" not in st.session_state:
-        st.session_state.iq_start_time = 0
-        
-    if "iq_lang" not in st.session_state:
-        st.session_state.iq_lang = "EN"
+    # --- 3. STATE ---
+    # GÜVENLİ BAŞLATMA (State Çakışmalarını Önler)
+    if "iq_state" not in st.session_state: st.session_state.iq_state = "intro"
+    if "iq_answers" not in st.session_state: st.session_state.iq_answers = {}
+    if "iq_correct_keys" not in st.session_state: st.session_state.iq_correct_keys = {}
+    if "iq_current_q" not in st.session_state: st.session_state.iq_current_q = 1
+    if "iq_start_time" not in st.session_state: st.session_state.iq_start_time = 0
+    if "iq_lang" not in st.session_state: st.session_state.iq_lang = "EN"
 
-    # --- EKRAN 1: GİRİŞ ---
+    # --- UI ---
     if st.session_state.iq_state == "intro":
         col1, col2 = st.columns([1, 1])
-        with col1:
-            st.info("⚠️ **Test Protocol:**\n\n1. **25 Minutes** total time.\n2. **No Pausing**: Timer continues.\n3. **Visual & Verbal**: 20 Matrix + 15 Verbal questions.\n4. **Progressive**: Questions get harder.")
+        with col1: st.info("⚠️ **Rules:**\n\n1. 25 Minutes.\n2. 35 Questions.\n3. Visual then Verbal.")
         with col2:
-            iq_lang = st.radio("Select Language / Dil Seçimi", ["English", "Türkçe"], horizontal=True)
+            iq_lang = st.radio("Language", ["English", "Türkçe"], horizontal=True)
             st.session_state.iq_lang = 'EN' if iq_lang == "English" else 'TR'
-            
-            st.write("") 
-            if st.button("START ASSESSMENT ►", type="primary", use_container_width=True):
+            if st.button("START TEST", type="primary"):
                 st.session_state.iq_state = "test"
                 st.session_state.iq_start_time = time.time()
                 st.session_state.iq_current_q = 1
@@ -2967,175 +2916,86 @@ with tab_iq:
                 st.session_state.iq_correct_keys = {}
                 st.rerun()
 
-    # --- EKRAN 2: TEST SÜRECİ ---
     elif st.session_state.iq_state == "test":
-        # Zamanlayıcı
         elapsed = time.time() - st.session_state.iq_start_time
-        time_limit = 25 * 60
-        remaining = time_limit - elapsed
+        remaining = (25 * 60) - elapsed
+        if remaining <= 0: st.session_state.iq_state = "result"; st.rerun()
         
-        if remaining <= 0:
-            st.session_state.iq_state = "result"
-            st.rerun()
-            
-        # İlerleme Çubuğu ve Saat
-        c_prog, c_time = st.columns([3, 1])
-        c_prog.progress(max(0.0, min(1.0, remaining / time_limit)))
-        mins, secs = divmod(int(remaining), 60)
-        c_time.markdown(f"⏱️ **{mins:02d}:{secs:02d}**")
+        st.progress(max(0.0, remaining / (25*60)))
+        st.caption(f"Time: {int(remaining)//60}:{int(remaining)%60:02d}")
         
         q_num = st.session_state.iq_current_q
         
-        # --- A) GÖRSEL SORULAR (1-20) ---
+        # A) GÖRSEL (1-20)
         if q_num <= 20:
-            st.subheader(f"Part I: Abstract Reasoning ({q_num}/35)")
+            st.subheader(f"Abstract Reasoning ({q_num}/35)")
+            col_matrix, col_opts = st.columns([1, 1])
             
-            # Sütunları ayarla: Sol (Matris) - Sağ (Seçenekler)
-            col_matrix, col_options = st.columns([1, 1])
+            # Soru verisi üretilmediyse veya sayfa yenilendiyse üret
+            # Session state'de cacheleyebiliriz ama anlık üretim daha az hafıza yer
+            img, opts, corr = generate_raven_matrix_and_options(q_num)
+            st.session_state.iq_correct_keys[f"q_{q_num}_key"] = corr
             
-            # Matrisi ve Şıkları Üret
-            q_img, opts_data, correct_let = generate_raven_matrix_and_options(q_num)
-            
-            # Doğru cevabı state'e kaydet (Puanlama için)
-            st.session_state.iq_correct_keys[f"q_{q_num}_key"] = correct_let
-            
-            with col_matrix:
-                st.image(q_img, use_container_width=True, caption="Pattern Matrix")
-            
-            with col_options:
-                st.write("Which option completes the pattern?")
-                
-                # Şıkları 3x2 Grid olarak göster
-                # Row 1
+            with col_matrix: st.image(img, use_container_width=True)
+            with col_opts:
+                st.write("Select Option:")
+                # Şıkları Grid Olarak Göster
                 c1, c2, c3 = st.columns(3)
-                c1.image(opts_data[0]['img'], caption="A")
-                c2.image(opts_data[1]['img'], caption="B")
-                c3.image(opts_data[2]['img'], caption="C")
-                
-                # Row 2
+                c1.image(opts[0]['img'], caption="A"); c2.image(opts[1]['img'], caption="B"); c3.image(opts[2]['img'], caption="C")
                 c4, c5, c6 = st.columns(3)
-                c4.image(opts_data[3]['img'], caption="D")
-                c5.image(opts_data[4]['img'], caption="E")
-                c6.image(opts_data[5]['img'], caption="F")
+                c4.image(opts[3]['img'], caption="D"); c5.image(opts[4]['img'], caption="E"); c6.image(opts[5]['img'], caption="F")
                 
-                # Radyo Butonu
-                options = ["A", "B", "C", "D", "E", "F"]
-                # Mevcut cevabı hatırla (Varsa)
-                current_selection = st.session_state.iq_answers.get(f"q_{q_num}", None)
-                idx = options.index(current_selection) if current_selection else 0
-                
-                choice = st.radio(f"Select Answer for Q{q_num}:", options, index=idx, horizontal=True, key=f"iq_rad_{q_num}")
+                sel = st.session_state.iq_answers.get(f"q_{q_num}", None)
+                idx = ["A","B","C","D","E","F"].index(sel) if sel else 0
+                choice = st.radio(f"Answer Q{q_num}", ["A","B","C","D","E","F"], index=idx, horizontal=True, key=f"rad_{q_num}")
                 st.session_state.iq_answers[f"q_{q_num}"] = choice
 
-        # --- B) SÖZEL/SAYISAL SORULAR (21-35) ---
+        # B) SÖZEL (21-35)
         else:
-            st.subheader(f"Part II: Verbal & Numerical ({q_num}/35)")
+            st.subheader(f"Verbal & Numerical ({q_num}/35)")
             db = FULL_QUESTIONS_DB[st.session_state.iq_lang]
             db_idx = q_num - 21
-            
             if db_idx < len(db):
-                q_data = db[db_idx]
+                q = db[db_idx]
+                # DÜZELTME: Soruyu st.info ile net göster
+                st.info(f"**Question {q_num}:**\n\n{q['q']}")
                 
-                # Kart tasarımı
-                st.markdown(f"""
-                <div style="background-color: white; padding: 20px; border-radius: 10px; border: 1px solid #ddd; margin-bottom: 20px;">
-                    <h4 style="color: #2c3e50; margin:0;">Question {q_num}</h4>
-                    <p style="font-size: 1.3em; margin-top: 10px;">{q_data['q']}</p>
-                </div>
-                """, unsafe_allow_html=True)
-                
-                choice = st.radio("Select Answer:", q_data['opts'], key=f"iq_rad_{q_num}")
+                sel = st.session_state.iq_answers.get(f"q_{q_num}", None)
+                idx = q['opts'].index(sel) if sel in q['opts'] else 0
+                choice = st.radio("Choose:", q['opts'], index=idx, key=f"rad_{q_num}")
                 st.session_state.iq_answers[f"q_{q_num}"] = choice
-            else:
-                st.error("End of questions.")
-
-        st.markdown("---")
         
-        # NAVİGASYON BUTONLARI
         c_prev, c_next = st.columns([1, 4])
-        
-        if c_next.button("Next Question ➡️" if q_num < 35 else "FINISH TEST ✅", type="primary", use_container_width=True):
-            if q_num < 35:
-                st.session_state.iq_current_q += 1
-                st.rerun()
-            else:
-                st.session_state.iq_state = "result"
-                st.rerun()
+        if c_next.button("Next ➡️" if q_num < 35 else "Finish ✅", type="primary"):
+            if q_num < 35: st.session_state.iq_current_q += 1
+            else: st.session_state.iq_state = "result"
+            st.rerun()
 
-    # --- EKRAN 3: SONUÇ VE ANALİZ ---
     elif st.session_state.iq_state == "result":
         st.balloons()
+        raw = 0; weighted = 0
         
-        # --- PUANLAMA ALGORİTMASI ---
-        raw_score = 0
-        total_weighted_points = 0
-        user_points = 0
-        
-        # 1. Matris Puanlama (1-20)
+        # Puanlama
         for i in range(1, 21):
-            diff = (i // 5) + 1 
-            pts = diff * 10
-            total_weighted_points += pts
+            pts = ((i // 5) + 1) * 10
+            weighted += pts
+            if st.session_state.iq_answers.get(f"q_{i}") == st.session_state.iq_correct_keys.get(f"q_{i}_key"): raw += pts
             
-            user_ans = st.session_state.iq_answers.get(f"q_{i}")
-            # Doğru anahtarı state'ten çek
-            correct_ans = st.session_state.iq_correct_keys.get(f"q_{i}_key")
-            
-            if user_ans and correct_ans and user_ans == correct_ans: 
-                user_points += pts
-                raw_score += 1
-
-        # 2. Sözel Puanlama (21-35)
         db = FULL_QUESTIONS_DB[st.session_state.iq_lang]
-        for i, q_data in enumerate(db):
-            q_num = 21 + i
-            diff = q_data['diff']
-            pts = diff * 12 
-            total_weighted_points += pts
+        for i, q in enumerate(db):
+            pts = q['diff'] * 12
+            weighted += pts
+            if st.session_state.iq_answers.get(f"q_{21+i}") == q['a']: raw += pts
             
-            ans = st.session_state.iq_answers.get(f"q_{q_num}")
-            if ans == q_data['a']:
-                user_points += pts
-                raw_score += 1
+        iq = int(85 + ((raw / weighted) * 60)) if weighted > 0 else 85
+        st.title("Cognitive Profile Report")
+        c1, c2 = st.columns(2)
+        c1.metric("Estimated IQ", f"{iq}", "Standard Score")
+        c2.metric("Accuracy", f"{int((raw/weighted)*100)}%")
         
-        # IQ HESAPLAMA (Mensa Scale: Mean 100, SD 15)
-        success_ratio = user_points / total_weighted_points if total_weighted_points > 0 else 0
-        estimated_iq = 85 + (success_ratio * 60) # Range: 85 - 145
-        estimated_iq = int(estimated_iq)
+        if iq >= 130: unlock_achievement("iq_genius")
+        unlock_achievement("iq_complete")
         
-        st.title("📊 Cognitive Profile Report")
-        
-        c1, c2, c3 = st.columns(3)
-        c1.metric("Estimated CPI (IQ)", f"{estimated_iq}", "Standard Score (SD 15)")
-        c2.metric("Raw Accuracy", f"{raw_score}/35", f"{int(success_ratio*100)}%")
-        
-        label = "Average"
-        if estimated_iq >= 132: label = "Mensa Eligible (Top 2%)"
-        elif estimated_iq >= 120: label = "Superior (Top 10%)"
-        elif estimated_iq >= 110: label = "High Average"
-        c3.metric("Classification", label)
-        
-        # Başarım Açma
-        if "achievements" in st.session_state:
-            if estimated_iq >= 130:
-                 st.session_state.achievements["iq_genius"]["unlocked"] = True
-            st.session_state.achievements["iq_complete"]["unlocked"] = True
-
-        st.markdown("---")
-        st.subheader("Performance Breakdown")
-        
-        col_g, col_v = st.columns(2)
-        with col_g:
-            st.info("**Abstract Reasoning**")
-            st.progress(min(1.0, success_ratio * 1.1)) 
-            st.caption("Pattern recognition, spatial logic.")
-        with col_v:
-            st.info("**Verbal & Numerical**")
-            st.progress(success_ratio)
-            st.caption("Vocabulary, arithmetic, logic.")
-
-        st.warning("💡 **Disclaimer:** This tool uses dynamic item generation. While accurate for screening, it is not a substitute for a clinical WAIS-IV test administered by a psychologist.")
-        
-        if st.button("Retake Test (Reset)"):
+        if st.button("Retake"):
             st.session_state.iq_state = "intro"
             st.rerun()
