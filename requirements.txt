@@ -19,3 +19,5 @@ langchain-google-genai
 # requirements.txt dosyanıza bunları ekleyin:
 pypdf         # PDF dosyalarını okumak için
 docx2txt      # .docx (Word) dosyalarını okumak için
+
+matplotlib
