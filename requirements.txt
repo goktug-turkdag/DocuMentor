@@ -15,6 +15,7 @@ langchain
 langchain-community
 langchain-huggingface
 langchain-google-genai
+langchain-openai
 
 # requirements.txt dosyanıza bunları ekleyin:
 pypdf         # PDF dosyalarını okumak için
