@@ -5,6 +5,7 @@ langchain-community
 langchain-core
 langchain-google-genai
 langchain-huggingface
+chromadb
 faiss-cpu
 sentence-transformers
 pypdf
