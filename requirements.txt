@@ -13,3 +13,4 @@ pypdf
 docx2txt
 matplotlib
 numpy
+pysqlite3-binary
