@@ -27,43 +27,45 @@ from langchain_community.document_loaders import PyPDFLoader, Docx2txtLoader, Te
 
 # --- 1.A BAŞARIM SİSTEMİ: ANA LİSTE (YENİ) ---
 ACHIEVEMENT_LIST = {
-    "gen_balance_10k": {"name": "Nostradamus musun?", "desc": "Bakiyeni 10,000'in üzerine çıkar. Geleceği mi görüyorsun?", "icon": "🔮"},
-    "gen_balance_100": {"name": "Son Pişmanlık", "desc": "Bakiyen 100'ün altına düştü. (Müslüm Baba anısına)", "icon": "🎻"},
-    "gen_win_1000": {"name": "I'M NOT LEAVING!", "desc": "Tek bir bahisten 1000 veya daha fazla kazan.", "icon": "🐺"},
-    "gen_played_all": {"name": "Mekanın Sahibi", "desc": "Tüm 6 oyunu (BJ, CF, RL, Slots, VP, SC) en az bir kez oyna.", "icon": "👑"},
+    # General
+    "gen_welcome": {"name": "Hoşgeldin Paketi", "desc": "Oyunu ilk kez açtın. (Bu bedavaydı.)", "icon": "👋"},
+    "gen_balance_10k": {"name": "Nostradamus musun?", "desc": "Bakiyeni 10,000'in üzerine çıkar. Geleceği mi görüyorsun?", "icon": "🔮"},
+    "gen_balance_100": {"name": "Son Pişmanlık", "desc": "Bakiyen 100'ün altına düştü. (Müslüm Baba anısına)", "icon": "🎻"},
+    "gen_win_1000": {"name": "I'M NOT LEAVING!", "desc": "Tek bir bahisten 1000 veya daha fazla kazan.", "icon": "🐺"},
+    "gen_played_all": {"name": "Mekanın Sahibi", "desc": "Tüm 6 oyunu (BJ, CF, RL, Slots, VP, SC) en az bir kez oyna.", "icon": "👑"},
 
-    # Blackjack
-    "bj_win_1": {"name": "Acemi Şansı", "desc": "İlk Blackjack elini kazan.", "icon": "🃏"},
-    "bj_win_25": {"name": "Kasa Katili", "desc": "Blackjack'te 25 el kazan.", "icon": "🦈"},
-    "bj_blackjack": {"name": "Natural 21", "desc": "Daha ilk iki kartta Blackjack yap.", "icon": "✨"},
-    "bj_charlie": {"name": "Beşibiryerde", "desc": "5-Card Charlie ile bir el kazan (Batmadan 5 kart çek).", "icon": "✋"},
-    "bj_split_win": {"name": "Dublör", "desc": "Elleri böldükten (Split) sonra en az bir eli kazan.", "icon": "👯"},
-    "bj_side_bet": {"name": "Yan Gelir", "desc": "Bir Blackjack yan bahsi (e.g., 21+3, PP) kazan.", "icon": "💸"},
+    # Blackjack
+    "bj_win_1": {"name": "Acemi Şansı", "desc": "İlk Blackjack elini kazan.", "icon": "🃏"},
+    "bj_win_25": {"name": "Kasa Katili", "desc": "Blackjack'te 25 el kazan.", "icon": "🦈"},
+    "bj_blackjack": {"name": "Natural 21", "desc": "Daha ilk iki kartta Blackjack yap.", "icon": "✨"},
+    "bj_charlie": {"name": "Beşibiryerde", "desc": "5-Card Charlie ile bir el kazan (Batmadan 5 kart çek).", "icon": "✋"},
+    "bj_split_win": {"name": "Dublör", "desc": "Elleri böldükten (Split) sonra en az bir eli kazan.", "icon": "👯"},
+    "bj_side_bet": {"name": "Yan Gelir", "desc": "Bir Blackjack yan bahsi (e.g., 21+3, PP) kazan.", "icon": "💸"},
 
-    # Coin Flip
-    "cf_win_10": {"name": "Yazı Tura", "desc": "Toplam 10 kez Yazı Tura kazan.", "icon": "🪙"},
-    "cf_played_25": {"name": "Flipping Out", "desc": "25 kez Yazı Tura oyna.", "icon": "🔄"},
+    # Coin Flip
+    "cf_win_10": {"name": "Yazı Tura", "desc": "Toplam 10 kez Yazı Tura kazan.", "icon": "🪙"},
+    "cf_played_25": {"name": "Flipping Out", "desc": "25 kez Yazı Tura oyna.", "icon": "🔄"},
 
-    # Roulette
-    "rl_win_0": {"name": "Can Polat'ım...", "desc": "0'a (Yeşil) bahis koy ve tesbihin 35 kat değerlensin.", "icon": "📿"},
-    "rl_win_black": {"name": "Always Bet on Black", "desc": "Siyaha bahis koy ve kazan. (Wesley Snipes anısına)", "icon": "⚫"},
-    "rl_played_25": {"name": "Dönme Dolap", "desc": "Rulette 25 spin oyna.", "icon": "🎡"},
+    # Roulette
+    "rl_win_0": {"name": "Can Polat'ım...", "desc": "0'a (Yeşil) bahis koy ve tesbihin 35 kat değerlensin.", "icon": "📿"},
+    "rl_win_black": {"name": "Always Bet on Black", "desc": "Siyaha bahis koy ve kazan. (Wesley Snipes anısına)", "icon": "⚫"},
+    "rl_played_25": {"name": "Dönme Dolap", "desc": "Rulette 25 spin oyna.", "icon": "🎡"},
 
-    # Slots
-    "slot_jackpot_7": {"name": "Midas Dokunuşu", "desc": "Slot makinesinde ❼❼❼ (Jackpot) yakala.", "icon": "💎"},
-    "slot_win_cherry": {"name": "Kiraz Mevsimi", "desc": "Slotlarda iki 🍒 ile kazan.", "icon": "🍒"},
-    "slot_played_100": {"name": "Kolu Çürüttün", "desc": "Slot makinesinde 100 kez spin at.", "icon": "🦾"},
+    # Slots
+    "slot_jackpot_7": {"name": "Midas Dokunuşu", "desc": "Slot makinesinde 777 (Jackpot) yakala.", "icon": "💎"},
+    "slot_win_cherry": {"name": "Kiraz Mevsimi", "desc": "Slotlarda iki 🍒 ile kazan.", "icon": "🍒"},
+    "slot_played_100": {"name": "Kolu Çürüttün", "desc": "Slot makinesinde 100 kez spin at.", "icon": "🦾"},
 
-    # Video Poker
-    "vp_win_royal": {"name": "Ezel", "desc": "Royal Flush yakala. İntikam soğuk yenen bir yemektir.", "icon": "👑"},
-    "vp_win_aces": {"name": "Kare As", "desc": "Dört As (Four of a Kind) ile bir el kazan.", "icon": "♠️"},
-    "vp_played_25": {"name": "Poker Face", "desc": "Video Pokerde 25 el oyna.", "icon": "😐"},
+    # Video Poker
+    "vp_win_royal": {"name": "Ezel", "desc": "Royal Flush yakala. İntikam soğuk yenen bir yemektir.", "icon": "👑"},
+    "vp_win_aces": {"name": "Kare As", "desc": "Dört As (Four of a Kind) ile bir el kazan.", "icon": "♠️"},
+    "vp_played_25": {"name": "Poker Face", "desc": "Video Pokerde 25 el oyna.", "icon": "😐"},
 
-    # Sisyphus' Climb
-    "sc_cashout_20x": {"name": "Fly Me to the Moon", "desc": "Sisyphus ile 20x veya daha yüksek bir çarpanda cash out yap.", "icon": "🚀"},
-    "sc_cashout_50x": {"name": "Zirve", "desc": "Sisyphus ile 50x veya daha yüksek bir çarpanda cash out yap.", "icon": "🏔️"},
-    "sc_crash_early": {"name": "Absürd", "desc": "Sisyphus 1.05x veya altında crash yapsın (Kaybet). (Camus anısına)", "icon": "💥"},
-    "sc_cashout_1_01x": {"name": "Risk Budur.", "desc": "Tam olarak 1.01x'te cash out yap. (İronik)", "icon": "🐔"},
+    # Sisyphus' Climb
+    "sc_cashout_20x": {"name": "Fly Me to the Moon", "desc": "Sisyphus ile 20x veya daha yüksek bir çarpanda cash out yap.", "icon": "🚀"},
+    "sc_cashout_50x": {"name": "Zirve", "desc": "Sisyphus ile 50x veya daha yüksek bir çarpanda cash out yap.", "icon": "🏔️"},
+    "sc_crash_early": {"name": "Absürd", "desc": "Sisyphus 1.05x veya altında crash yapsın (Kaybet). (Camus anısına)", "icon": "💥"},
+    "sc_cashout_1_01x": {"name": "Risk Budur.", "desc": "Tam olarak 1.01x'te cash out yap. (İronik)", "icon": "🐔"},
 }
 
 # --- 1. SETUP, CACHING VE API ANAHTARLARI ---
