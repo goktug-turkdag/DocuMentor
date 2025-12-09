@@ -11,3 +11,4 @@ pypdf
 docx2txt
 matplotlib
 numpy
+datasets
