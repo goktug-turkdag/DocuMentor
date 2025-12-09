@@ -27,7 +27,6 @@ from langchain_community.document_loaders import PyPDFLoader, Docx2txtLoader, Te
 
 # --- 1.A BAŞARIM SİSTEMİ: ANA LİSTE (YENİ) ---
 ACHIEVEMENT_LIST = {
-    "gen_welcome": {"name": "Hoşgeldin Paketi", "desc": "Oyunu ilk kez açtın. (Bu bedavaydı.)", "icon": "👋"},
     "gen_balance_10k": {"name": "Nostradamus musun?", "desc": "Bakiyeni 10,000'in üzerine çıkar. Geleceği mi görüyorsun?", "icon": "🔮"},
     "gen_balance_100": {"name": "Son Pişmanlık", "desc": "Bakiyen 100'ün altına düştü. (Müslüm Baba anısına)", "icon": "🎻"},
     "gen_win_1000": {"name": "I'M NOT LEAVING!", "desc": "Tek bir bahisten 1000 veya daha fazla kazan.", "icon": "🐺"},
