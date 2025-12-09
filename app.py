@@ -71,8 +71,8 @@ ACHIEVEMENT_LIST = {
 # --- 1. SETUP, CACHING VE API ANAHTARLARI ---
 load_dotenv()
 if "GOOGLE_API_KEY" not in os.environ:
-    st.error("GOOGLE_API_KEY not found. Please check your .env file.")
-    st.stop()
+    st.error("GOOGLE_API_KEY not found. Please check your .env file.")
+    st.stop()
 
 PERSIST_DIRECTORY = "chroma_db_multilingual"
 
