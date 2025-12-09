@@ -634,13 +634,6 @@ with tab_chat:
 
     COMBINE_DOCS_PROMPT = PromptTemplate.from_template(PROMPT_TEMPLATE)
 
-    # RAG zincirini oluştur
-    rag_chain = ConversationalRetrievalChain.from_llm(
-        llm=llm,
-        retriever=active_retriever,
-        combine_docs_chain_kwargs={"prompt": COMBINE_DOCS_PROMPT},
-        return_source_documents=True
-    )
 
     # Avatarları tanımla
     avatars = {"human": "👤", "assistant": "👽" if st.session_state.simlish_mode else "🤖"}
