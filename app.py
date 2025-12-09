@@ -35,6 +35,8 @@ from langchain_core.messages import HumanMessage, AIMessage
 # Doküman Yükleyiciler (Community'den gelir)
 from langchain_community.document_loaders import PyPDFLoader, Docx2txtLoader, TextLoader
 
+from langchain.chains import ConversationalRetrievalChain
+
 # --- 1.A BAŞARIM SİSTEMİ: ANA LİSTE (YENİ) ---
 ACHIEVEMENT_LIST = {
     # General
