@@ -79,10 +79,10 @@ PERSIST_DIRECTORY = "chroma_db_multilingual"
 # --- ÖNBELLEKLEME (PAHALI İŞLEMLER) ---
 @st.cache_resource
 def get_embeddings():
-    """Embedding modelini yükler"""
-    return HuggingFaceEmbeddings(
-        model_name="sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
-    )
+    """Embedding modelini yükler"""
+    return HuggingFaceEmbeddings(
+        model_name="sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
+    )
 
 @st.cache_resource
 def load_llm():
