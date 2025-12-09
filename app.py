@@ -1,5 +1,14 @@
 # -*- coding: utf-8 -*-
 import streamlit as st
+
+# --- CHROMA DB İÇİN SQLITE YAMASI (Bunu en başa ekleyin) ---
+try:
+    __import__('pysqlite3')
+    import sys
+    sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
+except ImportError:
+    pass
+
 import os
 import time
 import random
@@ -10,19 +19,16 @@ from collections import Counter
 from dotenv import load_dotenv
 
 # --- LANGCHAIN & AI IMPORTS ---
-try:
-    from langchain_community.vectorstores import Chroma
-    from langchain_huggingface import HuggingFaceEmbeddings
-    from langchain_google_genai import ChatGoogleGenerativeAI
-    from langchain.chains import ConversationalRetrievalChain
-    from langchain.text_splitter import RecursiveCharacterTextSplitter
-    from langchain.schema import Document, StrOutputParser
-    from langchain.prompts import PromptTemplate, ChatPromptTemplate
-    from langchain_core.messages import HumanMessage, AIMessage
-    from langchain_community.document_loaders import PyPDFLoader, Docx2txtLoader, TextLoader
-except ImportError:
-    st.error("Kritik kütüphaneler eksik. Lütfen: pip install langchain-community langchain-google-genai chromadb sentence-transformers langchain-huggingface")
-    st.stop()
+# Hata verirse direkt ekrana bassın ki sebebini görelim
+from langchain_community.vectorstores import Chroma
+from langchain_huggingface import HuggingFaceEmbeddings
+from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain.chains import ConversationalRetrievalChain
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain.schema import Document, StrOutputParser
+from langchain.prompts import PromptTemplate, ChatPromptTemplate
+from langchain_core.messages import HumanMessage, AIMessage
+from langchain_community.document_loaders import PyPDFLoader, Docx2txtLoader, TextLoader
 
 # --- 1. CONFIG & SETUP ---
 st.set_page_config(page_title="DocuMentor Pro", layout="wide", page_icon="📄")
