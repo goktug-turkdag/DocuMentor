@@ -14,14 +14,25 @@ import matplotlib.patches as patches
 import numpy as np
 import io
 
-# --- GEREKLİ LANGCHAIN IMPORTLARI ---
+# --- GÜNCELLENMİŞ VE SORUNSUZ IMPORTLAR ---
+
+# Vektör Veritabanı (Community'den gelir)
 from langchain_community.vectorstores import Chroma
+
+# Embedding ve LLM Entegrasyonları
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain.schema import Document, StrOutputParser # Creative Corner için
-from langchain.prompts import PromptTemplate, ChatPromptTemplate # Creative Corner için
+
+# Metin Bölücü (Artık kendi özel paketinden çekiyoruz, langchain ana paketine gerek yok)
+from langchain_text_splitters import RecursiveCharacterTextSplitter
+
+# Core Bileşenler (En kritik değişiklik burası: 'langchain' yerine 'langchain_core')
+from langchain_core.documents import Document
+from langchain_core.output_parsers import StrOutputParser
+from langchain_core.prompts import PromptTemplate, ChatPromptTemplate
 from langchain_core.messages import HumanMessage, AIMessage
+
+# Doküman Yükleyiciler (Community'den gelir)
 from langchain_community.document_loaders import PyPDFLoader, Docx2txtLoader, TextLoader
 
 # --- 1.A BAŞARIM SİSTEMİ: ANA LİSTE (YENİ) ---
