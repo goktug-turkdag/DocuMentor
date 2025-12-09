@@ -1,6 +1,7 @@
 streamlit
 python-dotenv
 langchain==0.1.16
+langchain.chains
 langchain-community==0.0.34
 langchain-core==0.1.45
 langchain-google-genai==1.0.3
