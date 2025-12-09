@@ -18,7 +18,6 @@ import io
 from langchain_community.vectorstores import Chroma
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain import ConversationalRetrievalChain
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.schema import Document, StrOutputParser # Creative Corner için
 from langchain.prompts import PromptTemplate, ChatPromptTemplate # Creative Corner için
