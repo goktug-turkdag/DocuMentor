@@ -86,94 +86,94 @@ def get_embeddings():
 
 @st.cache_resource
 def load_llm():
-    """LLM'i yükler"""
-    return ChatGoogleGenerativeAI(model="gemini-pro-latest", temperature=0.6)
+    """LLM'i yükler"""
+    return ChatGoogleGenerativeAI(model="gemini-pro-latest", temperature=0.6)
 
 # Creative Corner ve AI Coach için daha yaratıcı bir LLM örneği
 @st.cache_resource
 def load_creative_llm():
-    """Creative Corner ve AI Coach için daha yüksek sıcaklıklı LLM yükler"""
-    return ChatGoogleGenerativeAI(model="gemini-pro-latest", temperature=0.8)
+    """Creative Corner ve AI Coach için daha yüksek sıcaklıklı LLM yükler"""
+    return ChatGoogleGenerativeAI(model="gemini-pro-latest", temperature=0.8)
 
 
 @st.cache_resource
 def load_default_retriever(_embeddings):
-    """Varsayılan (Dolly-15k) bilgi tabanını yükler."""
-    if not os.path.exists(PERSIST_DIRECTORY):
-        with st.spinner("Creating default knowledge base for the first time..."):
-            st.info("First-time setup: The default (Dolly-15k) knowledge base is being created.")
-            dataset = load_dataset("databricks/databricks-dolly-15k", split="train")
-            data_with_context = dataset.filter(
-                lambda example: example["context"] != "" and len(example["context"]) > 10
-            )
-            documents = [Document(page_content=item['context'], metadata={"source": f"dolly_15k_item_{i}"})
-                         for i, item in enumerate(data_with_context)]
+    """Varsayılan (Dolly-15k) bilgi tabanını yükler."""
+    if not os.path.exists(PERSIST_DIRECTORY):
+        with st.spinner("Creating default knowledge base for the first time..."):
+            st.info("First-time setup: The default (Dolly-15k) knowledge base is being created.")
+            dataset = load_dataset("databricks/databricks-dolly-15k", split="train")
+            data_with_context = dataset.filter(
+                lambda example: example["context"] != "" and len(example["context"]) > 10
+            )
+            documents = [Document(page_content=item['context'], metadata={"source": f"dolly_15k_item_{i}"})
+                         for i, item in enumerate(data_with_context)]
 
-            text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
-            split_documents = text_splitter.split_documents(documents)
-            vector_store = Chroma.from_documents(
-                documents=split_documents,
-                embedding=_embeddings,
-                persist_directory=PERSIST_DIRECTORY
-            )
-    else:
-        vector_store = Chroma(
-            persist_directory=PERSIST_DIRECTORY,
-            embedding_function=_embeddings
-        )
-    return vector_store.as_retriever(search_kwargs={'k': 3})
+            text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
+            split_documents = text_splitter.split_documents(documents)
+            vector_store = Chroma.from_documents(
+                documents=split_documents,
+                embedding=_embeddings,
+                persist_directory=PERSIST_DIRECTORY
+            )
+    else:
+        vector_store = Chroma(
+            persist_directory=PERSIST_DIRECTORY,
+            embedding_function=_embeddings
+        )
+    return vector_store.as_retriever(search_kwargs={'k': 3})
 
 
 # --- ÇOKLU DOSYA İŞLEME ---
 @st.cache_data(max_entries=1)
 def process_uploaded_files(uploaded_files_data): # Dosya verisini alır (isim ve içerik)
-    """
-    Yüklenen dosyaların içeriğini okur, parçalar ve parçalanmış dokümanları döndürür.
-    Cache anahtarı olarak dosya isimleri ve boyutları kullanılır.
-    """
-    if not uploaded_files_data:
-        return None
+    """
+    Yüklenen dosyaların içeriğini okur, parçalar ve parçalanmış dokümanları döndürür.
+    Cache anahtarı olarak dosya isimleri ve boyutları kullanılır.
+    """
+    if not uploaded_files_data:
+        return None
 
-    all_documents = []
-    processed_names = []
+    all_documents = []
+    processed_names = []
 
-    with tempfile.TemporaryDirectory() as temp_dir:
-        for file_name, file_content in uploaded_files_data.items():
-            temp_path = os.path.join(temp_dir, file_name)
-            with open(temp_path, "wb") as f:
-                f.write(file_content)
+    with tempfile.TemporaryDirectory() as temp_dir:
+        for file_name, file_content in uploaded_files_data.items():
+            temp_path = os.path.join(temp_dir, file_name)
+            with open(temp_path, "wb") as f:
+                f.write(file_content)
 
-            try:
-                if file_name.endswith(".pdf"):
-                    loader = PyPDFLoader(temp_path)
-                elif file_name.endswith(".docx"):
-                    loader = Docx2txtLoader(temp_path)
-                elif file_name.endswith(".txt"):
-                    loader = TextLoader(temp_path, encoding="utf-8")
-                else:
-                    st.warning(f"Unsupported file type: {file_name}. Skipping.")
-                    continue
+            try:
+                if file_name.endswith(".pdf"):
+                    loader = PyPDFLoader(temp_path)
+                elif file_name.endswith(".docx"):
+                    loader = Docx2txtLoader(temp_path)
+                elif file_name.endswith(".txt"):
+                    loader = TextLoader(temp_path, encoding="utf-8")
+                else:
+                    st.warning(f"Unsupported file type: {file_name}. Skipping.")
+                    continue
 
-                loaded_docs = loader.load()
-                # Kaynak bilgisini metadata'ya ekle
-                for doc in loaded_docs:
-                    doc.metadata["source"] = file_name
-                all_documents.extend(loaded_docs)
-                processed_names.append(file_name)
+                loaded_docs = loader.load()
+                # Kaynak bilgisini metadata'ya ekle
+                for doc in loaded_docs:
+                    doc.metadata["source"] = file_name
+                all_documents.extend(loaded_docs)
+                processed_names.append(file_name)
 
-            except Exception as e:
-                st.error(f"Error processing {file_name}: {e}")
+            except Exception as e:
+                st.error(f"Error processing {file_name}: {e}")
 
-    if not all_documents:
-        st.error("No documents could be processed.")
-        return None
+    if not all_documents:
+        st.error("No documents could be processed.")
+        return None
 
-    text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
-    split_documents = text_splitter.split_documents(all_documents)
+    text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
+    split_documents = text_splitter.split_documents(all_documents)
 
-    st.success(f"Successfully processed {len(processed_names)} files: {', '.join(processed_names)}.")
-    # Sadece parçalanmış dokümanları döndür
-    return split_documents
+    st.success(f"Successfully processed {len(processed_names)} files: {', '.join(processed_names)}.")
+    # Sadece parçalanmış dokümanları döndür
+    return split_documents
 
 
 # --- PROMPT ŞABLONLARI ---
@@ -204,103 +204,103 @@ st.title("DocuMentor 📄")
 # --- Sekmeler (BURAYI GÜNCELLEYİN) ---
 # tab_iq değişkenini listeye ekliyoruz:
 tab_chat, tab_blackjack, tab_coinflip, tab_roulette, tab_slots, tab_vpoker, tab_stats, tab_achievements, tab_crash, tab_iq, tab_music, tab_creative, tab_settings = st.tabs([
-    "💬 Chatbot",
-    "🃏 Blackjack",
-    "🪙 Coin Flip",
-    "🎡 Roulette",
-    "🎰 Slots",
-    "🃏 Video Poker",
-    "📊 Stats",
-    "🏆 Achievements", 
-    "⛰️ Sisyphus' Climb",
-    "🧠 Cognitive Test", # <--- YENİ EKLENEN KISIM
-    "🎶 Music Player",
-    "🎨 Creative Corner",
-    "⚙️ Settings"
+    "💬 Chatbot",
+    "🃏 Blackjack",
+    "🪙 Coin Flip",
+    "🎡 Roulette",
+    "🎰 Slots",
+    "🃏 Video Poker",
+    "📊 Stats",
+    "🏆 Achievements", 
+    "⛰️ Sisyphus' Climb",
+    "🧠 Cognitive Test", # <--- YENİ EKLENEN KISIM
+    "🎶 Music Player",
+    "🎨 Creative Corner",
+    "⚙️ Settings"
 ])
 
 # --- 1.E BAŞARIM SİSTEMİ: BİLDİRİM SIRASI ---
 if "achievement_queue" in st.session_state:
-    while st.session_state.achievement_queue:
-        ach_id = st.session_state.achievement_queue.pop(0)
-        if ach_id in st.session_state.achievements:
-            ach_data = st.session_state.achievements[ach_id]
-            st.toast(f"Başarım Açıldı! {ach_data['name']}", icon=ach_data['icon'])
-            time.sleep(0.5) # Bildirimlerin üst üste binmemesi için
+    while st.session_state.achievement_queue:
+        ach_id = st.session_state.achievement_queue.pop(0)
+        if ach_id in st.session_state.achievements:
+            ach_data = st.session_state.achievements[ach_id]
+            st.toast(f"Başarım Açıldı! {ach_data['name']}", icon=ach_data['icon'])
+            time.sleep(0.5) # Bildirimlerin üst üste binmemesi için
 
 # --- BURADAN İTİBAREN SEKME KODLARI BAŞLAR ---
 
 # --- Sidebar ---
 with st.sidebar:
-    st.header("About DocuMentor")
-    st.markdown(
-        """
-        **DocuMentor** demonstrates advanced application development, combining:
-        1.  An **intelligent Q&A chatbot** leveraging cutting-edge AI.
-        2.  Several **interactive features & games of chance** demonstrating Python logic and state handling.
-        3.  A **creative text generation** module.
+    st.header("About DocuMentor")
+    st.markdown(
+        """
+        **DocuMentor** demonstrates advanced application development, combining:
+        1.  An **intelligent Q&A chatbot** leveraging cutting-edge AI.
+        2.  Several **interactive features & games of chance** demonstrating Python logic and state handling.
+        3.  A **creative text generation** module.
 
-        **Technical Architecture & Features:**
-        * **UI:** Built with **Streamlit**.
-        * **Core Logic:** **Python**.
-        * **Chatbot Engine:** RAG architecture, Google Gemini Pro LLM (via LangChain), HuggingFace multilingual embeddings, ChromaDB vector store, Dolly 15k dataset baseline, multi-document upload (.pdf, .docx, .txt), conversational memory, streaming responses, and Simlish mode easter egg & Developer FAQ. Expanded content moderation included.
-        * **Interactive Features (Games):** Blackjack (with 4 side bets, dynamic cashout, Double Down, Insurance, 5-Card Charlie, **AI Coach**, **Split Hands**), Coin Flip, Roulette, Slots, and Video Poker (Jacks or Better) implemented using pure Python logic and Streamlit Session State for complex state management (balance, bets, game flow, history, stats). Visual enhancements like card displays and animations.
-        * **Creative Generation:** Uses Google Gemini Pro via LangChain for prompt-based creative text generation (poems, story ideas, haikus, tweets).
+        **Technical Architecture & Features:**
+        * **UI:** Built with **Streamlit**.
+        * **Core Logic:** **Python**.
+        * **Chatbot Engine:** RAG architecture, Google Gemini Pro LLM (via LangChain), HuggingFace multilingual embeddings, ChromaDB vector store, Dolly 15k dataset baseline, multi-document upload (.pdf, .docx, .txt), conversational memory, streaming responses, and Simlish mode easter egg & Developer FAQ. Expanded content moderation included.
+        * **Interactive Features (Games):** Blackjack (with 4 side bets, dynamic cashout, Double Down, Insurance, 5-Card Charlie, **AI Coach**, **Split Hands**), Coin Flip, Roulette, Slots, and Video Poker (Jacks or Better) implemented using pure Python logic and Streamlit Session State for complex state management (balance, bets, game flow, history, stats). Visual enhancements like card displays and animations.
+        * **Creative Generation:** Uses Google Gemini Pro via LangChain for prompt-based creative text generation (poems, story ideas, haikus, tweets).
 
-        **Developed by Göktuğ Türkdağ.** This project highlights proficiency in building complex, interactive AI applications and sophisticated state management.
+        **Developed by Göktuğ Türkdağ.** This project highlights proficiency in building complex, interactive AI applications and sophisticated state management.
 
-        The codebase exceeds **2000+ lines** and is **open-source** on GitHub. Find the repository via the link below!
-        """ # Satır sayısını ve özelliği güncelledim
-    )
-    st.markdown("---")
-    st.subheader("Connect with the Developer")
-    st.markdown("🔗 [LinkedIn](https://www.linkedin.com/in/goktugturkdag)")
-    st.markdown("🐙 [GitHub](https://github.com/goktug-turkdag)")
-    st.markdown("📅 [Book a Meeting](https://cal.com/goktugturkdag)")
-    st.markdown("---")
+        The codebase exceeds **2000+ lines** and is **open-source** on GitHub. Find the repository via the link below!
+        """ # Satır sayısını ve özelliği güncelledim
+    )
+    st.markdown("---")
+    st.subheader("Connect with the Developer")
+    st.markdown("🔗 [LinkedIn](https://www.linkedin.com/in/goktugturkdag)")
+    st.markdown("🐙 [GitHub](https://github.com/goktug-turkdag)")
+    st.markdown("📅 [Book a Meeting](https://cal.com/goktugturkdag)")
+    st.markdown("---")
 
-    # Reset fonksiyonlarını global scope'a ekleyelim (Bu satırlar önemli)
-    bj_reset_func = lambda reset_balance=False: None
-    cf_reset_func = lambda reset_balance=False: None
-    rl_reset_func = lambda reset_balance=False: None
-    sl_reset_func = lambda reset_balance=False: None
-    vp_reset_func = lambda reset_balance=False: None
-    st_reset_func = lambda: None # Stats reset için
-    sc_reset_func = lambda reset_balance=False: None # Sisyphus' Climb için
+    # Reset fonksiyonlarını global scope'a ekleyelim (Bu satırlar önemli)
+    bj_reset_func = lambda reset_balance=False: None
+    cf_reset_func = lambda reset_balance=False: None
+    rl_reset_func = lambda reset_balance=False: None
+    sl_reset_func = lambda reset_balance=False: None
+    vp_reset_func = lambda reset_balance=False: None
+    st_reset_func = lambda: None # Stats reset için
+    sc_reset_func = lambda reset_balance=False: None # Sisyphus' Climb için
 
 
-    # Butonlar
-    if st.button("Clear Chat History 🧹"):
-        st.session_state.messages = []
-        st.session_state.chat_history = []
-        st.session_state.processed_docs = None
-        st.session_state.processed_file_names = []
-        st.success("Chat history and uploaded files context cleared!")
-        st.rerun()
+    # Butonlar
+    if st.button("Clear Chat History 🧹"):
+        st.session_state.messages = []
+        st.session_state.chat_history = []
+        st.session_state.processed_docs = None
+        st.session_state.processed_file_names = []
+        st.success("Chat history and uploaded files context cleared!")
+        st.rerun()
 
-    if st.button("Reset Interactive Features & Stats 💰📊"):
-        # Reset fonksiyonlarını çağır
-        bj_reset_func(reset_balance=True)
-        cf_reset_func(reset_balance=True)
-        rl_reset_func(reset_balance=True)
-        sl_reset_func(reset_balance=True)
-        vp_reset_func(reset_balance=True)
-        st_reset_func() # Stats reset
-        sc_reset_func(reset_balance=True) # YENİ OYUNU EKLE
+    if st.button("Reset Interactive Features & Stats 💰📊"):
+        # Reset fonksiyonlarını çağır
+        bj_reset_func(reset_balance=True)
+        cf_reset_func(reset_balance=True)
+        rl_reset_func(reset_balance=True)
+        sl_reset_func(reset_balance=True)
+        vp_reset_func(reset_balance=True)
+        st_reset_func() # Stats reset
+        sc_reset_func(reset_balance=True) # YENİ OYUNU EKLE
 
-        st.session_state.player_balance = 1000 # Bakiyeyi sıfırla
-        st.success("Balance, feature states, and stats reset!")
-        st.rerun()
+        st.session_state.player_balance = 1000 # Bakiyeyi sıfırla
+        st.success("Balance, feature states, and stats reset!")
+        st.rerun()
 
-    st.markdown("---")
+    st.markdown("---")
 
-    st.subheader("Chat with Your Documents")
-    st.markdown("Upload one or multiple PDF, DOCX, or TXT files.")
-    uploaded_files = st.file_uploader(
-        "Upload files for chat:",
-        type=["pdf", "docx", "txt"],
-        accept_multiple_files=True
-    )
+    st.subheader("Chat with Your Documents")
+    st.markdown("Upload one or multiple PDF, DOCX, or TXT files.")
+    uploaded_files = st.file_uploader(
+        "Upload files for chat:",
+        type=["pdf", "docx", "txt"],
+        accept_multiple_files=True
+    )
 
 # --- BİLEŞENLERİ YÜKLE ---
 llm = load_llm()
@@ -311,146 +311,146 @@ default_retriever = load_default_retriever(embeddings)
 # --- SESSION STATE BAŞLATMA (GENEL VE OYUNLAR İÇİN) ---
 # Sohbet için
 if "messages" not in st.session_state:
-    st.session_state.messages = []
-    st.session_state.chat_history = []
-    st.session_state.processed_docs = None
-    st.session_state.processed_file_names = []
-    # Welcome message buradan kaldırıldı, tab_chat içine hardcode edildi.
+    st.session_state.messages = []
+    st.session_state.chat_history = []
+    st.session_state.processed_docs = None
+    st.session_state.processed_file_names = []
+    # Welcome message buradan kaldırıldı, tab_chat içine hardcode edildi.
 
 # Ortak Bakiye ve Genel Ayarlar
 if "player_balance" not in st.session_state:
-    st.session_state.player_balance = 1000
+    st.session_state.player_balance = 1000
 if "simlish_mode" not in st.session_state:
-    st.session_state.simlish_mode = False
+    st.session_state.simlish_mode = False
 if "bj_deck_count" not in st.session_state:
-     st.session_state.bj_deck_count = 6
+     st.session_state.bj_deck_count = 6
 
 # Oyuncu İstatistikleri için State
 if "player_stats" not in st.session_state:
-    st.session_state.player_stats = {
-        "start_balance": 1000, "total_bets": 0, "total_won_amount": 0, "total_lost_amount": 0,
-        "bj": {"played": 0, "won": 0, "lost": 0, "push": 0},
-        "cf": {"played": 0, "won": 0, "lost": 0},
-        "rl": {"played": 0, "won": 0, "lost": 0},
-        "slot": {"played": 0, "won": 0, "lost": 0},
-        "vp": {"played": 0, "won": 0, "lost": 0},
-        "sc": {"played": 0, "won": 0, "lost": 0}, # Sisyphus Climb istatistiği
-        "biggest_win": 0, "biggest_loss": 0,
-    }
-    
+    st.session_state.player_stats = {
+        "start_balance": 1000, "total_bets": 0, "total_won_amount": 0, "total_lost_amount": 0,
+        "bj": {"played": 0, "won": 0, "lost": 0, "push": 0},
+        "cf": {"played": 0, "won": 0, "lost": 0},
+        "rl": {"played": 0, "won": 0, "lost": 0},
+        "slot": {"played": 0, "won": 0, "lost": 0},
+        "vp": {"played": 0, "won": 0, "lost": 0},
+        "sc": {"played": 0, "won": 0, "lost": 0}, # Sisyphus Climb istatistiği
+        "biggest_win": 0, "biggest_loss": 0,
+    }
+    
 # --- 1.B BAŞARIM SİSTEMİ: STATE BAŞLATMA ---
 # (Bu blok, "if player_stats..." bloğunun DIŞINDA olmalı, aynı girinti seviyesinde)
 if "achievements" not in st.session_state:
-    st.session_state.achievements = {
-        ach_id: {
-            "name": data["name"],
-            "description": data["desc"],
-            "icon": data["icon"],
-            "unlocked": False
-        } for ach_id, data in ACHIEVEMENT_LIST.items()
-    }
-    # İlk başarıyı hemen aç (ID GÜNCELLENDİ)
-    st.session_state.achievements["gen_welcome"]["unlocked"] = True 
+    st.session_state.achievements = {
+        ach_id: {
+            "name": data["name"],
+            "description": data["desc"],
+            "icon": data["icon"],
+            "unlocked": False
+        } for ach_id, data in ACHIEVEMENT_LIST.items()
+    }
+    # İlk başarıyı hemen aç (ID GÜNCELLENDİ)
+    st.session_state.achievements["gen_welcome"]["unlocked"] = True 
 
 if "achievement_queue" not in st.session_state:
-    st.session_state.achievement_queue = [] # Bildirimler için
+    st.session_state.achievement_queue = [] # Bildirimler için
 
 # --- Yardımcı Fonksiyonlar ---
 # --- add_history fonksiyonunun tamamını bununla değiştirin ---
 
 def add_history(game_key, bet, outcome, balance):
-    history_key = f"{game_key}_history"
-    if history_key not in st.session_state:
-        st.session_state[history_key] = []
-    st.session_state[history_key].insert(0, {"bet": bet, "outcome": outcome, "balance": balance})
-    st.session_state[history_key] = st.session_state[history_key][:5]
+    history_key = f"{game_key}_history"
+    if history_key not in st.session_state:
+        st.session_state[history_key] = []
+    st.session_state[history_key].insert(0, {"bet": bet, "outcome": outcome, "balance": balance})
+    st.session_state[history_key] = st.session_state[history_key][:5]
 
-    try:
-        stats = st.session_state.player_stats
-        
-        total_bet_this_round = bet 
-        # BJ'de, bu fonksiyon yan bahisler için ayrı ayrı, ana bahis için ayrı çağrılır.
-        # Bu, total_bets'i doğru hesaplar (her bahis ayrı bir "bet"tir).
-        if game_key == "bj":
-            stats["total_bets"] += bet # Her bahsi (yan veya ana) ekle
-        else:
-            stats["total_bets"] += total_bet_this_round
+    try:
+        stats = st.session_state.player_stats
+        
+        total_bet_this_round = bet 
+        # BJ'de, bu fonksiyon yan bahisler için ayrı ayrı, ana bahis için ayrı çağrılır.
+        # Bu, total_bets'i doğru hesaplar (her bahis ayrı bir "bet"tir).
+        if game_key == "bj":
+            stats["total_bets"] += bet # Her bahsi (yan veya ana) ekle
+        else:
+            stats["total_bets"] += total_bet_this_round
 
-        if outcome > 0:
-            stats["total_won_amount"] += outcome
-            if game_key in stats and bet == st.session_state.get(f"{game_key}_main_bet", bet): # Sadece ana bahsi oyun sayısı olarak say
-                stats[game_key]["won"] += 1
-            stats["biggest_win"] = max(stats["biggest_win"], outcome)
-        elif outcome < 0:
-            stats["total_lost_amount"] += abs(outcome)
-            if game_key in stats and bet == st.session_state.get(f"{game_key}_main_bet", bet):
-                stats[game_key]["lost"] += 1
-            stats["biggest_loss"] = max(stats["biggest_loss"], abs(outcome))
-        elif game_key == "bj" and "bj" in stats and bet == st.session_state.get("current_bet", bet): # Sadece ana bahis push olur (veya o elin bahsi)
-            stats["bj"]["push"] += 1
-        
-        # BJ'de split varsa, 'played' her el için artmalıdır.
-        # 'bet' parametresi, o elin (veya yan bahsin) bahsidir.
-        # Ana bahsi (veya split el bahsini) 'played' sayacı olarak ele almalıyız.
-        # Yan bahisler (PP, 21+3) 'played' sayılmamalı.
-        
-        is_side_bet = False
-        if game_key == "bj":
-                # 'bet' in yan bahis olup olmadığını kontrol et
-                side_bet_values = [
-                    st.session_state.get("bet_21_3", 0),
-                    st.session_state.get("bet_perfect_pairs", 0),
-                    st.session_state.get("bet_lucky_seven", 0),
-                    st.session_state.get("bet_bust", 0),
-                    st.session_state.get("bet_insurance", 0)
-                ]
-                # Eğer 'bet' bu değerlerden biriyse (ve 0 değilse) VE o anki 'current_bet' (ana el bahsi) değilse, yan bahistir.
-                if bet in side_bet_values and bet > 0 and bet != st.session_state.get("current_bet", -1):
-                    is_side_bet = True
-                
-                # Eğer yan bahis değilse, 'played'ı artır
-                if not is_side_bet:
-                    stats[game_key]["played"] += 1
-                    # Ana bahsi (stats için) o anki elin bahsi olarak güncelle
-                    st.session_state.bj_main_bet = bet 
-                    
-        elif game_key in stats:
-                stats[game_key]["played"] += 1 # Diğer oyunlar için her zaman 1 artır
-            
-        st.session_state.player_stats = stats
+        if outcome > 0:
+            stats["total_won_amount"] += outcome
+            if game_key in stats and bet == st.session_state.get(f"{game_key}_main_bet", bet): # Sadece ana bahsi oyun sayısı olarak say
+                stats[game_key]["won"] += 1
+            stats["biggest_win"] = max(stats["biggest_win"], outcome)
+        elif outcome < 0:
+            stats["total_lost_amount"] += abs(outcome)
+            if game_key in stats and bet == st.session_state.get(f"{game_key}_main_bet", bet):
+                stats[game_key]["lost"] += 1
+            stats["biggest_loss"] = max(stats["biggest_loss"], abs(outcome))
+        elif game_key == "bj" and "bj" in stats and bet == st.session_state.get("current_bet", bet): # Sadece ana bahis push olur (veya o elin bahsi)
+            stats["bj"]["push"] += 1
+        
+        # BJ'de split varsa, 'played' her el için artmalıdır.
+        # 'bet' parametresi, o elin (veya yan bahsin) bahsidir.
+        # Ana bahsi (veya split el bahsini) 'played' sayacı olarak ele almalıyız.
+        # Yan bahisler (PP, 21+3) 'played' sayılmamalı.
+        
+        is_side_bet = False
+        if game_key == "bj":
+                # 'bet' in yan bahis olup olmadığını kontrol et
+                side_bet_values = [
+                    st.session_state.get("bet_21_3", 0),
+                    st.session_state.get("bet_perfect_pairs", 0),
+                    st.session_state.get("bet_lucky_seven", 0),
+                    st.session_state.get("bet_bust", 0),
+                    st.session_state.get("bet_insurance", 0)
+                ]
+                # Eğer 'bet' bu değerlerden biriyse (ve 0 değilse) VE o anki 'current_bet' (ana el bahsi) değilse, yan bahistir.
+                if bet in side_bet_values and bet > 0 and bet != st.session_state.get("current_bet", -1):
+                    is_side_bet = True
+                
+                # Eğer yan bahis değilse, 'played'ı artır
+                if not is_side_bet:
+                    stats[game_key]["played"] += 1
+                    # Ana bahsi (stats için) o anki elin bahsi olarak güncelle
+                    st.session_state.bj_main_bet = bet 
+                    
+        elif game_key in stats:
+                stats[game_key]["played"] += 1 # Diğer oyunlar için her zaman 1 artır
+            
+        st.session_state.player_stats = stats
 
-        # --- 1.D BAŞARIM SİSTEMİ: KONTROLLERİ ÇAĞIR (DOĞRU GİRİNTİ) ---
-        # Bu blok, 'st.session_state.player_stats = stats' satırı ile aynı girintide olmalı
-        check_stat_achievements() # İstatistik bazlıları kontrol et
-        
-        if outcome >= 1000: # 1000+ kazanç
-            unlock_achievement("gen_win_1000")
-        # --- YENİ KODUN SONU ---
+        # --- 1.D BAŞARIM SİSTEMİ: KONTROLLERİ ÇAĞIR (DOĞRU GİRİNTİ) ---
+        # Bu blok, 'st.session_state.player_stats = stats' satırı ile aynı girintide olmalı
+        check_stat_achievements() # İstatistik bazlıları kontrol et
+        
+        if outcome >= 1000: # 1000+ kazanç
+            unlock_achievement("gen_win_1000")
+        # --- YENİ KODUN SONU ---
 
-    except Exception as e:
-        print(f"Stats update error for game_key '{game_key}': {e}")
+    except Exception as e:
+        print(f"Stats update error for game_key '{game_key}': {e}")
 def display_history(game_key):
-     history_key = f"{game_key}_history"
-     if history_key in st.session_state and st.session_state[history_key]:
-         with st.expander("Show Recent History"):
-             for entry in st.session_state[history_key]:
-                 outcome_sign = "+" if entry["outcome"] > 0 else "" if entry["outcome"] == 0 else ""
-                 outcome_val = entry['outcome'] if entry['outcome'] != 0 else 'Push'
-                 st.markdown(f"- Bet: {entry['bet']}, Outcome: {outcome_sign}{outcome_val}, New Balance: {entry['balance']}")
+     history_key = f"{game_key}_history"
+     if history_key in st.session_state and st.session_state[history_key]:
+         with st.expander("Show Recent History"):
+             for entry in st.session_state[history_key]:
+                 outcome_sign = "+" if entry["outcome"] > 0 else "" if entry["outcome"] == 0 else ""
+                 outcome_val = entry['outcome'] if entry['outcome'] != 0 else 'Push'
+                 st.markdown(f"- Bet: {entry['bet']}, Outcome: {outcome_sign}{outcome_val}, New Balance: {entry['balance']}")
 
 # İstatistik Resetleme Fonksiyonu
 def reset_stats_state():
-     st.session_state.player_stats = {
-        "start_balance": st.session_state.player_balance,
-        "total_bets": 0,"total_won_amount": 0,"total_lost_amount": 0,
-        "bj": {"played": 0, "won": 0, "lost": 0, "push": 0},
-        "cf": {"played": 0, "won": 0, "lost": 0},
-        "rl": {"played": 0, "won": 0, "lost": 0},
-        "slot": {"played": 0, "won": 0, "lost": 0},
-        "vp": {"played": 0, "won": 0, "lost": 0},
-        "sc": {"played": 0, "won": 0, "lost": 0}, # YENİ İSTATİSTİK
-        "biggest_win": 0,"biggest_loss": 0,
-     }
+     st.session_state.player_stats = {
+        "start_balance": st.session_state.player_balance,
+        "total_bets": 0,"total_won_amount": 0,"total_lost_amount": 0,
+        "bj": {"played": 0, "won": 0, "lost": 0, "push": 0},
+        "cf": {"played": 0, "won": 0, "lost": 0},
+        "rl": {"played": 0, "won": 0, "lost": 0},
+        "slot": {"played": 0, "won": 0, "lost": 0},
+        "vp": {"played": 0, "won": 0, "lost": 0},
+        "sc": {"played": 0, "won": 0, "lost": 0}, # YENİ İSTATİSTİK
+        "biggest_win": 0,"biggest_loss": 0,
+     }
 globals()["st_reset_func"] = reset_stats_state
 
 globals()["st_reset_func"] = reset_stats_state
@@ -458,76 +458,76 @@ globals()["st_reset_func"] = reset_stats_state
 
 # --- 1.C BAŞARIM SİSTEMİ: YARDIMCI FONKSİYONLAR (YENİ) ---
 def unlock_achievement(ach_id):
-    """Bir başarımı açar ve bildirim sırasına ekler."""
-    if ach_id in st.session_state.achievements and not st.session_state.achievements[ach_id]["unlocked"]:
-        st.session_state.achievements[ach_id]["unlocked"] = True
-        st.session_state.achievement_queue.append(ach_id)
+    """Bir başarımı açar ve bildirim sırasına ekler."""
+    if ach_id in st.session_state.achievements and not st.session_state.achievements[ach_id]["unlocked"]:
+        st.session_state.achievements[ach_id]["unlocked"] = True
+        st.session_state.achievement_queue.append(ach_id)
 
 def check_stat_achievements():
-    """İstatistiklere dayalı başarımları kontrol eder."""
-    try:
-        stats = st.session_state.player_stats
-        
-        # General
-        if st.session_state.player_balance >= 10000: unlock_achievement("gen_balance_10k")
-        if st.session_state.player_balance < 100: unlock_achievement("gen_balance_100")
-        
-        # Tüm oyunları oynadı mı?
-        if (stats["bj"]["played"] > 0 and stats["cf"]["played"] > 0 and 
-            stats["rl"]["played"] > 0 and stats["slot"]["played"] > 0 and 
-            stats["vp"]["played"] > 0 and stats["sc"]["played"] > 0):
-            unlock_achievement("gen_played_all")
+    """İstatistiklere dayalı başarımları kontrol eder."""
+    try:
+        stats = st.session_state.player_stats
+        
+        # General
+        if st.session_state.player_balance >= 10000: unlock_achievement("gen_balance_10k")
+        if st.session_state.player_balance < 100: unlock_achievement("gen_balance_100")
+        
+        # Tüm oyunları oynadı mı?
+        if (stats["bj"]["played"] > 0 and stats["cf"]["played"] > 0 and 
+            stats["rl"]["played"] > 0 and stats["slot"]["played"] > 0 and 
+            stats["vp"]["played"] > 0 and stats["sc"]["played"] > 0):
+            unlock_achievement("gen_played_all")
 
-        # Blackjack
-        if stats["bj"]["won"] >= 1: unlock_achievement("bj_win_1")
-        if stats["bj"]["won"] >= 25: unlock_achievement("bj_win_25")
-        
-        # Coin Flip
-        if stats["cf"]["won"] >= 10: unlock_achievement("cf_win_10")
-        if stats["cf"]["played"] >= 25: unlock_achievement("cf_played_25")
-        
-        # Roulette
-        if stats["rl"]["played"] >= 25: unlock_achievement("rl_played_25")
+        # Blackjack
+        if stats["bj"]["won"] >= 1: unlock_achievement("bj_win_1")
+        if stats["bj"]["won"] >= 25: unlock_achievement("bj_win_25")
+        
+        # Coin Flip
+        if stats["cf"]["won"] >= 10: unlock_achievement("cf_win_10")
+        if stats["cf"]["played"] >= 25: unlock_achievement("cf_played_25")
+        
+        # Roulette
+        if stats["rl"]["played"] >= 25: unlock_achievement("rl_played_25")
 
-        # Slots
-        if stats["slot"]["played"] >= 100: unlock_achievement("slot_played_100")
+        # Slots
+        if stats["slot"]["played"] >= 100: unlock_achievement("slot_played_100")
 
-        # Video Poker
-        if stats["vp"]["played"] >= 25: unlock_achievement("vp_played_25")
-        
-    except Exception as e:
-        print(f"Error checking stat achievements: {e}")
+        # Video Poker
+        if stats["vp"]["played"] >= 25: unlock_achievement("vp_played_25")
+        
+    except Exception as e:
+        print(f"Error checking stat achievements: {e}")
 
 # --- Genişletilmiş Güvenlik Bariyeri ---
 BANNED_KEYWORDS = [
-    # Şiddet ve Zarar Verme
-    "kill", "murder", "bomb", "terror", "attack", "assault", "rape", "abuse", "torture", "violence", "violent", "hurt", "harm", "injure", "slaughter", "massacre", "weapon", "gun", "knife", "explode", "fight", "war", "death", "die", "assassinate", "execute", "wound", "behead", "maim", "molest",
-    # Yasa Dışı Faaliyetler
-    "illegal", "drug", "cocaine", "heroin", "meth", "lsd", "mdma", "theft", "steal", "robbery", "fraud", "scam", "hack", "phish", "crack", "exploit", "smuggle", "counterfeit", "bribery", "blackmail", "crime", "criminal", "poach", "trespass", "arson", "embezzle", "money laundering",
-    # Nefret Söylemi ve Ayrımcılık
-    "hate", "nazi", "racist", "racism", "sexist", "sexism", "homophobic", "homophobia", "transphobic", "transphobia", "bigot", "supremacy", "discrimination", "stereotype", "slur", "insult", "offensive", "derogatory", "prejudice", "xenophobia", "misogyny", "antisemitism", "islamophobia", "nigga", "nigger", "kike", "chink", "wetback", "faggot", "dyke", "retard", # Hakaretler
-    # Müstehcen ve Cinsel İçerik
-    "sex", "porn", "nude", "naked", "erotic", "explicit", "sexual", "prostitute", "pedophile", "incest", "bestiality", "orgasm", "masturbate", "fetish", "kink", "bdsm", "rape", "molest", "child abuse", "lolita", "hentai", "xxx",
-    # Kendine Zarar Verme
-    "suicide", "self-harm", "depressed", "anorexia", "bulimia", "cut", "bleed", "overdose", "kill myself", "want to die", "hopeless", "intihar",
-    # Dezenformasyon ve Komplo Teorileri
-    "hoax", "fake news", "conspiracy", "qanon", "chemtrail", "flat earth", "plandemic", "misinformation", "disinformation", "propaganda", "anti-vax", "pizzagate", "lizard people",
-    # Tehlikeli Talimatlar
-    "how to make a bomb", "how to kill", "how to hack", "how to make drugs", "how to build weapon", "how to commit crime", "how to suicide", "how to self harm",
-    # Kişisel Bilgi İsteği (Örnekler)
-    "what is your password", "give me your credit card", "where do you live", "phone number", "social security", "private key", "address", "real name", "bank account",
-    # Siyasi Figürler/Partiler/Hassas Konular (Yönlendirme için)
-    "recep", "tayyip", "erdoğan", "erdogan", "akp", "ak parti", "chp", "mhp", "iyi parti", "hdp", "politics", "siyaset", "election", "seçim", "government", "hükümet", "turkey", "türkiye", "world politics", "president", "başkan", "minister", "bakan", "policy", "politika", "parliament", "meclis", "vote", "oy", "trump", "biden", "putin", "zelensky", "russia", "ukraine", "iran", "iraq", "hamas", "israel", "palestine", "gaza", "war", "invasion", "conflict", "kılıçdaroğlu", "imamoğlu", "ekrem", "özgür özel", "bahçeli", "akşener", "demirtaş", "meral", "fetö", "pkk", # Eklenenler
-    # Diğer Potensiyel Olarak Zararlı / Etik Dışı / Küfür
-    "unsafe", "dangerous", "unethical", "immoral", "malware", "virus", "phishing", "doxing", "stalking", "harassment", "bullying", "cheat", "plagiarize", "impersonate", "fuck", "shit", "damn", "bitch", "asshole", "cunt", "bastard", "cock", "pussy", "dick" # Küfürler
+    # Şiddet ve Zarar Verme
+    "kill", "murder", "bomb", "terror", "attack", "assault", "rape", "abuse", "torture", "violence", "violent", "hurt", "harm", "injure", "slaughter", "massacre", "weapon", "gun", "knife", "explode", "fight", "war", "death", "die", "assassinate", "execute", "wound", "behead", "maim", "molest",
+    # Yasa Dışı Faaliyetler
+    "illegal", "drug", "cocaine", "heroin", "meth", "lsd", "mdma", "theft", "steal", "robbery", "fraud", "scam", "hack", "phish", "crack", "exploit", "smuggle", "counterfeit", "bribery", "blackmail", "crime", "criminal", "poach", "trespass", "arson", "embezzle", "money laundering",
+    # Nefret Söylemi ve Ayrımcılık
+    "hate", "nazi", "racist", "racism", "sexist", "sexism", "homophobic", "homophobia", "transphobic", "transphobia", "bigot", "supremacy", "discrimination", "stereotype", "slur", "insult", "offensive", "derogatory", "prejudice", "xenophobia", "misogyny", "antisemitism", "islamophobia", "nigga", "nigger", "kike", "chink", "wetback", "faggot", "dyke", "retard", # Hakaretler
+    # Müstehcen ve Cinsel İçerik
+    "sex", "porn", "nude", "naked", "erotic", "explicit", "sexual", "prostitute", "pedophile", "incest", "bestiality", "orgasm", "masturbate", "fetish", "kink", "bdsm", "rape", "molest", "child abuse", "lolita", "hentai", "xxx",
+    # Kendine Zarar Verme
+    "suicide", "self-harm", "depressed", "anorexia", "bulimia", "cut", "bleed", "overdose", "kill myself", "want to die", "hopeless", "intihar",
+    # Dezenformasyon ve Komplo Teorileri
+    "hoax", "fake news", "conspiracy", "qanon", "chemtrail", "flat earth", "plandemic", "misinformation", "disinformation", "propaganda", "anti-vax", "pizzagate", "lizard people",
+    # Tehlikeli Talimatlar
+    "how to make a bomb", "how to kill", "how to hack", "how to make drugs", "how to build weapon", "how to commit crime", "how to suicide", "how to self harm",
+    # Kişisel Bilgi İsteği (Örnekler)
+    "what is your password", "give me your credit card", "where do you live", "phone number", "social security", "private key", "address", "real name", "bank account",
+    # Siyasi Figürler/Partiler/Hassas Konular (Yönlendirme için)
+    "recep", "tayyip", "erdoğan", "erdogan", "akp", "ak parti", "chp", "mhp", "iyi parti", "hdp", "politics", "siyaset", "election", "seçim", "government", "hükümet", "turkey", "türkiye", "world politics", "president", "başkan", "minister", "bakan", "policy", "politika", "parliament", "meclis", "vote", "oy", "trump", "biden", "putin", "zelensky", "russia", "ukraine", "iran", "iraq", "hamas", "israel", "palestine", "gaza", "war", "invasion", "conflict", "kılıçdaroğlu", "imamoğlu", "ekrem", "özgür özel", "bahçeli", "akşener", "demirtaş", "meral", "fetö", "pkk", # Eklenenler
+    # Diğer Potensiyel Olarak Zararlı / Etik Dışı / Küfür
+    "unsafe", "dangerous", "unethical", "immoral", "malware", "virus", "phishing", "doxing", "stalking", "harassment", "bullying", "cheat", "plagiarize", "impersonate", "fuck", "shit", "damn", "bitch", "asshole", "cunt", "bastard", "cock", "pussy", "dick" # Küfürler
 ]
 
 POLITICAL_KEYWORDS = [
-    "recep", "tayyip", "erdoğan", "erdogan", "akp", "ak parti", "chp", "mhp", "iyi parti", "hdp",
-    "politics", "siyaset", "election", "seçim", "government", "hükümet", "turkey", "türkiye",
-    "world politics", "president", "başkan", "minister", "bakan", "policy", "politika", "parliament", "meclis", "vote", "oy",
-    "trump", "biden", "putin", "zelensky", "russia", "ukraine", "iran", "iraq", "hamas", "israel", "palestine", "gaza", "war", "invasion", "conflict",
-    "kılıçdaroğlu", "imamoğlu", "ekrem", "özgür özel", "bahçeli", "akşener", "demirtaş", "meral", "fetö", "pkk" # Eklenenler
+    "recep", "tayyip", "erdoğan", "erdogan", "akp", "ak parti", "chp", "mhp", "iyi parti", "hdp",
+    "politics", "siyaset", "election", "seçim", "government", "hükümet", "turkey", "türkiye",
+    "world politics", "president", "başkan", "minister", "bakan", "policy", "politika", "parliament", "meclis", "vote", "oy",
+    "trump", "biden", "putin", "zelensky", "russia", "ukraine", "iran", "iraq", "hamas", "israel", "palestine", "gaza", "war", "invasion", "conflict",
+    "kılıçdaroğlu", "imamoğlu", "ekrem", "özgür özel", "bahçeli", "akşener", "demirtaş", "meral", "fetö", "pkk" # Eklenenler
 ]
 
 SELF_HARM_KEYWORDS = ["suicide", "self-harm", "kill myself", "want to die", "hopeless", "cut", "overdose", "intihar"]
@@ -535,18 +535,17 @@ SELF_HARM_KEYWORDS = ["suicide", "self-harm", "kill myself", "want to die", "hop
 # Günlük Konuşma Anahtar Kelimeleri
 GREETING_KEYWORDS = ["selam", "merhaba", "hi", "hello", "hey", "greetings", "günaydın", "iyi günler", "iyi akşamlar", "good morning", "good afternoon", "good evening"]
 WELLBEING_KEYWORDS = ["naber", "ne haber", "nasılsın", "nassın", "naptın", "iyi misin", "how are you", "what's up", "how's it going", "how goes it", "are you okay", "what are you doing"]
-LOCATION_KEYWORDS = ["ankara", "how is ankara", "neredesin", "where are you"] 
+LOCATION_KEYWORDS = ["ankara", "how is ankara", "neredesin", "where are you"] 
 
 # Chatbot Bekleme Mesajları
 WAITING_MESSAGES = [
-    "Searching for the answer... Hang tight! Maybe listen to some blues on the Music tab? 🎶",
-    "Looking that up for you... It's a lovely day today, isn't it? 🤔",
-    "Consulting the knowledge base... Please wait a moment. ✨",
-    "Processing your request... Shouldn't be too long! ⏳",
-    "Digging through the data... Almost there! 🧐",
-    "Let me check my notes... 📝"
+    "Searching for the answer... Hang tight! Maybe listen to some blues on the Music tab? 🎶",
+    "Looking that up for you... It's a lovely day today, isn't it? 🤔",
+    "Consulting the knowledge base... Please wait a moment. ✨",
+    "Processing your request... Shouldn't be too long! ⏳",
+    "Digging through the data... Almost there! 🧐",
+    "Let me check my notes... 📝"
 ]
-
 
 # --- BURADAN İTİBAREN SEKME KODLARI BAŞLAR ---
 
