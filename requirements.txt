@@ -1,13 +1,11 @@
 streamlit
 python-dotenv
-langchain
 langchain-community
 langchain-core
 langchain-google-genai
 langchain-huggingface
+langchain-text-splitters
 chromadb
-faiss-cpu
-sentence-transformers
 pypdf
 docx2txt
 matplotlib
