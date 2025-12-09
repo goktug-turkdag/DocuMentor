@@ -1627,1083 +1627,1083 @@ with tab_blackjack:
     display_history("bj")
 
 
-# --- SEKME 3: COIN FLIP ---
+  # --- SEKME 3: COIN FLIP ---
 with tab_coinflip:
-    st.header("🪙 Coin Flip")
-    st.markdown("A simple Heads or Tails betting game.")
+    st.header("🪙 Coin Flip")
+    st.markdown("A simple Heads or Tails betting game.")
 
-    # State başlatma
-    if "coin_flip_result" not in st.session_state:
-        st.session_state.coin_flip_result = ""
-        st.session_state.coin_flip_message = ""
-        st.session_state.last_coin_flip_bet = 10
-        st.session_state.last_coin_flip_choice = "Heads"
-        st.session_state.cf_history = []
+    # State başlatma
+    if "coin_flip_result" not in st.session_state:
+        st.session_state.coin_flip_result = ""
+        st.session_state.coin_flip_message = ""
+        st.session_state.last_coin_flip_bet = 10
+        st.session_state.last_coin_flip_choice = "Heads"
+        st.session_state.cf_history = []
 
-    def reset_coin_flip_state(reset_balance=False):
-        st.session_state.coin_flip_result = ""
-        st.session_state.coin_flip_message = ""
-        st.session_state.last_coin_flip_bet = 10
-        st.session_state.last_coin_flip_choice = "Heads"
-        st.session_state.cf_history = []
-        if reset_balance: st.session_state.player_balance = 1000
-    globals()["cf_reset_func"] = reset_coin_flip_state
+    def reset_coin_flip_state(reset_balance=False):
+        st.session_state.coin_flip_result = ""
+        st.session_state.coin_flip_message = ""
+        st.session_state.last_coin_flip_bet = 10
+        st.session_state.last_coin_flip_choice = "Heads"
+        st.session_state.cf_history = []
+        if reset_balance: st.session_state.player_balance = 1000
+    globals()["cf_reset_func"] = reset_coin_flip_state
 
-    # Oyun Arayüzü ve Mantığı
-    st.metric(label="Your Balance", value=f"💰 {st.session_state.player_balance}")
+    # Oyun Arayüzü ve Mantığı
+    st.metric(label="Your Balance", value=f"💰 {st.session_state.player_balance}")
 
-    if st.session_state.player_balance <= 0:
-        st.error("You are out of money! Reset features from the sidebar.")
-    else:
-        st.caption(f"Last bet: {st.session_state.last_coin_flip_bet} on {st.session_state.last_coin_flip_choice}")
+    if st.session_state.player_balance <= 0:
+        st.error("You are out of money! Reset features from the sidebar.")
+    else:
+        st.caption(f"Last bet: {st.session_state.last_coin_flip_bet} on {st.session_state.last_coin_flip_choice}")
 
-        with st.form("coin_flip_form"):
-            default_cf_bet = min(st.session_state.last_coin_flip_bet, st.session_state.player_balance) if st.session_state.player_balance > 0 else 1
-            cf_bet = st.number_input("Bet Amount:", min_value=1, max_value=st.session_state.player_balance,
-                                    value=default_cf_bet, step=1)
-            cf_choice_options = ["Heads", "Tails"]
-            cf_choice_index = cf_choice_options.index(st.session_state.last_coin_flip_choice) if st.session_state.last_coin_flip_choice in cf_choice_options else 0
-            cf_choice = st.radio("Choose:", cf_choice_options, index=cf_choice_index, horizontal=True)
+        with st.form("coin_flip_form"):
+            default_cf_bet = min(st.session_state.last_coin_flip_bet, st.session_state.player_balance) if st.session_state.player_balance > 0 else 1
+            cf_bet = st.number_input("Bet Amount:", min_value=1, max_value=st.session_state.player_balance,
+                                     value=default_cf_bet, step=1)
+            cf_choice_options = ["Heads", "Tails"]
+            cf_choice_index = cf_choice_options.index(st.session_state.last_coin_flip_choice) if st.session_state.last_coin_flip_choice in cf_choice_options else 0
+            cf_choice = st.radio("Choose:", cf_choice_options, index=cf_choice_index, horizontal=True)
 
-            flip_button = st.form_submit_button("Flip Coin")
+            flip_button = st.form_submit_button("Flip Coin")
 
-        if flip_button:
-            st.session_state.player_balance -= cf_bet
-            st.session_state.cf_main_bet = cf_bet # Stats için
-            placeholder = st.empty()
-            placeholder.header("Flipping... 🪙")
-            time.sleep(0.7)
-            result = random.choice(["Heads", "Tails"])
-            placeholder.header(f"It's {result}!") 
+        if flip_button:
+            st.session_state.player_balance -= cf_bet
+            st.session_state.cf_main_bet = cf_bet # Stats için
+            placeholder = st.empty()
+            placeholder.header("Flipping... 🪙")
+            time.sleep(0.7)
+            result = random.choice(["Heads", "Tails"])
+            placeholder.header(f"It's {result}!") 
 
-            st.session_state.coin_flip_result = result
-            st.session_state.last_coin_flip_bet = cf_bet
-            st.session_state.last_coin_flip_choice = cf_choice
+            st.session_state.coin_flip_result = result
+            st.session_state.last_coin_flip_bet = cf_bet
+            st.session_state.last_coin_flip_choice = cf_choice
 
-            if result == cf_choice:
-                winnings = cf_bet 
-                st.session_state.player_balance += cf_bet + winnings 
-                st.session_state.coin_flip_message = f"🎉 You win {winnings}!"
-                add_history("cf", cf_bet, winnings, st.session_state.player_balance)
-                st.balloons()
-            else:
-                st.session_state.coin_flip_message = f"😕 It's {result}. You lost."
-                add_history("cf", cf_bet, -cf_bet, st.session_state.player_balance)
+            if result == cf_choice:
+                winnings = cf_bet 
+                st.session_state.player_balance += cf_bet + winnings 
+                st.session_state.coin_flip_message = f"🎉 You win {winnings}!"
+                add_history("cf", cf_bet, winnings, st.session_state.player_balance)
+                st.balloons()
+            else:
+                st.session_state.coin_flip_message = f"😕 It's {result}. You lost."
+                add_history("cf", cf_bet, -cf_bet, st.session_state.player_balance)
 
-            st.rerun() 
+            st.rerun() 
 
-    if st.session_state.coin_flip_result and st.session_state.coin_flip_message:
-        st.write(st.session_state.coin_flip_message)
+    if st.session_state.coin_flip_result and st.session_state.coin_flip_message:
+        st.write(st.session_state.coin_flip_message)
 
-    display_history("cf")
+    display_history("cf")
 
 
 # --- SEKME 4: ROULETTE ---
 with tab_roulette:
-    st.header("🎡 Roulette (European)")
-    st.markdown("Place your bets on the table and spin the wheel!")
+    st.header("🎡 Roulette (European)")
+    st.markdown("Place your bets on the table and spin the wheel!")
 
-    # State başlatma
-    if "roulette_bets" not in st.session_state:
-        st.session_state.roulette_bets = {}
-        st.session_state.roulette_result = ""
-        st.session_state.roulette_message = ""
-        st.session_state.last_roulette_bets = {}
-        st.session_state.rl_history = []
+    # State başlatma
+    if "roulette_bets" not in st.session_state:
+        st.session_state.roulette_bets = {}
+        st.session_state.roulette_result = ""
+        st.session_state.roulette_message = ""
+        st.session_state.last_roulette_bets = {}
+        st.session_state.rl_history = []
 
-    def reset_roulette_state(reset_balance=False):
-        st.session_state.roulette_bets = {}
-        st.session_state.roulette_result = ""
-        st.session_state.roulette_message = ""
-        st.session_state.last_roulette_bets = {}
-        st.session_state.rl_history = []
-        if reset_balance: st.session_state.player_balance = 1000
-    globals()["rl_reset_func"] = reset_roulette_state
+    def reset_roulette_state(reset_balance=False):
+        st.session_state.roulette_bets = {}
+        st.session_state.roulette_result = ""
+        st.session_state.roulette_message = ""
+        st.session_state.last_roulette_bets = {}
+        st.session_state.rl_history = []
+        if reset_balance: st.session_state.player_balance = 1000
+    globals()["rl_reset_func"] = reset_roulette_state
 
-    numbers = list(range(37))
-    red_numbers = {1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36}
-    black_numbers = {2, 4, 6, 8, 10, 11, 13, 15, 17, 20, 22, 24, 26, 28, 29, 31, 33, 35}
+    numbers = list(range(37))
+    red_numbers = {1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36}
+    black_numbers = {2, 4, 6, 8, 10, 11, 13, 15, 17, 20, 22, 24, 26, 28, 29, 31, 33, 35}
 
-    def get_color(number):
-        if number == 0: return "Green"
-        if number in red_numbers: return "Red"
-        if number in black_numbers: return "Black"
-        return ""
+    def get_color(number):
+        if number == 0: return "Green"
+        if number in red_numbers: return "Red"
+        if number in black_numbers: return "Black"
+        return ""
 
-    def get_odd_even(number):
-        if number == 0: return ""
-        return "Odd" if number % 2 != 0 else "Even"
+    def get_odd_even(number):
+        if number == 0: return ""
+        return "Odd" if number % 2 != 0 else "Even"
 
-    def get_low_high(number):
-        if number == 0: return ""
-        return "Low" if 1 <= number <= 18 else "High"
+    def get_low_high(number):
+        if number == 0: return ""
+        return "Low" if 1 <= number <= 18 else "High"
 
-    # Rulet Arayüzü, Spin Logic ve History Gösterimi
-    st.metric(label="Your Balance", value=f"💰 {st.session_state.player_balance}")
+    # Rulet Arayüzü, Spin Logic ve History Gösterimi
+    st.metric(label="Your Balance", value=f"💰 {st.session_state.player_balance}")
 
-    if st.session_state.player_balance <= 0:
-        st.error("You are out of money! Reset features from the sidebar.")
-    else:
-        st.subheader("Place Your Bets:")
+    if st.session_state.player_balance <= 0:
+        st.error("You are out of money! Reset features from the sidebar.")
+    else:
+        st.subheader("Place Your Bets:")
 
-        if st.session_state.last_roulette_bets:
-            with st.expander("Show/Repeat Last Bets"):
-                last_bets_str = "\n".join([f"- {k.replace('_', ' ').title()}: {v}" for k, v in st.session_state.last_roulette_bets.items()])
-                st.markdown(last_bets_str)
+        if st.session_state.last_roulette_bets:
+            with st.expander("Show/Repeat Last Bets"):
+                last_bets_str = "\n".join([f"- {k.replace('_', ' ').title()}: {v}" for k, v in st.session_state.last_roulette_bets.items()])
+                st.markdown(last_bets_str)
 
-        current_bets = {}
-        total_current_bet = 0
+        current_bets = {}
+        total_current_bet = 0
 
-        num_cols = st.columns(4)
-        selected_number = num_cols[0].selectbox("Number (0-36):", ["-"] + numbers, key="r_num_select")
-        last_num_key = next((k for k in st.session_state.last_roulette_bets if k.startswith("number_")), None)
-        default_num_bet = min(st.session_state.last_roulette_bets.get(last_num_key, 0), st.session_state.player_balance) if last_num_key and st.session_state.player_balance > 0 else 0
-        if selected_number != "-":
-            number_bet = num_cols[1].number_input("Bet on Number (35:1):", min_value=0, max_value=st.session_state.player_balance,
-                                                value=default_num_bet, step=1, key="r_num_bet")
-            if number_bet > 0:
-                current_bets[f"number_{selected_number}"] = number_bet
-                total_current_bet += number_bet
+        num_cols = st.columns(4)
+        selected_number = num_cols[0].selectbox("Number (0-36):", ["-"] + numbers, key="r_num_select")
+        last_num_key = next((k for k in st.session_state.last_roulette_bets if k.startswith("number_")), None)
+        default_num_bet = min(st.session_state.last_roulette_bets.get(last_num_key, 0), st.session_state.player_balance) if last_num_key and st.session_state.player_balance > 0 else 0
+        if selected_number != "-":
+            number_bet = num_cols[1].number_input("Bet on Number (35:1):", min_value=0, max_value=st.session_state.player_balance,
+                                                value=default_num_bet, step=1, key="r_num_bet")
+            if number_bet > 0:
+                current_bets[f"number_{selected_number}"] = number_bet
+                total_current_bet += number_bet
 
-        st.markdown("**Outside Bets (1:1 Payout)**")
-        ext_cols = st.columns(3)
+        st.markdown("**Outside Bets (1:1 Payout)**")
+        ext_cols = st.columns(3)
 
-        max_outside_bet = st.session_state.player_balance 
-        red_bet = ext_cols[0].number_input("Bet on Red:", min_value=0, max_value=max_outside_bet, value=min(st.session_state.last_roulette_bets.get("Red", 0), max_outside_bet), step=1, key="r_red_bet")
-        if red_bet > 0: current_bets["Red"] = red_bet; total_current_bet += red_bet
-        black_bet = ext_cols[0].number_input("Bet on Black:", min_value=0, max_value=max_outside_bet, value=min(st.session_state.last_roulette_bets.get("Black", 0), max_outside_bet), step=1, key="r_black_bet")
-        if black_bet > 0: current_bets["Black"] = black_bet; total_current_bet += black_bet
+        max_outside_bet = st.session_state.player_balance 
+        red_bet = ext_cols[0].number_input("Bet on Red:", min_value=0, max_value=max_outside_bet, value=min(st.session_state.last_roulette_bets.get("Red", 0), max_outside_bet), step=1, key="r_red_bet")
+        if red_bet > 0: current_bets["Red"] = red_bet; total_current_bet += red_bet
+        black_bet = ext_cols[0].number_input("Bet on Black:", min_value=0, max_value=max_outside_bet, value=min(st.session_state.last_roulette_bets.get("Black", 0), max_outside_bet), step=1, key="r_black_bet")
+        if black_bet > 0: current_bets["Black"] = black_bet; total_current_bet += black_bet
 
-        odd_bet = ext_cols[1].number_input("Bet on Odd:", min_value=0, max_value=max_outside_bet, value=min(st.session_state.last_roulette_bets.get("Odd", 0), max_outside_bet), step=1, key="r_odd_bet")
-        if odd_bet > 0: current_bets["Odd"] = odd_bet; total_current_bet += odd_bet
-        even_bet = ext_cols[1].number_input("Bet on Even:", min_value=0, max_value=max_outside_bet, value=min(st.session_state.last_roulette_bets.get("Even", 0), max_outside_bet), step=1, key="r_even_bet")
-        if even_bet > 0: current_bets["Even"] = even_bet; total_current_bet += even_bet
+        odd_bet = ext_cols[1].number_input("Bet on Odd:", min_value=0, max_value=max_outside_bet, value=min(st.session_state.last_roulette_bets.get("Odd", 0), max_outside_bet), step=1, key="r_odd_bet")
+        if odd_bet > 0: current_bets["Odd"] = odd_bet; total_current_bet += odd_bet
+        even_bet = ext_cols[1].number_input("Bet on Even:", min_value=0, max_value=max_outside_bet, value=min(st.session_state.last_roulette_bets.get("Even", 0), max_outside_bet), step=1, key="r_even_bet")
+        if even_bet > 0: current_bets["Even"] = even_bet; total_current_bet += even_bet
 
-        low_bet = ext_cols[2].number_input("Bet on Low (1-18):", min_value=0, max_value=max_outside_bet, value=min(st.session_state.last_roulette_bets.get("Low", 0), max_outside_bet), step=1, key="r_low_bet")
-        if low_bet > 0: current_bets["Low"] = low_bet; total_current_bet += low_bet
-        high_bet = ext_cols[2].number_input("Bet on High (19-36):", min_value=0, max_value=max_outside_bet, value=min(st.session_state.last_roulette_bets.get("High", 0), max_outside_bet), step=1, key="r_high_bet")
-        if high_bet > 0: current_bets["High"] = high_bet; total_current_bet += high_bet
+        low_bet = ext_cols[2].number_input("Bet on Low (1-18):", min_value=0, max_value=max_outside_bet, value=min(st.session_state.last_roulette_bets.get("Low", 0), max_outside_bet), step=1, key="r_low_bet")
+        if low_bet > 0: current_bets["Low"] = low_bet; total_current_bet += low_bet
+        high_bet = ext_cols[2].number_input("Bet on High (19-36):", min_value=0, max_value=max_outside_bet, value=min(st.session_state.last_roulette_bets.get("High", 0), max_outside_bet), step=1, key="r_high_bet")
+        if high_bet > 0: current_bets["High"] = high_bet; total_current_bet += high_bet
 
-        st.markdown(f"**Total Bet: {total_current_bet}**")
+        st.markdown(f"**Total Bet: {total_current_bet}**")
 
-        if st.button("Spin Wheel", key="spin_roulette"):
-            if total_current_bet <= 0:
-                st.warning("Please place at least one bet.")
-            elif total_current_bet > st.session_state.player_balance:
-                st.error(f"Total bet ({total_current_bet}) cannot exceed your balance ({st.session_state.player_balance}).")
-            else:
-                st.session_state.player_balance -= total_current_bet
-                st.session_state.rl_main_bet = total_current_bet # Stats için
-                st.session_state.roulette_bets = current_bets
-                st.session_state.last_roulette_bets = current_bets
+        if st.button("Spin Wheel", key="spin_roulette"):
+            if total_current_bet <= 0:
+                st.warning("Please place at least one bet.")
+            elif total_current_bet > st.session_state.player_balance:
+                st.error(f"Total bet ({total_current_bet}) cannot exceed your balance ({st.session_state.player_balance}).")
+            else:
+                st.session_state.player_balance -= total_current_bet
+                st.session_state.rl_main_bet = total_current_bet # Stats için
+                st.session_state.roulette_bets = current_bets
+                st.session_state.last_roulette_bets = current_bets
 
-                spin_placeholder = st.empty()
-                with spin_placeholder.container():
-                        st.header("Spinning... 🎡")
-                time.sleep(1.5) 
+                spin_placeholder = st.empty()
+                with spin_placeholder.container():
+                        st.header("Spinning... 🎡")
+                time.sleep(1.5) 
 
-                winning_number = random.randint(0, 36)
-                winning_color = get_color(winning_number)
-                winning_odd_even = get_odd_even(winning_number)
-                winning_low_high = get_low_high(winning_number)
-                
-                color_emoji = "🔴" if winning_color == "Red" else "⚫" if winning_color == "Black" else "🟢"
+                winning_number = random.randint(0, 36)
+                winning_color = get_color(winning_number)
+                winning_odd_even = get_odd_even(winning_number)
+                winning_low_high = get_low_high(winning_number)
+                
+                color_emoji = "🔴" if winning_color == "Red" else "⚫" if winning_color == "Black" else "🟢"
 
-                with spin_placeholder.container():
-                        st.header(f"Result: {winning_number} {color_emoji} {winning_color}!") 
-                st.session_state.roulette_result = f"**{winning_number} {color_emoji} {winning_color}**"
+                with spin_placeholder.container():
+                        st.header(f"Result: {winning_number} {color_emoji} {winning_color}!") 
+                st.session_state.roulette_result = f"**{winning_number} {color_emoji} {winning_color}**"
 
-                total_winnings = 0
-                winning_messages = []
-                net_outcome = -total_current_bet
+                total_winnings = 0
+                winning_messages = []
+                net_outcome = -total_current_bet
 
-                # --- BAŞARIM KONTROLLERİ BURADA (DOĞRU GİRİNTİLENMİŞ) ---
-                for bet_type, bet_amount in st.session_state.roulette_bets.items():
-                    win = False
-                    payout_ratio = 0
+                # --- BAŞARIM KONTROLLERİ BURADA ---
+                for bet_type, bet_amount in st.session_state.roulette_bets.items():
+                    win = False
+                    payout_ratio = 0
 
-                    if bet_type.startswith("number_"):
-                        bet_num = int(bet_type.split("_")[1])
-                        if bet_num == winning_number: 
-                            win = True; payout_ratio = 35
-                            if bet_num == 0:
-                                unlock_achievement("rl_win_0") # <-- BAŞARIM KODU
-                    elif bet_type == "Red" and winning_color == "Red": win = True; payout_ratio = 1
-                    elif bet_type == "Black" and winning_color == "Black": 
-                        win = True; payout_ratio = 1
-                        unlock_achievement("rl_win_black") # <-- BAŞARIM KODU
-                    elif bet_type == "Odd" and winning_odd_even == "Odd": win = True; payout_ratio = 1
-                    elif bet_type == "Even" and winning_odd_even == "Even": win = True; payout_ratio = 1
-                    elif bet_type == "Low" and winning_low_high == "Low": win = True; payout_ratio = 1
-                    elif bet_type == "High" and winning_low_high == "High": win = True; payout_ratio = 1
+                    if bet_type.startswith("number_"):
+                        bet_num = int(bet_type.split("_")[1])
+                        if bet_num == winning_number: 
+                            win = True; payout_ratio = 35
+                            if bet_num == 0:
+                                unlock_achievement("rl_win_0") # <-- BAŞARIM KODU
+                    elif bet_type == "Red" and winning_color == "Red": win = True; payout_ratio = 1
+                    elif bet_type == "Black" and winning_color == "Black": 
+                        win = True; payout_ratio = 1
+                        unlock_achievement("rl_win_black") # <-- BAŞARIM KODU
+                    elif bet_type == "Odd" and winning_odd_even == "Odd": win = True; payout_ratio = 1
+                    elif bet_type == "Even" and winning_odd_even == "Even": win = True; payout_ratio = 1
+                    elif bet_type == "Low" and winning_low_high == "Low": win = True; payout_ratio = 1
+                    elif bet_type == "High" and winning_low_high == "High": win = True; payout_ratio = 1
 
-                    if win:
-                        winnings = bet_amount * payout_ratio
-                        total_winnings += winnings + bet_amount
-                        net_outcome += winnings + bet_amount
-                        winning_messages.append(f"Win on {bet_type.replace('_', ' ').title()}: +{winnings}!")
+                    if win:
+                        winnings = bet_amount * payout_ratio
+                        total_winnings += winnings + bet_amount
+                        net_outcome += winnings + bet_amount
+                        winning_messages.append(f"Win on {bet_type.replace('_', ' ').title()}: +{winnings}!")
 
-                if total_winnings > 0:
-                    st.session_state.player_balance += total_winnings
-                    st.session_state.roulette_message = "🎉 **Winning Bets:**\n" + "\n".join(winning_messages)
-                    st.balloons()
-                else:
-                    st.session_state.roulette_message = "😕 No winning bets this round."
+                if total_winnings > 0:
+                    st.session_state.player_balance += total_winnings
+                    st.session_state.roulette_message = "🎉 **Winning Bets:**\n" + "\n".join(winning_messages)
+                    st.balloons()
+                else:
+                    st.session_state.roulette_message = "😕 No winning bets this round."
 
-                add_history("rl", total_current_bet, net_outcome, st.session_state.player_balance)
-                st.rerun()
+                add_history("rl", total_current_bet, net_outcome, st.session_state.player_balance)
+                st.rerun()
 
-    if st.session_state.roulette_result and st.session_state.roulette_message: 
-        st.write(st.session_state.roulette_message)
-        st.button("Place New Bets", on_click=lambda: st.session_state.update({"roulette_result":"", "roulette_message":"", "roulette_bets":{}}))
+    if st.session_state.roulette_result and st.session_state.roulette_message: 
+        st.write(st.session_state.roulette_message)
+        st.button("Place New Bets", on_click=lambda: st.session_state.update({"roulette_result":"", "roulette_message":"", "roulette_bets":{}}))
 
-    display_history("rl")
+    display_history("rl")
 
 
 # --- SEKME 5: SLOTS (AUTOSPIN İLE GÜNCELLENDİ) ---
 with tab_slots:
-    st.header("🎰 Simple Slots")
-    st.markdown("Spin the reels and try to match the symbols on the middle line! **Now with Autospin!**")
+    st.header("🎰 Simple Slots")
+    st.markdown("Spin the reels and try to match the symbols on the middle line! **Now with Autospin!**")
 
-    # Slot Sembolleri ve Olasılıkları
-    symbols = ["🍒", "🍋", "🍊", "🍉", "⭐", "💎", "❼"]
-    weights = [    25,    20,    18,    15,    10,     7,     5]
+    # Slot Sembolleri ve Olasılıkları
+    symbols = ["🍒", "🍋", "🍊", "🍉", "⭐", "💎", "❼"]
+    weights = [    25,    20,    18,    15,    10,     7,     5]
 
-    # Payout Oranları
-    payouts = {
-        "🍒": {2: 2, 3: 5},
-        "🍋": {3: 10},
-        "🍊": {3: 15},
-        "🍉": {3: 20},
-        "⭐": {3: 50},
-        "💎": {3: 75},
-        "❼": {3: 100}
-    }
+    # Payout Oranları
+    payouts = {
+        "🍒": {2: 2, 3: 5},
+        "🍋": {3: 10},
+        "🍊": {3: 15},
+        "🍉": {3: 20},
+        "⭐": {3: 50},
+        "💎": {3: 75},
+        "❼": {3: 100}
+    }
 
-    # State başlatma (Autospin eklendi)
-    if "slot_state" not in st.session_state:
-        st.session_state.slot_state = "ready" # ready, spinning, result
-        st.session_state.slot_reels = ["❓", "❓", "❓"]
-        st.session_state.slot_message = "Place your bet and spin!"
-        st.session_state.slot_history = []
-        st.session_state.last_slot_bet = 5
-        st.session_state.autospin_active = False
-        st.session_state.autospin_remaining = 0
-        st.session_state.temp_balloons = False
+    # State başlatma (Autospin eklendi)
+    if "slot_state" not in st.session_state:
+        st.session_state.slot_state = "ready" # ready, spinning, result
+        st.session_state.slot_reels = ["❓", "❓", "❓"]
+        st.session_state.slot_message = "Place your bet and spin!"
+        st.session_state.slot_history = []
+        st.session_state.last_slot_bet = 5
+        st.session_state.autospin_active = False
+        st.session_state.autospin_remaining = 0
+        st.session_state.temp_balloons = False
 
-    def reset_slots_state(reset_balance=False):
-        st.session_state.slot_state = "ready"
-        st.session_state.slot_reels = ["❓", "❓", "❓"]
-        st.session_state.slot_message = "Place your bet and spin!"
-        st.session_state.slot_history = []
-        st.session_state.last_slot_bet = 5
-        st.session_state.autospin_active = False
-        st.session_state.autospin_remaining = 0
-        st.session_state.temp_balloons = False
-        if reset_balance: st.session_state.player_balance = 1000
-    globals()["sl_reset_func"] = reset_slots_state
+    def reset_slots_state(reset_balance=False):
+        st.session_state.slot_state = "ready"
+        st.session_state.slot_reels = ["❓", "❓", "❓"]
+        st.session_state.slot_message = "Place your bet and spin!"
+        st.session_state.slot_history = []
+        st.session_state.last_slot_bet = 5
+        st.session_state.autospin_active = False
+        st.session_state.autospin_remaining = 0
+        st.session_state.temp_balloons = False
+        if reset_balance: st.session_state.player_balance = 1000
+    globals()["sl_reset_func"] = reset_slots_state
 
-    def spin_reels():
-        return random.choices(symbols, weights=weights, k=3)
+    def spin_reels():
+        return random.choices(symbols, weights=weights, k=3)
 
-    # check_win fonksiyonu (Başarım tetikleyicileri ile güncellenmiş hali)
-    def check_win(reels, bet):
-        middle_symbol = reels[1]
+    # check_win fonksiyonu (Başarım tetikleyicileri ile güncellenmiş hali)
+    def check_win(reels, bet):
+        middle_symbol = reels[1]
 
-        # Üçlü eşleşme
-        if reels[0] == middle_symbol == reels[2]:
-            symbol = middle_symbol
-            if symbol in payouts and 3 in payouts[symbol]:
-                if symbol == "❼":
-                    unlock_achievement("slot_jackpot_7")
-                multiplier = payouts[symbol][3]
-                winnings = bet * multiplier
-                return winnings, f"🎉 JACKPOT! Three {symbol}! Win {winnings} ({multiplier}x)!"
+        # Üçlü eşleşme
+        if reels[0] == middle_symbol == reels[2]:
+            symbol = middle_symbol
+            if symbol in payouts and 3 in payouts[symbol]:
+                if symbol == "❼":
+                    unlock_achievement("slot_jackpot_7")
+                multiplier = payouts[symbol][3]
+                winnings = bet * multiplier
+                return winnings, f"🎉 JACKPOT! Three {symbol}! Win {winnings} ({multiplier}x)!"
 
-        # İkili kiraz
-        if (reels[0] == "🍒" == reels[1]) or (reels[1] == "🍒" == reels[2]):
-                if "🍒" in payouts and 2 in payouts["🍒"]:
-                    unlock_achievement("slot_win_cherry")
-                    multiplier = payouts["🍒"][2]
-                    winnings = bet * multiplier
-                    return winnings, f"🍒 Two Cherries! Win {winnings} ({multiplier}x)!"
+        # İkili kiraz
+        if (reels[0] == "🍒" == reels[1]) or (reels[1] == "🍒" == reels[2]):
+            if "🍒" in payouts and 2 in payouts["🍒"]:
+                unlock_achievement("slot_win_cherry")
+                multiplier = payouts["🍒"][2]
+                winnings = bet * multiplier
+                return winnings, f"🍒 Two Cherries! Win {winnings} ({multiplier}x)!"
 
-        return 0, "😕 No win this time."
+        return 0, "😕 No win this time."
 
-    st.metric(label="Your Balance", value=f"💰 {st.session_state.player_balance}")
+    st.metric(label="Your Balance", value=f"💰 {st.session_state.player_balance}")
 
-    if st.session_state.player_balance <= 0:
-        st.error("You are out of money! Reset features from the sidebar.")
-    else:
-        
-        # --- AUTOSPIN MANTIĞI ---
-        # 1. Autospin Tetikleyicisi
-        # Eğer autospin aktifse, durum 'ready' ise ve spin hakkı varsa...
-        if (st.session_state.autospin_active and 
-            st.session_state.slot_state == "ready" and 
-            st.session_state.autospin_remaining > 0):
-            
-            # Bakiyeyi kontrol et
-            if st.session_state.player_balance >= st.session_state.last_slot_bet:
-                # Durumu 'spinning' olarak ayarla ve script'i yeniden çalıştır
-                st.session_state.slot_state = "spinning"
-                st.rerun()
-            else:
-                # Bakiye yetersizse autospin'i durdur
-                st.session_state.autospin_active = False
-                st.session_state.autospin_remaining = 0
-                st.warning("Autospin stopped. Insufficient balance.")
+    if st.session_state.player_balance <= 0:
+        st.error("You are out of money! Reset features from the sidebar.")
+    else:
+        
+        # --- AUTOSPIN MANTIĞI ---
+        # 1. Autospin Tetikleyicisi
+        # Eğer autospin aktifse, durum 'ready' ise ve spin hakkı varsa...
+        if (st.session_state.autospin_active and 
+            st.session_state.slot_state == "ready" and 
+            st.session_state.autospin_remaining > 0):
+            
+            # Bakiyeyi kontrol et
+            if st.session_state.player_balance >= st.session_state.last_slot_bet:
+                # Durumu 'spinning' olarak ayarla ve script'i yeniden çalıştır
+                st.session_state.slot_state = "spinning"
+                st.rerun()
+            else:
+                # Bakiye yetersizse autospin'i durdur
+                st.session_state.autospin_active = False
+                st.session_state.autospin_remaining = 0
+                st.warning("Autospin stopped. Insufficient balance.")
 
-        # --- ARAYÜZ ---
-        
-        # Bahis miktarını ayarla (Autospin aktifse kilitli)
-        default_slot_bet = min(st.session_state.last_slot_bet, st.session_state.player_balance)
-        slot_bet = st.number_input(
-            "Bet Amount per Spin:", 
-            min_value=1, 
-            max_value=st.session_state.player_balance,
-            value=default_slot_bet, 
-            step=1, 
-            key="slot_bet_input",
-            disabled=st.session_state.autospin_active # Autospin'deyse kilitle
-        )
+        # --- ARAYÜZ ---
+        
+        # Bahis miktarını ayarla (Autospin aktifse kilitli)
+        default_slot_bet = min(st.session_state.last_slot_bet, st.session_state.player_balance)
+        slot_bet = st.number_input(
+            "Bet Amount per Spin:", 
+            min_value=1, 
+            max_value=st.session_state.player_balance,
+            value=default_slot_bet, 
+            step=1, 
+            key="slot_bet_input",
+            disabled=st.session_state.autospin_active # Autospin'deyse kilitle
+        )
 
-        # Butonları ayarla
-        col1, col2, col3 = st.columns([1, 1, 1])
+        # Butonları ayarla
+        col1, col2, col3 = st.columns([1, 1, 1])
 
-        # 1. Manuel Spin Butonu
-        def manual_spin():
-            st.session_state.slot_state = "spinning"
-            st.session_state.last_slot_bet = st.session_state.slot_bet_input # Bahsi ayarla
+        # 1. Manuel Spin Butonu
+        def manual_spin():
+            st.session_state.slot_state = "spinning"
+            st.session_state.last_slot_bet = st.session_state.slot_bet_input # Bahsi ayarla
 
-        col1.button(
-            "Spin Reels!", 
-            key="spin_slots_manual", 
-            on_click=manual_spin,
-            disabled=(st.session_state.slot_state != "ready" or st.session_state.autospin_active)
-        )
+        col1.button(
+            "Spin Reels!", 
+            key="spin_slots_manual", 
+            on_click=manual_spin,
+            disabled=(st.session_state.slot_state != "ready" or st.session_state.autospin_active)
+        )
 
-        # 2. Autospin Başlat/Durdur Butonları
-        if not st.session_state.autospin_active:
-            autospin_count_select = col2.selectbox(
-                "Autospins:", 
-                [10, 25, 50, 100], 
-                key="autospin_count",
-                disabled=(st.session_state.slot_state != "ready")
-            )
-            
-            def start_autospin():
-                st.session_state.autospin_active = True
-                st.session_state.autospin_remaining = st.session_state.autospin_count
-                st.session_state.last_slot_bet = st.session_state.slot_bet_input # Bahsi kilitle
-                st.session_state.slot_state = "ready" # Başlamaya hazırla
-                st.rerun() # Autospin döngüsünü tetikle
-            
-            col3.button(
-                "Start Autospin", 
-                on_click=start_autospin,
-                disabled=(st.session_state.slot_state != "ready")
-            )
-        else:
-            def stop_autospin():
-                st.session_state.autospin_active = False
-                st.session_state.autospin_remaining = 0
+        # 2. Autospin Başlat/Durdur Butonları
+        if not st.session_state.autospin_active:
+            autospin_count_select = col2.selectbox(
+                "Autospins:", 
+                [10, 25, 50, 100], 
+                key="autospin_count",
+                disabled=(st.session_state.slot_state != "ready")
+            )
+            
+            def start_autospin():
+                st.session_state.autospin_active = True
+                st.session_state.autospin_remaining = st.session_state.autospin_count
+                st.session_state.last_slot_bet = st.session_state.slot_bet_input # Bahsi kilitle
+                st.session_state.slot_state = "ready" # Başlamaya hazırla
+                st.rerun() # Autospin döngüsünü tetikle
+            
+            col3.button(
+                "Start Autospin", 
+                on_click=start_autospin,
+                disabled=(st.session_state.slot_state != "ready")
+            )
+        else:
+            def stop_autospin():
+                st.session_state.autospin_active = False
+                st.session_state.autospin_remaining = 0
 
-            col2.button(
-                f"Stop ({st.session_state.autospin_remaining} left)", 
-                on_click=stop_autospin,
-                type="primary"
-            )
+            col2.button(
+                f"Stop ({st.session_state.autospin_remaining} left)", 
+                on_click=stop_autospin,
+                type="primary"
+            )
 
-        # --- Çarkları Göster ---
-        reel_cols = st.columns(3)
-        reel_placeholders = [col.empty() for col in reel_cols]
-        for i, symbol in enumerate(st.session_state.slot_reels):
-            with reel_placeholders[i].container(border=True):
-                st.markdown(f"<h1 style='text-align: center; font-size: 4em;'>{symbol}</h1>", unsafe_allow_html=True)
+        # --- Çarkları Göster ---
+        reel_cols = st.columns(3)
+        reel_placeholders = [col.empty() for col in reel_cols]
+        for i, symbol in enumerate(st.session_state.slot_reels):
+            with reel_placeholders[i].container(border=True):
+                st.markdown(f"<h1 style='text-align: center; font-size: 4em;'>{symbol}</h1>", unsafe_allow_html=True)
 
-        # --- OYUN AKIŞ MANTIĞI ---
+        # --- OYUN AKIŞ MANTIĞI ---
 
-        # 1. SPINNING DURUMU (Manuel veya Autospin ile tetiklenir)
-        if st.session_state.slot_state == "spinning":
-            
-            # Bahsi kullan (Autospin'deyse kilitli bahsi, değilse mevcut bahsi)
-            current_bet = st.session_state.last_slot_bet
-            
-            # Son bakiye kontrolü (teorik olarak autospin tetiği bunu yapar ama güvenlik için)
-            if st.session_state.player_balance < current_bet:
-                st.session_state.slot_state = "ready"
-                st.session_state.autospin_active = False
-                st.warning("Autospin stopped. Insufficient balance.")
-                st.rerun()
-            
-            st.session_state.player_balance -= current_bet
-            st.session_state.slot_main_bet = current_bet 
-            st.session_state.slot_message = "Spinning..."
+        # 1. SPINNING DURUMU (Manuel veya Autospin ile tetiklenir)
+        if st.session_state.slot_state == "spinning":
+            
+            # Bahsi kullan (Autospin'deyse kilitli bahsi, değilse mevcut bahsi)
+            current_bet = st.session_state.last_slot_bet
+            
+            # Son bakiye kontrolü (teorik olarak autospin tetiği bunu yapar ama güvenlik için)
+            if st.session_state.player_balance < current_bet:
+                st.session_state.slot_state = "ready"
+                st.session_state.autospin_active = False
+                st.warning("Autospin stopped. Insufficient balance.")
+                st.rerun()
+            
+            st.session_state.player_balance -= current_bet
+            st.session_state.slot_main_bet = current_bet 
+            st.session_state.slot_message = "Spinning..."
 
-            # Basit animasyon
-            spin_duration = 0.8 # saniye (Autospin için hızlı tut)
-            if st.session_state.autospin_active:
-                spin_duration = 0.2 # Autospin'deyse çok daha hızlı
-                
-            steps = 8
-            for _ in range(steps):
-                temp_reels = spin_reels()
-                for i, symbol in enumerate(temp_reels):
-                    with reel_placeholders[i].container(border=True):
-                        st.markdown(f"<h1 style='text-align: center; font-size: 4em;'>{symbol}</h1>", unsafe_allow_html=True)
-                time.sleep(spin_duration / steps)
+            # Basit animasyon
+            spin_duration = 0.8 # saniye (Autospin için hızlı tut)
+            if st.session_state.autospin_active:
+                spin_duration = 0.2 # Autospin'deyse çok daha hızlı
+                
+            steps = 8
+            for _ in range(steps):
+                temp_reels = spin_reels()
+                for i, symbol in enumerate(temp_reels):
+                    with reel_placeholders[i].container(border=True):
+                        st.markdown(f"<h1 style='text-align: center; font-size: 4em;'>{symbol}</h1>", unsafe_allow_html=True)
+                time.sleep(spin_duration / steps)
 
-            # Sonuçları işle
-            st.session_state.slot_reels = spin_reels() # Gerçek sonuç
-            winnings, message = check_win(st.session_state.slot_reels, current_bet)
+            # Sonuçları işle
+            st.session_state.slot_reels = spin_reels() # Gerçek sonuç
+            winnings, message = check_win(st.session_state.slot_reels, current_bet)
 
-            # Sonucu animasyon placeholder'ına yaz
-            for i, symbol in enumerate(st.session_state.slot_reels):
-                with reel_placeholders[i].container(border=True):
-                    st.markdown(f"<h1 style='text-align: center; font-size: 4em;'>{symbol}</h1>", unsafe_allow_html=True)
+            # Sonucu animasyon placeholder'ına yaz
+            for i, symbol in enumerate(st.session_state.slot_reels):
+                with reel_placeholders[i].container(border=True):
+                    st.markdown(f"<h1 style='text-align: center; font-size: 4em;'>{symbol}</h1>", unsafe_allow_html=True)
 
-            if winnings > 0:
-                st.session_state.player_balance += winnings + current_bet
-                add_history("slot", current_bet, winnings, st.session_state.player_balance)
-                st.session_state.temp_balloons = True # Balonları hazırla
-            else:
-                add_history("slot", current_bet, -current_bet, st.session_state.player_balance)
+            if winnings > 0:
+                st.session_state.player_balance += winnings + current_bet
+                add_history("slot", current_bet, winnings, st.session_state.player_balance)
+                st.session_state.temp_balloons = True # Balonları hazırla
+            else:
+                add_history("slot", current_bet, -current_bet, st.session_state.player_balance)
 
-            st.session_state.slot_message = message
-            
-            # Autospin sayacını güncelle
-            if st.session_state.autospin_active:
-                st.session_state.autospin_remaining -= 1
-                if st.session_state.autospin_remaining <= 0:
-                    st.session_state.autospin_active = False # Spin hakkı bitti
-            
-            # "result" durumuna geç
-            st.session_state.slot_state = "result"
-            st.rerun()
+            st.session_state.slot_message = message
+            
+            # Autospin sayacını güncelle
+            if st.session_state.autospin_active:
+                st.session_state.autospin_remaining -= 1
+                if st.session_state.autospin_remaining <= 0:
+                    st.session_state.autospin_active = False # Spin hakkı bitti
+            
+            # "result" durumuna geç
+            st.session_state.slot_state = "result"
+            st.rerun()
 
-        # 2. RESULT DURUMU (Sonucu göster, sonra 'ready'e geç)
-        elif st.session_state.slot_state == "result":
-            st.markdown(f"**{st.session_state.slot_message}**")
-            
-            # Balonları patlat
-            if st.session_state.get("temp_balloons", False):
-                st.balloons()
-                st.session_state.temp_balloons = False # Bayrağı temizle
-            
-            # Bir sonraki spin için "ready" durumuna geç
-            st.session_state.slot_state = "ready"
-            
-            # Eğer hala autospin'deysek, bir sonraki turu tetiklemek için bekle ve yeniden çalıştır
-            if st.session_state.autospin_active:
-                time.sleep(1.0) # Sonucu görmek için 1 saniye bekle
-                st.rerun() # Bu, en baştaki "Autospin Tetikleyicisi"ne takılacak
+        # 2. RESULT DURUMU (Sonucu göster, sonra 'ready'e geç)
+        elif st.session_state.slot_state == "result":
+            st.markdown(f"**{st.session_state.slot_message}**")
+            
+            # Balonları patlat
+            if st.session_state.get("temp_balloons", False):
+                st.balloons()
+                st.session_state.temp_balloons = False # Bayrağı temizle
+            
+            # Bir sonraki spin için "ready" durumuna geç
+            st.session_state.slot_state = "ready"
+            
+            # Eğer hala autospin'deysek, bir sonraki turu tetiklemek için bekle ve yeniden çalıştır
+            if st.session_state.autospin_active:
+                time.sleep(1.0) # Sonucu görmek için 1 saniye bekle
+                st.rerun() # Bu, en baştaki "Autospin Tetikleyicisi"ne takılacak
 
-    # Bakiye Geçmişi
-    display_history("slot")
+    # Bakiye Geçmişi
+    display_history("slot")
 
 # --- SEKME 6: VIDEO POKER ---
 with tab_vpoker:
-    st.header("🃏 Video Poker") # Emoji güncellendi
-    st.markdown("Get a pair of Jacks or better to win!")
+    st.header("🃏 Video Poker") # Emoji güncellendi
+    st.markdown("Get a pair of Jacks or better to win!")
 
-    # State başlatma
-    if "vp_state" not in st.session_state:
-        st.session_state.vp_state = "betting"
-        st.session_state.vp_deck = []
-        st.session_state.vp_hand = []
-        st.session_state.vp_message = ""
-        st.session_state.vp_history = []
-        st.session_state.vp_current_bet = 1
+    # State başlatma
+    if "vp_state" not in st.session_state:
+        st.session_state.vp_state = "betting"
+        st.session_state.vp_deck = []
+        st.session_state.vp_hand = []
+        st.session_state.vp_message = ""
+        st.session_state.vp_history = []
+        st.session_state.vp_current_bet = 1
 
-    # Payout Tablosu
-    vp_payouts = {
-        "Royal Flush": 800, "Straight Flush": 50, "Four of a Kind": 25,
-        "Full House": 9, "Flush": 6, "Straight": 4,
-        "Three of a Kind": 3, "Two Pair": 2, "Jacks or Better": 1,
-    }
-    st.dataframe(vp_payouts.items(), column_config={"0": "Hand", "1": "Payout (for 1 credit bet)"})
+    # Payout Tablosu
+    vp_payouts = {
+        "Royal Flush": 800, "Straight Flush": 50, "Four of a Kind": 25,
+        "Full House": 9, "Flush": 6, "Straight": 4,
+        "Three of a Kind": 3, "Two Pair": 2, "Jacks or Better": 1,
+    }
+    st.dataframe(vp_payouts.items(), column_config={"0": "Hand", "1": "Payout (for 1 credit bet)"})
 
-    # Poker Eli Kontrol Fonksiyonları
-    def check_vp_hand(hand):
-        ranks = sorted([card['rank'] for card in hand], key=lambda r: vp_rank_map.get(r, 0))
-        suits = [card['suit'] for card in hand]
-        rank_counts = Counter(ranks)
-        is_flush = len(set(suits)) == 1
-        numerical_ranks = sorted(list(set(vp_rank_map.get(r, 0) for r in ranks)))
-        is_straight = len(numerical_ranks) == 5 and (numerical_ranks[-1] - numerical_ranks[0] == 4)
-        if numerical_ranks == [2, 3, 4, 5, 14]: is_straight = True 
-            
-        if is_straight and is_flush and numerical_ranks[-1] == 14 and numerical_ranks[0] == 10: 
-            unlock_achievement("vp_win_royal") # <-- BAŞARIM TETİKLEYİCİSİ
-            return "Royal Flush"
-        if is_straight and is_flush: return "Straight Flush"
-        if 4 in rank_counts.values(): 
-            # Dörtlünün 'A' olup olmadığını kontrol et
-            four_kind_rank = [rank for rank, count in rank_counts.items() if count == 4][0]
-            if four_kind_rank == 'A':
-                unlock_achievement("vp_win_aces") # <-- BAŞARIM TETİKLEYİCİSİ
-            return "Four of a Kind"
-        if sorted(rank_counts.values()) == [2, 3]: 
-            return "Full House"
-        if 3 in rank_counts.values(): return "Three of a Kind"
-        if list(rank_counts.values()).count(2) == 2: return "Two Pair"
-        for rank, count in rank_counts.items():
-            if count == 2 and rank in ['J', 'Q', 'K', 'A']:
-                return "Jacks or Better"
-        return "Nothing"
+    # Poker Eli Kontrol Fonksiyonları
+    def check_vp_hand(hand):
+        ranks = sorted([card['rank'] for card in hand], key=lambda r: vp_rank_map.get(r, 0))
+        suits = [card['suit'] for card in hand]
+        rank_counts = Counter(ranks)
+        is_flush = len(set(suits)) == 1
+        numerical_ranks = sorted(list(set(vp_rank_map.get(r, 0) for r in ranks)))
+        is_straight = len(numerical_ranks) == 5 and (numerical_ranks[-1] - numerical_ranks[0] == 4)
+        if numerical_ranks == [2, 3, 4, 5, 14]: is_straight = True 
+            
+        if is_straight and is_flush and numerical_ranks[-1] == 14 and numerical_ranks[0] == 10: 
+            unlock_achievement("vp_win_royal") # <-- BAŞARIM TETİKLEYİCİSİ
+            return "Royal Flush"
+        if is_straight and is_flush: return "Straight Flush"
+        if 4 in rank_counts.values(): 
+            # Dörtlünün 'A' olup olmadığını kontrol et
+            four_kind_rank = [rank for rank, count in rank_counts.items() if count == 4][0]
+            if four_kind_rank == 'A':
+                unlock_achievement("vp_win_aces") # <-- BAŞARIM TETİKLEYİCİSİ
+            return "Four of a Kind"
+        if sorted(rank_counts.values()) == [2, 3]: 
+            return "Full House"
+        if 3 in rank_counts.values(): return "Three of a Kind"
+        if list(rank_counts.values()).count(2) == 2: return "Two Pair"
+        for rank, count in rank_counts.items():
+            if count == 2 and rank in ['J', 'Q', 'K', 'A']:
+                return "Jacks or Better"
+        return "Nothing"
 
-    vp_rank_map = {'2':2, '3':3, '4':4, '5':5, '6':6, '7':7, '8':8, '9':9, '10':10, 'J':11, 'Q':12, 'K':13, 'A':14}
+    vp_rank_map = {'2':2, '3':3, '4':4, '5':5, '6':6, '7':7, '8':8, '9':9, '10':10, 'J':11, 'Q':12, 'K':13, 'A':14}
 
-    def reset_vpoker_state(reset_balance=False):
-        st.session_state.vp_state = "betting"
-        st.session_state.vp_deck = []
-        st.session_state.vp_hand = []
-        st.session_state.vp_message = ""
-        st.session_state.vp_history = []
-        st.session_state.vp_current_bet = 1 # Keep last bet? Reset to 1 for now.
-        if reset_balance: st.session_state.player_balance = 1000
-    globals()["vp_reset_func"] = reset_vpoker_state
+    def reset_vpoker_state(reset_balance=False):
+        st.session_state.vp_state = "betting"
+        st.session_state.vp_deck = []
+        st.session_state.vp_hand = []
+        st.session_state.vp_message = ""
+        st.session_state.vp_history = []
+        st.session_state.vp_current_bet = 1 # Keep last bet? Reset to 1 for now.
+        if reset_balance: st.session_state.player_balance = 1000
+    globals()["vp_reset_func"] = reset_vpoker_state
 
-    # Video Poker Arayüzü, Oyun Akışı ve History Gösterimi
-    st.metric(label="Your Balance", value=f"💰 {st.session_state.player_balance}")
+    # Video Poker Arayüzü, Oyun Akışı ve History Gösterimi
+    st.metric(label="Your Balance", value=f"💰 {st.session_state.player_balance}")
 
-    if st.session_state.player_balance <= 0:
-        st.error("You are out of money! Reset features from the sidebar.")
-    else:
-        # Bahis Aşaması
-        if st.session_state.vp_state == "betting":
-            # Değeri bakiye ile sınırla
-            default_vp_bet = min(st.session_state.vp_current_bet, min(5, st.session_state.player_balance)) if st.session_state.player_balance > 0 else 1
-            vp_bet = st.number_input("Bet Amount (1-5 credits):", min_value=1, max_value=min(5, st.session_state.player_balance),
-                                    value=default_vp_bet, step=1, key="vp_bet")
+    if st.session_state.player_balance <= 0:
+        st.error("You are out of money! Reset features from the sidebar.")
+    else:
+        # Bahis Aşaması
+        if st.session_state.vp_state == "betting":
+            # Değeri bakiye ile sınırla
+            default_vp_bet = min(st.session_state.vp_current_bet, min(5, st.session_state.player_balance)) if st.session_state.player_balance > 0 else 1
+            vp_bet = st.number_input("Bet Amount (1-5 credits):", min_value=1, max_value=min(5, st.session_state.player_balance),
+                                     value=default_vp_bet, step=1, key="vp_bet")
 
-            if st.button("Deal Hand", key="vp_deal"):
-                st.session_state.player_balance -= vp_bet
-                st.session_state.vp_main_bet = vp_bet # Stats için
-                st.session_state.vp_current_bet = vp_bet
-                # VP için tek deste kullan
-                vp_deck = [{'rank': r, 'suit': s} for s in ['♥', '♦', '♣', '♠'] for r in ['2','3','4','5','6','7','8','9','10','J','Q','K','A']]
-                random.shuffle(vp_deck)
-                st.session_state.vp_deck = vp_deck # Tek desteyi state'e kaydet
-                st.session_state.vp_hand = [{'card': st.session_state.vp_deck.pop(), 'held': False} for _ in range(5)]
-                st.session_state.vp_state = "dealt"
-                st.session_state.vp_message = "Select cards to hold and click Draw."
-                st.rerun()
+            if st.button("Deal Hand", key="vp_deal"):
+                st.session_state.player_balance -= vp_bet
+                st.session_state.vp_main_bet = vp_bet # Stats için
+                st.session_state.vp_current_bet = vp_bet
+                # VP için tek deste kullan
+                vp_deck = [{'rank': r, 'suit': s} for s in ['♥', '♦', '♣', '♠'] for r in ['2','3','4','5','6','7','8','9','10','J','Q','K','A']]
+                random.shuffle(vp_deck)
+                st.session_state.vp_deck = vp_deck # Tek desteyi state'e kaydet
+                st.session_state.vp_hand = [{'card': st.session_state.vp_deck.pop(), 'held': False} for _ in range(5)]
+                st.session_state.vp_state = "dealt"
+                st.session_state.vp_message = "Select cards to hold and click Draw."
+                st.rerun()
 
-        # Kart Seçme ve Çekme Aşaması
-        elif st.session_state.vp_state in ["dealt", "holding"]:
-            st.subheader("Your Hand:")
-            cols = st.columns(5)
-            for i, card_info in enumerate(st.session_state.vp_hand):
-                card = card_info['card']
-                is_held = st.session_state.vp_hand[i]['held']
-                button_type = "primary" if is_held else "secondary"
-                color = "red" if card['suit'] in ['♥', '♦'] else "black"
-                card_html = f"<div style='border:2px solid {'#007bff' if is_held else '#ccc'}; border-radius: 5px; padding: 10px; margin: 5px; text-align: center; background-color: white; color: {color};'> <span style='font-size: 1.5em; font-weight: bold;'>{card['rank']}</span><br><span style='font-size: 1.5em;'>{card['suit']}</span> </div>"
-                cols[i].markdown(card_html, unsafe_allow_html=True)
-                if cols[i].button("Hold" if not is_held else "Discard", key=f"vp_card_{i}", type=button_type, use_container_width=True):
-                    st.session_state.vp_hand[i]['held'] = not is_held
-                    st.session_state.vp_state = "holding"
-                    st.rerun()
+        # Kart Seçme ve Çekme Aşaması
+        elif st.session_state.vp_state in ["dealt", "holding"]:
+            st.subheader("Your Hand:")
+            cols = st.columns(5)
+            for i, card_info in enumerate(st.session_state.vp_hand):
+                card = card_info['card']
+                is_held = st.session_state.vp_hand[i]['held']
+                button_type = "primary" if is_held else "secondary"
+                color = "red" if card['suit'] in ['♥', '♦'] else "black"
+                card_html = f"<div style='border:2px solid {'#007bff' if is_held else '#ccc'}; border-radius: 5px; padding: 10px; margin: 5px; text-align: center; background-color: white; color: {color};'> <span style='font-size: 1.5em; font-weight: bold;'>{card['rank']}</span><br><span style='font-size: 1.5em;'>{card['suit']}</span> </div>"
+                cols[i].markdown(card_html, unsafe_allow_html=True)
+                if cols[i].button("Hold" if not is_held else "Discard", key=f"vp_card_{i}", type=button_type, use_container_width=True):
+                    st.session_state.vp_hand[i]['held'] = not is_held
+                    st.session_state.vp_state = "holding"
+                    st.rerun()
 
-            st.caption(st.session_state.vp_message)
+            st.caption(st.session_state.vp_message)
 
-            if st.button("Draw", key="vp_draw", disabled=(st.session_state.vp_state != "holding" and st.session_state.vp_state != "dealt")):
-                st.session_state.vp_state = "drawing" # Çift tıklamayı önle
-                
-                for i in range(5):
-                    if not st.session_state.vp_hand[i]['held']:
-                        if st.session_state.vp_deck:
-                             st.session_state.vp_hand[i]['card'] = st.session_state.vp_deck.pop()
-                             st.session_state.vp_hand[i]['held'] = False # Hold'u kaldır
-                        else:
-                            st.error("Deck is empty!")
+            if st.button("Draw", key="vp_draw", disabled=(st.session_state.vp_state != "holding" and st.session_state.vp_state != "dealt")):
+                st.session_state.vp_state = "drawing" # Çift tıklamayı önle
+                
+                for i in range(5):
+                    if not st.session_state.vp_hand[i]['held']:
+                        if st.session_state.vp_deck:
+                             st.session_state.vp_hand[i]['card'] = st.session_state.vp_deck.pop()
+                             st.session_state.vp_hand[i]['held'] = False # Hold'u kaldır
+                        else:
+                            st.error("Deck is empty!")
 
-                final_hand_cards = [info['card'] for info in st.session_state.vp_hand]
-                hand_rank = check_vp_hand(final_hand_cards)
-                payout_multiplier = vp_payouts.get(hand_rank, 0)
+                final_hand_cards = [info['card'] for info in st.session_state.vp_hand]
+                hand_rank = check_vp_hand(final_hand_cards)
+                payout_multiplier = vp_payouts.get(hand_rank, 0)
 
-                if payout_multiplier > 0:
-                    winnings = st.session_state.vp_current_bet * payout_multiplier
-                    st.session_state.player_balance += winnings + st.session_state.vp_current_bet
-                    st.session_state.vp_message = f"🎉 {hand_rank}! You win {winnings}!"
-                    add_history("vp", st.session_state.vp_current_bet, winnings, st.session_state.player_balance)
-                    st.balloons()
-                else:
-                    st.session_state.vp_message = f"😕 {hand_rank}. No win."
-                    add_history("vp", st.session_state.vp_current_bet, -st.session_state.vp_current_bet, st.session_state.player_balance)
+                if payout_multiplier > 0:
+                    winnings = st.session_state.vp_current_bet * payout_multiplier
+                    st.session_state.player_balance += winnings + st.session_state.vp_current_bet
+                    st.session_state.vp_message = f"🎉 {hand_rank}! You win {winnings}!"
+                    add_history("vp", st.session_state.vp_current_bet, winnings, st.session_state.player_balance)
+                    st.balloons()
+                else:
+                    st.session_state.vp_message = f"😕 {hand_rank}. No win."
+                    add_history("vp", st.session_state.vp_current_bet, -st.session_state.vp_current_bet, st.session_state.player_balance)
 
-                st.session_state.vp_state = "result"
-                st.rerun()
+                st.session_state.vp_state = "result"
+                st.rerun()
 
-        # Sonuç Gösterme Aşaması
-        elif st.session_state.vp_state == "result":
-            st.subheader("Final Hand:")
-            cols = st.columns(5)
-            for i, card_info in enumerate(st.session_state.vp_hand):
-                card = card_info['card']
-                color = "red" if card['suit'] in ['♥', '♦'] else "black"
-                card_html = f"<div style='border:1px solid #ccc; border-radius: 5px; padding: 10px; margin: 5px; text-align: center; background-color: white; color: {color};'> <span style='font-size: 1.5em; font-weight: bold;'>{card['rank']}</span><br><span style='font-size: 1.5em;'>{card['suit']}</span> </div>"
-                cols[i].markdown(card_html, unsafe_allow_html=True)
+        # Sonuç Gösterme Aşaması
+        elif st.session_state.vp_state == "result":
+            st.subheader("Final Hand:")
+            cols = st.columns(5)
+            for i, card_info in enumerate(st.session_state.vp_hand):
+                card = card_info['card']
+                color = "red" if card['suit'] in ['♥', '♦'] else "black"
+                card_html = f"<div style='border:1px solid #ccc; border-radius: 5px; padding: 10px; margin: 5px; text-align: center; background-color: white; color: {color};'> <span style='font-size: 1.5em; font-weight: bold;'>{card['rank']}</span><br><span style='font-size: 1.5em;'>{card['suit']}</span> </div>"
+                cols[i].markdown(card_html, unsafe_allow_html=True)
 
-            st.header(st.session_state.vp_message)
-            if st.button("Deal New Hand", key="vp_new_deal"):
-                # reset_vpoker_state() # Bet'i sıfırlamasın, sadece oyunu başa alsın
-                st.session_state.vp_state = "betting"
-                st.session_state.vp_deck = []
-                st.session_state.vp_hand = []
-                st.session_state.vp_message = ""
-                # st.session_state.vp_current_bet = 1 # Keep last bet
-                st.rerun()
+            st.header(st.session_state.vp_message)
+            if st.button("Deal New Hand", key="vp_new_deal"):
+                # reset_vpoker_state() # Bet'i sıfırlamasın, sadece oyunu başa alsın
+                st.session_state.vp_state = "betting"
+                st.session_state.vp_deck = []
+                st.session_state.vp_hand = []
+                st.session_state.vp_message = ""
+                # st.session_state.vp_current_bet = 1 # Keep last bet
+                st.rerun()
 
-    display_history("vp")
+    display_history("vp")
 
 # --- SEKME 7: BAŞARIMLAR (YENİ) ---
 with tab_achievements:
-    st.header("🏆 Achievements")
-    
-    unlocked_count = sum(1 for ach in st.session_state.achievements.values() if ach["unlocked"])
-    total_count = len(st.session_state.achievements)
-    st.progress(unlocked_count / total_count, text=f"{unlocked_count} / {total_count} Kilidi Açıldı")
-    st.markdown("---")
-    
-    st.subheader("Açılan Başarımlar")
-    unlocked_achs = [ach for ach in st.session_state.achievements.values() if ach["unlocked"]]
-    if not unlocked_achs:
-        st.caption("Henüz hiç başarım açılmadı. Oynamaya başla!")
-    
-    # Kilidi açılanları 3 sütunlu bir grid'de göster
-    cols = st.columns(3)
-    col_idx = 0
-    for ach in unlocked_achs:
-        with cols[col_idx]:
-            st.success(f"**{ach['icon']} {ach['name']}**\n\n*{ach['description']}*")
-        col_idx = (col_idx + 1) % 3
+    st.header("🏆 Achievements")
+    
+    unlocked_count = sum(1 for ach in st.session_state.achievements.values() if ach["unlocked"])
+    total_count = len(st.session_state.achievements)
+    st.progress(unlocked_count / total_count, text=f"{unlocked_count} / {total_count} Kilidi Açıldı")
+    st.markdown("---")
+    
+    st.subheader("Açılan Başarımlar")
+    unlocked_achs = [ach for ach in st.session_state.achievements.values() if ach["unlocked"]]
+    if not unlocked_achs:
+        st.caption("Henüz hiç başarım açılmadı. Oynamaya başla!")
+    
+    # Kilidi açılanları 3 sütunlu bir grid'de göster
+    cols = st.columns(3)
+    col_idx = 0
+    for ach in unlocked_achs:
+        with cols[col_idx]:
+            st.success(f"**{ach['icon']} {ach['name']}**\n\n*{ach['description']}*")
+        col_idx = (col_idx + 1) % 3
 
-    # Kilitlileri bir expander içinde göster
-    with st.expander("Kilitli Başarımları Göster"):
-        locked_achs = [ach for ach in st.session_state.achievements.values() if not ach["unlocked"]]
-        for ach in locked_achs:
-            st.info(f"**🔒 {ach['name']}** - *{ach['description']}*")
+    # Kilitlileri bir expander içinde göster
+    with st.expander("Kilitli Başarımları Göster"):
+        locked_achs = [ach for ach in st.session_state.achievements.values() if not ach["unlocked"]]
+        for ach in locked_achs:
+            st.info(f"**🔒 {ach['name']}** - *{ach['description']}*")
 
 # --- SEKME 7: STATS ---
 with tab_stats:
-    st.header("📊 Player Stats")
-    st.markdown("Your performance across the interactive features.")
+    st.header("📊 Player Stats")
+    st.markdown("Your performance across the interactive features.")
 
-    if "player_stats" not in st.session_state:
-        reset_stats_state() 
-        st.warning("Stats initialized. Play some games!")
-    
-    stats = st.session_state.player_stats
-    
-    # Genel Bakış
-    st.subheader("Overall Performance")
-    net_result = st.session_state.player_balance - stats['start_balance'] 
-    profit_loss_str = f"+{net_result}" if net_result >= 0 else str(net_result)
-    
-    col1, col2, col3, col4 = st.columns(4)
-    col1.metric("Starting Balance", f"💰 {stats['start_balance']}")
-    col2.metric("Current Balance", f"💰 {st.session_state.player_balance}")
-    col3.metric("Total Bets Placed", stats["total_bets"])
-    col4.metric("Net Profit/Loss", f"{profit_loss_str}", delta=f"{net_result}")
+    if "player_stats" not in st.session_state:
+        reset_stats_state() 
+        st.warning("Stats initialized. Play some games!")
+    
+    stats = st.session_state.player_stats
+    
+    # Genel Bakış
+    st.subheader("Overall Performance")
+    net_result = st.session_state.player_balance - stats['start_balance'] 
+    profit_loss_str = f"+{net_result}" if net_result >= 0 else str(net_result)
+    
+    col1, col2, col3, col4 = st.columns(4)
+    col1.metric("Starting Balance", f"💰 {stats['start_balance']}")
+    col2.metric("Current Balance", f"💰 {st.session_state.player_balance}")
+    col3.metric("Total Bets Placed", stats["total_bets"])
+    col4.metric("Net Profit/Loss", f"{profit_loss_str}", delta=f"{net_result}")
 
-    col5, col6 = st.columns(2)
-    col5.metric("Biggest Win (Single Hand/Spin)", f"💰 {stats['biggest_win']}")
-    col6.metric("Biggest Loss (Single Hand/Spin)", f"💰 {stats['biggest_loss']}")
-    
-    st.markdown("---")
-    
-    # Oyun Özelinde İstatistikler
-    st.subheader("Performance by Game")
-    
-    game_stats_data = []
-    game_keys = ["bj", "cf", "rl", "slot", "vp", "sc"] # YENİ OYUNU EKLE
-    game_names = {"bj": "Blackjack", "cf": "Coin Flip", "rl": "Roulette", "slot": "Slots", "vp": "Video Poker", "sc": "Sisyphus' Climb"} # YENİ OYUNU EKLE
+    col5, col6 = st.columns(2)
+    col5.metric("Biggest Win (Single Hand/Spin)", f"💰 {stats['biggest_win']}")
+    col6.metric("Biggest Loss (Single Hand/Spin)", f"💰 {stats['biggest_loss']}")
+    
+    st.markdown("---")
+    
+    # Oyun Özelinde İstatistikler
+    st.subheader("Performance by Game")
+    
+    game_stats_data = []
+    game_keys = ["bj", "cf", "rl", "slot", "vp", "sc"] # YENİ OYUNU EKLE
+    game_names = {"bj": "Blackjack", "cf": "Coin Flip", "rl": "Roulette", "slot": "Slots", "vp": "Video Poker", "sc": "Sisyphus' Climb"} # YENİ OYUNU EKLE
 
-    for game_key in game_keys:
-        game_data = stats.get(game_key)
-        if isinstance(game_data, dict) and "played" in game_data:
-            played = game_data["played"]
-            if played > 0:
-                won = game_data["won"]
-                lost = game_data["lost"]
-                # BJ'de, 'played' (ana el/split el) 'won' ve 'lost' toplamından farklı olabilir (push'lar yüzünden)
-                if game_key == "bj":
-                     push = game_data.get("push", 0)
-                     # Win rate: (Won / (Won + Lost))
-                     win_rate = f"{((won / (won + lost)) * 100):.1f}" if (won + lost) > 0 else "N/A"
-                else:
-                    win_rate = f"{((won / played) * 100):.1f}" if played > 0 else "0.0"
-                    push = "-"
-            else:
-                won, lost, win_rate, push = 0, 0, "0.0", "-"
+    for game_key in game_keys:
+        game_data = stats.get(game_key)
+        if isinstance(game_data, dict) and "played" in game_data:
+            played = game_data["played"]
+            if played > 0:
+                won = game_data["won"]
+                lost = game_data["lost"]
+                # BJ'de, 'played' (ana el/split el) 'won' ve 'lost' toplamından farklı olabilir (push'lar yüzünden)
+                if game_key == "bj":
+                     push = game_data.get("push", 0)
+                     # Win rate: (Won / (Won + Lost))
+                     win_rate = f"{((won / (won + lost)) * 100):.1f}" if (won + lost) > 0 else "N/A"
+                else:
+                    win_rate = f"{((won / played) * 100):.1f}" if played > 0 else "0.0"
+                    push = "-"
+            else:
+                won, lost, win_rate, push = 0, 0, "0.0", "-"
 
-            game_stats_data.append({
-                "Game": game_names.get(game_key, game_key.upper()),
-                "Played": played,
-                "Won": won,
-                "Lost": lost,
-                "Push/Tie": push if game_key == "bj" else "-", 
-                "Win Rate (%)": float(win_rate) if win_rate != "N/A" else None 
-            })
-    
-    if game_stats_data:
-         st.dataframe(
-             game_stats_data, 
-             hide_index=True,
-             column_config={
-                 "Win Rate (%)": st.column_config.NumberColumn(format="%.1f%%") 
-             }
-         )
-    else:
-         st.info("Play some games to see detailed stats here!")
-         
-    if st.button("Reset Stats Only"):
-        reset_stats_state()
-        st.success("Stats have been reset!")
-        time.sleep(1)
-        st.rerun()
-    
+            game_stats_data.append({
+                "Game": game_names.get(game_key, game_key.upper()),
+                "Played": played,
+                "Won": won,
+                "Lost": lost,
+                "Push/Tie": push if game_key == "bj" else "-", 
+                "Win Rate (%)": float(win_rate) if win_rate != "N/A" else None 
+            })
+    
+    if game_stats_data:
+         st.dataframe(
+             game_stats_data, 
+             hide_index=True,
+             column_config={
+                 "Win Rate (%)": st.column_config.NumberColumn(format="%.1f%%") 
+             }
+         )
+    else:
+         st.info("Play some games to see detailed stats here!")
+         
+    if st.button("Reset Stats Only"):
+        reset_stats_state()
+        st.success("Stats have been reset!")
+        time.sleep(1)
+        st.rerun()
+    
 # --- SEKME 7.5: SISYPHUS' CLIMB (CRASH GAME) ---
 with tab_crash:
-    
-    # Cash Out butonunu yeşil yapmak için CSS enjekte et
-    st.markdown("""
-    <style>
-    button[kind="primary"] {
-        background-color: #28a745; /* Bootstrap Green */
-        border-color: #28a745;
-        color: white; /* Beyaz yazı rengi */
-    }
-    button[kind="primary"]:hover {
-        background-color: #218838;
-        border-color: #1e7e34;
-        color: white;
-    }
-    button[kind="primary"]:active {
-        background-color: #1e7e34;
-        border-color: #1e7e34;
-        color: white;
-    }
-    button[kind="primary"]:focus {
-        box-shadow: 0 0 0 0.2rem rgba(40,167,69,.5);
-    }
-    </style>
-    """, unsafe_allow_html=True)
+    
+    # Cash Out butonunu yeşil yapmak için CSS enjekte et
+    st.markdown("""
+    <style>
+    button[kind="primary"] {
+        background-color: #28a745; /* Bootstrap Green */
+        border-color: #28a745;
+        color: white; /* Beyaz yazı rengi */
+    }
+    button[kind="primary"]:hover {
+        background-color: #218838;
+        border-color: #1e7e34;
+        color: white;
+    }
+    button[kind="primary"]:active {
+        background-color: #1e7e34;
+        border-color: #1e7e34;
+        color: white;
+    }
+    button[kind="primary"]:focus {
+        box-shadow: 0 0 0 0.2rem rgba(40,167,69,.5);
+    }
+    </style>
+    """, unsafe_allow_html=True)
 
-    st.header("⛰️ Sisyphus' Climb")
-    st.markdown(
-        """
-        *"The struggle itself toward the heights is enough to fill a man's heart. One must imagine Sisyphus happy."* - Albert Camus
-        
-        Place your bet. Watch Sisyphus push the boulder (and the multiplier) up the mountain. 
-        **Cash out** before the boulder rolls back down (crashes)! How long can you resist?
-        """
-    )
-    st.markdown("---")
+    st.header("⛰️ Sisyphus' Climb")
+    st.markdown(
+        """
+        *"The struggle itself toward the heights is enough to fill a man's heart. One must imagine Sisyphus happy."* - Albert Camus
+        
+        Place your bet. Watch Sisyphus push the boulder (and the multiplier) up the mountain. 
+        **Cash out** before the boulder rolls back down (crashes)! How long can you resist?
+        """
+    )
+    st.markdown("---")
 
-    # State başlatma
-    if "sc_state" not in st.session_state:
-        st.session_state.sc_state = "betting" # betting, climbing, finished
-        st.session_state.sc_bet = 10
-        st.session_state.sc_multiplier = 1.0
-        st.session_state.sc_crash_point = 1.0
-        st.session_state.sc_start_time = 0
-        st.session_state.sc_message = ""
-        st.session_state.sc_history = []
+    # State başlatma
+    if "sc_state" not in st.session_state:
+        st.session_state.sc_state = "betting" # betting, climbing, finished
+        st.session_state.sc_bet = 10
+        st.session_state.sc_multiplier = 1.0
+        st.session_state.sc_crash_point = 1.0
+        st.session_state.sc_start_time = 0
+        st.session_state.sc_message = ""
+        st.session_state.sc_history = []
 
-    # Reset Fonksiyonu
-    def reset_sisyphus_climb_state(reset_balance=False):
-        st.session_state.sc_state = "betting"
-        st.session_state.sc_bet = 10
-        st.session_state.sc_multiplier = 1.0
-        st.session_state.sc_crash_point = 1.0
-        st.session_state.sc_start_time = 0
-        st.session_state.sc_message = ""
-        if reset_balance: st.session_state.player_balance = 1000
-    globals()["sc_reset_func"] = reset_sisyphus_climb_state
+    # Reset Fonksiyonu
+    def reset_sisyphus_climb_state(reset_balance=False):
+        st.session_state.sc_state = "betting"
+        st.session_state.sc_bet = 10
+        st.session_state.sc_multiplier = 1.0
+        st.session_state.sc_crash_point = 1.0
+        st.session_state.sc_start_time = 0
+        st.session_state.sc_message = ""
+        if reset_balance: st.session_state.player_balance = 1000
+    globals()["sc_reset_func"] = reset_sisyphus_climb_state
 
-    # Crash noktasını belirle
-    def generate_crash_point():
-        r = random.random()
-        if r < 0.70:
-            return round(random.uniform(1.01, 2.0), 2)
-        elif r < 0.90:
-            return round(random.uniform(2.01, 5.0), 2)
-        else:
-            return round(random.uniform(5.01, 15.0), 2)
+    # Crash noktasını belirle
+    def generate_crash_point():
+        r = random.random()
+        if r < 0.70:
+            return round(random.uniform(1.01, 2.0), 2)
+        elif r < 0.90:
+            return round(random.uniform(2.01, 5.0), 2)
+        else:
+            return round(random.uniform(5.01, 15.0), 2)
 
-    # Çarpanı geçen süreye göre hesapla
-    def get_current_multiplier(start_time):
-        elapsed = time.time() - start_time
-        multiplier = 1 + 0.05 * (elapsed ** 1.15) # Yavaş hızlanma
-        return round(multiplier, 2)
-    
-    # DÜZELTME: Animasyonu çizen modüler fonksiyon (TEMİZ CSS İLE)
-    def draw_sisyphus_animation(multiplier, state="betting"):
-        """
-        Sisyphus animasyonunu mevcut duruma göre çizer.
-        """
-        
-        # 1. Çarpan Metnini Hazırla
-        color = "#4CAF50" # Yeşil (Climbing)
-        if state == "betting":
-            color = "#808080" # Gri
-            multiplier = 1.00 
-        elif state == "crashed":
-            color = "#DC143C" # Kırmızı (Crash)
-        
-        st.markdown(f"<h1 style='text-align: center; color: {color}; font-size: 4em;'>{multiplier:.2f}x</h1>", unsafe_allow_html=True)
-        
-        # 2. Sisyphus Konumunu Hazırla
-        max_visual_multiplier = 99.0 # Zirve 99x
-        progress = 0
-        if state in ["climbing", "cashed_out", "crashed"]:
-            progress = min(100, int((multiplier - 1.0) / (max_visual_multiplier - 1.0) * 100))
-        
-        bottom_pos = progress * 0.85 # 0% -> 85%
-        left_pos = 5 + (progress * 0.8) # 5% -> 85%
-        
-        # 3. DÜZELTME: HTML/CSS'i Streamlit'in seveceği şekilde tek satıra indirge
-        style_mountain = "position: relative; width: 100%; height: 250px; background: linear-gradient(160deg, #CD853F 20%, #8B4513 100%); border-radius: 10px; border-bottom: 5px solid #5C2F0E; overflow: hidden; margin-top: 10px;"
-        style_peak = "position:absolute; top: 10px; right: 10px; font-size: 2.5em;"
-        style_peak_text = "position:absolute; top: 35px; right: 10px; font-size: 1.0em; color: white;"
-        style_sisyphus = f"position: absolute; bottom: {bottom_pos}%; left: {left_pos}%; font-size: 3em;"
+    # Çarpanı geçen süreye göre hesapla
+    def get_current_multiplier(start_time):
+        elapsed = time.time() - start_time
+        multiplier = 1 + 0.05 * (elapsed ** 1.15) # Yavaş hızlanma
+        return round(multiplier, 2)
+    
+    # DÜZELTME: Animasyonu çizen modüler fonksiyon (TEMİZ CSS İLE)
+    def draw_sisyphus_animation(multiplier, state="betting"):
+        """
+        Sisyphus animasyonunu mevcut duruma göre çizer.
+        """
+        
+        # 1. Çarpan Metnini Hazırla
+        color = "#4CAF50" # Yeşil (Climbing)
+        if state == "betting":
+            color = "#808080" # Gri
+            multiplier = 1.00 
+        elif state == "crashed":
+            color = "#DC143C" # Kırmızı (Crash)
+        
+        st.markdown(f"<h1 style='text-align: center; color: {color}; font-size: 4em;'>{multiplier:.2f}x</h1>", unsafe_allow_html=True)
+        
+        # 2. Sisyphus Konumunu Hazırla
+        max_visual_multiplier = 99.0 # Zirve 99x
+        progress = 0
+        if state in ["climbing", "cashed_out", "crashed"]:
+            progress = min(100, int((multiplier - 1.0) / (max_visual_multiplier - 1.0) * 100))
+        
+        bottom_pos = progress * 0.85 # 0% -> 85%
+        left_pos = 5 + (progress * 0.8) # 5% -> 85%
+        
+        # 3. DÜZELTME: HTML/CSS'i Streamlit'in seveceği şekilde tek satıra indirge
+        style_mountain = "position: relative; width: 100%; height: 250px; background: linear-gradient(160deg, #CD853F 20%, #8B4513 100%); border-radius: 10px; border-bottom: 5px solid #5C2F0E; overflow: hidden; margin-top: 10px;"
+        style_peak = "position:absolute; top: 10px; right: 10px; font-size: 2.5em;"
+        style_peak_text = "position:absolute; top: 35px; right: 10px; font-size: 1.0em; color: white;"
+        style_sisyphus = f"position: absolute; bottom: {bottom_pos}%; left: {left_pos}%; font-size: 3em;"
 
-        html_animation = f"""
-        <div style="{style_mountain}">
-            <div style="{style_peak}">🏁</div>
-            <div style="{style_peak_text}">(99x)</div>
-            <div style="{style_sisyphus}">
-                🧍🪨
-            </div>
-        </div>
-        """
-        st.markdown(html_animation, unsafe_allow_html=True)
-        st.progress(progress)
+        html_animation = f"""
+        <div style="{style_mountain}">
+            <div style="{style_peak}">🏁</div>
+            <div style="{style_peak_text}">(99x)</div>
+            <div style="{style_sisyphus}">
+                🧍🪨
+            </div>
+        </div>
+        """
+        st.markdown(html_animation, unsafe_allow_html=True)
+        st.progress(progress)
 
 
-    # --- Arayüz ---
-    st.metric(label="Your Balance", value=f"💰 {st.session_state.player_balance}")
-    st.markdown("---")
+    # --- Arayüz ---
+    st.metric(label="Your Balance", value=f"💰 {st.session_state.player_balance}")
+    st.markdown("---")
 
-    # --- Bahis Aşaması ---
-    if st.session_state.sc_state == "betting":
-        if st.session_state.player_balance <= 0:
-            st.error("You are out of money! Reset features from the sidebar.")
-        else:
-            st.session_state.sc_message = "" # Mesajı temizle
-            
-            # Animasyonu "betting" modunda çiz
-            draw_sisyphus_animation(1.00, state="betting")
-            
-            current_balance_int = int(st.session_state.player_balance)
-            default_sc_bet = min(st.session_state.sc_bet, current_balance_int)
-            
-            with st.form(key="sc_bet_form"):
-                bet_amount = st.number_input(
-                    "Bet Amount:", min_value=1, max_value=current_balance_int,
-                    value=default_sc_bet, step=1
-                )
-                start_climb_button = st.form_submit_button("Start the Climb")
+    # --- Bahis Aşaması ---
+    if st.session_state.sc_state == "betting":
+        if st.session_state.player_balance <= 0:
+            st.error("You are out of money! Reset features from the sidebar.")
+        else:
+            st.session_state.sc_message = "" # Mesajı temizle
+            
+            # Animasyonu "betting" modunda çiz
+            draw_sisyphus_animation(1.00, state="betting")
+            
+            current_balance_int = int(st.session_state.player_balance)
+            default_sc_bet = min(st.session_state.sc_bet, current_balance_int)
+            
+            with st.form(key="sc_bet_form"):
+                bet_amount = st.number_input(
+                    "Bet Amount:", min_value=1, max_value=current_balance_int,
+                    value=default_sc_bet, step=1
+                )
+                start_climb_button = st.form_submit_button("Start the Climb")
 
-            if start_climb_button:
-                st.session_state.player_balance -= bet_amount
-                st.session_state.sc_bet = bet_amount
-                st.session_state.sc_main_bet = bet_amount # Stats için
-                st.session_state.sc_crash_point = generate_crash_point()
-                st.session_state.sc_start_time = time.time()
-                st.session_state.sc_multiplier = 1.0
-                st.session_state.sc_state = "climbing"
-                st.rerun()
+            if start_climb_button:
+                st.session_state.player_balance -= bet_amount
+                st.session_state.sc_bet = bet_amount
+                st.session_state.sc_main_bet = bet_amount # Stats için
+                st.session_state.sc_crash_point = generate_crash_point()
+                st.session_state.sc_start_time = time.time()
+                st.session_state.sc_multiplier = 1.0
+                st.session_state.sc_state = "climbing"
+                st.rerun()
 
-    # --- Tırmanış (Oyun) Aşaması ---
-    elif st.session_state.sc_state == "climbing":
-        
-        # 1. Çarpanı hesapla
-        multiplier = get_current_multiplier(st.session_state.sc_start_time)
-        st.session_state.sc_multiplier = multiplier
+    # --- Tırmanış (Oyun) Aşaması ---
+    elif st.session_state.sc_state == "climbing":
+        
+        # 1. Çarpanı hesapla
+        multiplier = get_current_multiplier(st.session_state.sc_start_time)
+        st.session_state.sc_multiplier = multiplier
 
-        # 2. Crash oldu mu diye KONTROL ET
-        if multiplier >= st.session_state.sc_crash_point:
-            st.session_state.sc_message = f"💥 CRASHED at {st.session_state.sc_crash_point:.2f}x! The boulder rolled back down."
-            st.session_state.sc_state = "finished"
-            
-            if st.session_state.sc_crash_point <= 1.05: # 1.05 veya altı
-                 unlock_achievement("sc_crash_early") # <-- BAŞARIM TETİKLEYİCİSİ
-                 
-            add_history("sc", st.session_state.sc_bet, -st.session_state.sc_bet, st.session_state.player_balance)
-            st.rerun() 
-            st.stop()
+        # 2. Crash oldu mu diye KONTROL ET
+        if multiplier >= st.session_state.sc_crash_point:
+            st.session_state.sc_message = f"💥 CRASHED at {st.session_state.sc_crash_point:.2f}x! The boulder rolled back down."
+            st.session_state.sc_state = "finished"
+            
+            if st.session_state.sc_crash_point <= 1.05: # 1.05 veya altı
+                unlock_achievement("sc_crash_early") # <-- BAŞARIM TETİKLEYİCİSİ
+                
+            add_history("sc", st.session_state.sc_bet, -st.session_state.sc_bet, st.session_state.player_balance)
+            st.rerun() 
+            st.stop()
 
-        # 3. Animasyonu Çiz
-        draw_sisyphus_animation(multiplier, state="climbing")
+        # 3. Animasyonu Çiz
+        draw_sisyphus_animation(multiplier, state="climbing")
 
-        # 4. Cash Out BUTONUNU GÖSTER
-        if st.button(f"CASH OUT @ {st.session_state.sc_multiplier:.2f}x", type="primary", use_container_width=True, key="sc_cashout_button"):
-            
-            # --- YENİ BAŞARIM KONTROLLERİ ---
-            current_multiplier = st.session_state.sc_multiplier
-            if current_multiplier >= 50.0:
-                unlock_achievement("sc_cashout_50x")
-            elif current_multiplier >= 20.0:
-                unlock_achievement("sc_cashout_20x")
-            
-            if current_multiplier == 1.01:
-                unlock_achievement("sc_cashout_1_01x")
-            # --- BİTTİ ---
+        # 4. Cash Out BUTONUNU GÖSTER
+        if st.button(f"CASH OUT @ {st.session_state.sc_multiplier:.2f}x", type="primary", use_container_width=True, key="sc_cashout_button"):
+            
+            # --- YENİ BAŞARIM KONTROLLERİ ---
+            current_multiplier = st.session_state.sc_multiplier
+            if current_multiplier >= 50.0:
+                unlock_achievement("sc_cashout_50x")
+            elif current_multiplier >= 20.0:
+                unlock_achievement("sc_cashout_20x")
+            
+            if current_multiplier == 1.01:
+                unlock_achievement("sc_cashout_1_01x")
+            # --- BİTTİ ---
 
-            # --- KAZANMA DURUMU ---
-            winnings = st.session_state.sc_bet * current_multiplier
-            net_profit = winnings - st.session_state.sc_bet
-            st.session_state.player_balance += round(winnings)
-            st.session_state.sc_message = f"⛰️ Cashed out at {current_multiplier:.2f}x! You win {round(net_profit)}."
-            st.session_state.sc_state = "finished" 
-            add_history("sc", st.session_state.sc_bet, round(net_profit), st.session_state.player_balance)
-            st.balloons()
-            st.rerun() 
-            st.stop()
+            # --- KAZANMA DURUMU ---
+            winnings = st.session_state.sc_bet * current_multiplier
+            net_profit = winnings - st.session_state.sc_bet
+            st.session_state.player_balance += round(winnings)
+            st.session_state.sc_message = f"⛰️ Cashed out at {current_multiplier:.2f}x! You win {round(net_profit)}."
+            st.session_state.sc_state = "finished" 
+            add_history("sc", st.session_state.sc_bet, round(net_profit), st.session_state.player_balance)
+            st.balloons()
+            st.rerun() 
+            st.stop()
 
-        # 5. Ekranı yenile
-        time.sleep(0.05) 
-        st.rerun()
-            
-    # --- Bitiş Aşaması ---
-    elif st.session_state.sc_state == "finished":
-        
-        final_multiplier = st.session_state.sc_multiplier
-        
-        if "Cashed out" in st.session_state.sc_message:
-            st.success(st.session_state.sc_message)
-            draw_sisyphus_animation(final_multiplier, state="cashed_out")
-            st.caption(f"The boulder would have crashed at {st.session_state.sc_crash_point:.2f}x.")
-        else:
-            st.error(st.session_state.sc_message)
-            draw_sisyphus_animation(st.session_state.sc_crash_point, state="crashed")
-            
-        if st.button("Play Again", use_container_width=True):
-            reset_sisyphus_climb_state(reset_balance=False)
-            st.rerun()
+        # 5. Ekranı yenile
+        time.sleep(0.05) 
+        st.rerun()
+            
+    # --- Bitiş Aşaması ---
+    elif st.session_state.sc_state == "finished":
+        
+        final_multiplier = st.session_state.sc_multiplier
+        
+        if "Cashed out" in st.session_state.sc_message:
+            st.success(st.session_state.sc_message)
+            draw_sisyphus_animation(final_multiplier, state="cashed_out")
+            st.caption(f"The boulder would have crashed at {st.session_state.sc_crash_point:.2f}x.")
+        else:
+            st.error(st.session_state.sc_message)
+            draw_sisyphus_animation(st.session_state.sc_crash_point, state="crashed")
+            
+        if st.button("Play Again", use_container_width=True):
+            reset_sisyphus_climb_state(reset_balance=False)
+            st.rerun()
 
-    # Bakiye Geçmişi
-    display_history("sc")
+    # Bakiye Geçmişi
+    display_history("sc")
 
 # --- SEKME 8: MUSIC PLAYER ---
 with tab_music:
-    st.header("🎶 Music Player")
+    st.header("🎶 Music Player")
 
-    blues_url = "https://www.youtube.com/watch?v=1eNSWZ4x2ZU&list=PLoPLEt1InO1x_fhNUCZW2HgRI3uTUn5NY"
-    guilty_url = "https://www.youtube.com/watch?v=yQ9lXHfv9Yg"
+    blues_url = "https://www.youtube.com/watch?v=1eNSWZ4x2ZU&list=PLoPLEt1InO1x_fhNUCZW2HgRI3uTUn5NY"
+    guilty_url = "https://www.youtube.com/watch?v=yQ9lXHfv9Yg"
 
-    choice = st.radio(
-        "Choose your music:",
-        ("Blues 🎶", "Guilty pleasures? 🤫"),
-        horizontal=True,
-        label_visibility="visible" # Label'ı görünür yap
-    )
+    choice = st.radio(
+        "Choose your music:",
+        ("Blues 🎶", "Guilty pleasures? 🤫"),
+        horizontal=True,
+        label_visibility="visible" # Label'ı görünür yap
+    )
 
-    if choice == "Blues 🎶":
-        st.markdown("How about a nice blues session? Maybe it will relax you.")
-        st.video(blues_url)
-    else: # Guilty pleasures
-        st.markdown("Guilty pleasures?")
-        st.subheader("manifest - Arıyo") # Düzeltilmiş başlık
-        st.video(guilty_url)
-    
-    st.caption("Music provided via YouTube embed. Playback may stop when switching tabs.")
+    if choice == "Blues 🎶":
+        st.markdown("How about a nice blues session? Maybe it will relax you.")
+        st.video(blues_url)
+    else: # Guilty pleasures
+        st.markdown("Guilty pleasures?")
+        st.subheader("manifest - Arıyo") # Düzeltilmiş başlık
+        st.video(guilty_url)
+    
+    st.caption("Music provided via YouTube embed. Playback may stop when switching tabs.")
 
 
 # --- SEKME 9: CREATIVE CORNER ---
 with tab_creative:
-    st.header("🎨 Creative Corner")
-    st.markdown("Let's generate some creative text using the Gemini model!")
+    st.header("🎨 Creative Corner")
+    st.markdown("Let's generate some creative text using the Gemini model!")
 
-    creative_type = st.selectbox(
-        "What would you like to generate?",
-        ["Short Poem", "Story Idea", "Haiku", "Tweet (Max 280 chars)"]
-    )
-    
-    creative_prompt = st.text_area("Enter a topic or theme (e.g., 'a rainy day in the city', 'the feeling of discovery', 'cats playing piano'):")
-    
-    if "creative_output" not in st.session_state:
-        st.session_state.creative_output = ""
+    creative_type = st.selectbox(
+        "What would you like to generate?",
+        ["Short Poem", "Story Idea", "Haiku", "Tweet (Max 280 chars)"]
+    )
+    
+    creative_prompt = st.text_area("Enter a topic or theme (e.g., 'a rainy day in the city', 'the feeling of discovery', 'cats playing piano'):")
+    
+    if "creative_output" not in st.session_state:
+        st.session_state.creative_output = ""
 
-    if st.button("Generate!", key="creative_generate"):
-        if creative_prompt:
-            # Creative Corner için basit bir güvenlik kontrolü
-            is_safe = True
-            padded_prompt = f" {creative_prompt.lower()} "
-            # Daha basit bir liste kullanalım, siyasi olmasın
-            creative_banned_list = [k for k in BANNED_KEYWORDS if k not in POLITICAL_KEYWORDS] 
-            
-            for keyword in creative_banned_list:
-                 if f" {keyword} " in padded_prompt:
-                     is_safe = False
-                     break
-            
-            if is_safe:
-                with st.spinner(f"Generating a {creative_type.lower()} about '{creative_prompt}'..."):
-                    try:
-                        creative_llm_instance = load_creative_llm() 
-                        
-                        if creative_type == "Short Poem":
-                            system_prompt = "You are a poet. Write a short, evocative poem (4-8 lines) about the following topic."
-                        elif creative_type == "Story Idea":
-                             system_prompt = "You are a creative writer. Generate a brief, intriguing story idea or plot hook (1-3 sentences) based on the following theme."
-                        elif creative_type == "Haiku":
-                            system_prompt = "You are a haiku master. Write a haiku (5-7-5 syllables) about the following topic."
-                        elif creative_type == "Tweet (Max 280 chars)":
-                             system_prompt = "You are a social media expert. Write a short, engaging tweet (max 280 characters) about the following topic."
-                        else:
-                            system_prompt = "Generate creative text about the following topic."
+    if st.button("Generate!", key="creative_generate"):
+        if creative_prompt:
+            # Creative Corner için basit bir güvenlik kontrolü
+            is_safe = True
+            padded_prompt = f" {creative_prompt.lower()} "
+            # Daha basit bir liste kullanalım, siyasi olmasın
+            creative_banned_list = [k for k in BANNED_KEYWORDS if k not in POLITICAL_KEYWORDS] 
+            
+            for keyword in creative_banned_list:
+                if f" {keyword} " in padded_prompt:
+                    is_safe = False
+                    break
+            
+            if is_safe:
+                with st.spinner(f"Generating a {creative_type.lower()} about '{creative_prompt}'..."):
+                    try:
+                        creative_llm_instance = load_creative_llm() 
+                        
+                        if creative_type == "Short Poem":
+                            system_prompt = "You are a poet. Write a short, evocative poem (4-8 lines) about the following topic."
+                        elif creative_type == "Story Idea":
+                            system_prompt = "You are a creative writer. Generate a brief, intriguing story idea or plot hook (1-3 sentences) based on the following theme."
+                        elif creative_type == "Haiku":
+                            system_prompt = "You are a haiku master. Write a haiku (5-7-5 syllables) about the following topic."
+                        elif creative_type == "Tweet (Max 280 chars)":
+                            system_prompt = "You are a social media expert. Write a short, engaging tweet (max 280 characters) about the following topic."
+                        else:
+                            system_prompt = "Generate creative text about the following topic."
 
-                        prompt = ChatPromptTemplate.from_messages([("system", system_prompt), ("human", "{topic}")])
-                        chain = prompt | creative_llm_instance | StrOutputParser()
-                        
-                        # Yaratıcı içerik için streaming
-                        response_container_creative = st.empty()
-                        full_response = ""
-                        for chunk in chain.stream({"topic": creative_prompt}):
-                            full_response += chunk
-                            response_container_creative.markdown(f"> {full_response}▌")
-                        response_container_creative.markdown(f"> {full_response}")
-                        
-                        st.session_state.creative_output = full_response # Sonucu kaydet
-                        st.success("Generated!")
-                    
-                    except Exception as e:
-                        st.error(f"An error occurred during generation: {e}")
-            else:
-                st.error("The topic provided contains inappropriate content. Please try a different topic.")
-                st.session_state.creative_output = "" # Çıktıyı temizle
-        else:
-            st.warning("Please enter a topic or theme.")
+                        prompt = ChatPromptTemplate.from_messages([("system", system_prompt), ("human", "{topic}")])
+                        chain = prompt | creative_llm_instance | StrOutputParser()
+                        
+                        # Yaratıcı içerik için streaming
+                        response_container_creative = st.empty()
+                        full_response = ""
+                        for chunk in chain.stream({"topic": creative_prompt}):
+                            full_response += chunk
+                            response_container_creative.markdown(f"> {full_response}▌")
+                        response_container_creative.markdown(f"> {full_response}")
+                        
+                        st.session_state.creative_output = full_response # Sonucu kaydet
+                        st.success("Generated!")
+                    
+                    except Exception as e:
+                        st.error(f"An error occurred during generation: {e}")
+            else:
+                st.error("The topic provided contains inappropriate content. Please try a different topic.")
+                st.session_state.creative_output = "" # Çıktıyı temizle
+        else:
+            st.warning("Please enter a topic or theme.")
 
-    # Sonucu göster (eğer butonla tetiklenmediyse state'den)
-    if st.session_state.creative_output and not ("creative_generate" in st.session_state and st.session_state.creative_generate):
-        st.markdown(f"### Your {creative_type}:")
-        st.markdown(f"> {st.session_state.creative_output}") 
+    # Sonucu göster (eğer butonla tetiklenmediyse state'den)
+    if st.session_state.creative_output and not ("creative_generate" in st.session_state and st.session_state.creative_generate):
+        st.markdown(f"### Your {creative_type}:")
+        st.markdown(f"> {st.session_state.creative_output}") 
 
 
 # --- SEKME 10: SETTINGS ---
 with tab_settings:
-    st.header("⚙️ Settings")
+    st.header("⚙️ Settings")
 
-    st.subheader("Chatbot Settings")
-    simlish_on = st.toggle("Enable Simlish Mode 👽", value=st.session_state.simlish_mode, key="settings_simlish")
-    if simlish_on != st.session_state.simlish_mode:
-        st.session_state.simlish_mode = simlish_on
-        st.rerun()
+    st.subheader("Chatbot Settings")
+    simlish_on = st.toggle("Enable Simlish Mode 👽", value=st.session_state.simlish_mode, key="settings_simlish")
+    if simlish_on != st.session_state.simlish_mode:
+        st.session_state.simlish_mode = simlish_on
+        st.rerun()
 
-    st.subheader("Blackjack Settings")
-    st.session_state.bj_deck_count = st.selectbox(
-        "Number of Decks",
-        [4, 6, 8],
-        index=[4, 6, 8].index(st.session_state.get("bj_deck_count", 6))
-    )
-    st.caption("Note: Game logic uses this setting for dealing cards.")
+    st.subheader("Blackjack Settings")
+    st.session_state.bj_deck_count = st.selectbox(
+        "Number of Decks",
+        [4, 6, 8],
+        index=[4, 6, 8].index(st.session_state.get("bj_deck_count", 6))
+    )
+    st.caption("Note: Game logic uses this setting for dealing cards.")
 
-    st.subheader("General Settings")
-    st.markdown("Use the 'Reset Interactive Features & Stats' button in the sidebar to reset game states, the shared balance to 1000, and player statistics.")
+    st.subheader("General Settings")
+    st.markdown("Use the 'Reset Interactive Features & Stats' button in the sidebar to reset game states, the shared balance to 1000, and player statistics.")
