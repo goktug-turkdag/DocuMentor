@@ -1,24 +1,15 @@
 streamlit
 python-dotenv
 datasets
-google-generativeai
-sentence-transformers
 chromadb
-
-# --- Çatışmayı Çözmek İçin ---
-# Temel bağımlılıkları açıkça listeliyoruz
+sentence-transformers
 pydantic
-langchain-core
-
-# Ana Langchain paketleri
 langchain
 langchain-community
-langchain-huggingface
+langchain-core
 langchain-google-genai
-langchain-openai
-
-# requirements.txt dosyanıza bunları ekleyin:
-pypdf         # PDF dosyalarını okumak için
-docx2txt      # .docx (Word) dosyalarını okumak için
-
+langchain-huggingface
+pypdf
+docx2txt
 matplotlib
+numpy
